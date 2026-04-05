@@ -1,5 +1,6 @@
 import streamlit as st
 from modules.health import calculate_metrics, score_metrics, calculate_overall_score, get_mirror_label
+from modules.narrative import build_prompt, call_llm
 
 
 def render_health_score(score: int, mirror: dict):
@@ -92,3 +93,23 @@ def render_results_panel():
     st.markdown("---")
 
     render_metrics_breakdown(metrics, metric_scores)
+
+    st.markdown("---")
+    st.markdown("### Your Financial Story")
+
+    prompt = build_prompt(
+        st.session_state,
+        metrics,
+        metric_scores,
+        overall_score,
+        mirror
+    )
+
+    try:
+        st.write_stream(call_llm(
+            prompt,
+            st.session_state.llm_provider,
+            st.session_state.api_key
+        ))
+    except Exception as e:
+        st.error(f"Could not generate narrative: {str(e)}")

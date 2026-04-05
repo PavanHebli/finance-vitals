@@ -13,8 +13,8 @@ def render_api_config():
     with col1:
         provider = st.selectbox(
             "AI Provider",
-            options=["anthropic", "openai", "groq"],
-            index=["anthropic", "openai", "groq"].index(st.session_state.get("llm_provider", "anthropic")),
+            options=["anthropic", "openai", "groq", "gemini"],
+            index=["anthropic", "openai", "groq", "gemini"].index(st.session_state.get("llm_provider", "anthropic")),
             help="Select the LLM provider to use for AI features"
         )
         st.session_state.llm_provider = provider
@@ -85,6 +85,7 @@ def render_expenses_section():
             step=50.0,
             format="%.2f"
         )
+        st.caption("Avg: $1,000–2,000/month")
         expenses["groceries"] = st.number_input(
             "Groceries",
             min_value=0.0,
@@ -92,6 +93,7 @@ def render_expenses_section():
             step=25.0,
             format="%.2f"
         )
+        st.caption("Avg: $200–400/month per person")
         expenses["transport"] = st.number_input(
             "Transport (car, gas, public transit)",
             min_value=0.0,
@@ -99,6 +101,7 @@ def render_expenses_section():
             step=25.0,
             format="%.2f"
         )
+        st.caption("Avg: $150–400/month")
         expenses["subscriptions"] = st.number_input(
             "Subscriptions (Netflix, Spotify, gym, etc.)",
             min_value=0.0,
@@ -106,7 +109,8 @@ def render_expenses_section():
             step=5.0,
             format="%.2f"
         )
-    
+        st.caption("Avg: $50–150/month")
+
     with col2:
         expenses["dining"] = st.number_input(
             "Dining out / Food delivery",
@@ -115,6 +119,7 @@ def render_expenses_section():
             step=25.0,
             format="%.2f"
         )
+        st.caption("Avg: $150–300/month")
         expenses["shopping"] = st.number_input(
             "Shopping / Personal",
             min_value=0.0,
@@ -122,6 +127,7 @@ def render_expenses_section():
             step=25.0,
             format="%.2f"
         )
+        st.caption("Avg: $100–300/month")
         expenses["other"] = st.number_input(
             "Other expenses",
             min_value=0.0,
@@ -129,6 +135,7 @@ def render_expenses_section():
             step=25.0,
             format="%.2f"
         )
+        st.caption("Anything not covered above")
     
     for key, value in expenses.items():
         st.session_state[f"expenses_{key}"] = value

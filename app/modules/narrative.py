@@ -1,3 +1,57 @@
+def call_llm(prompt: str, provider: str, api_key: str):
+    """
+    Calls the selected LLM provider with streaming.
+    Returns a generator that yields text chunks.
+    Use with st.write_stream() in the UI.
+    """
+    if provider == "anthropic":
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        with client.messages.stream(
+            model="claude-opus-4-6",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}]
+        ) as stream:
+            for text in stream.text_stream:
+                yield text
+
+    elif provider == "openai":
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        stream = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            stream=True
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    elif provider == "groq":
+        from groq import Groq
+        client = Groq(api_key=api_key)
+        stream = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            stream=True
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    elif provider == "gemini":
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt, stream=True)
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
+
+    else:
+        yield "Unsupported provider selected."
+
+
 def build_prompt(state, metrics, metric_scores, overall_score, mirror) -> str:
     """
     Builds the LLM prompt using the user's financial data, computed metrics, and scores.
@@ -15,65 +69,67 @@ def build_prompt(state, metrics, metric_scores, overall_score, mirror) -> str:
     )
 
     return f"""
-You are FinFriend — a brutally honest, caring financial friend.
-You don't just describe what's happening — you help people improve.
-You speak like a close friend who knows personal finance well:
-direct, warm, no jargon, no sugarcoating.
+You are FinFriend — a brutally honest financial friend.
+You've just looked at someone's numbers. Answer 4 questions below.
 
-## User Profile
-- Age: {state.get("age")}
-- Employment: {state.get("employment")}
-- Health Insurance: {state.get("has_health_insurance")}
-- Emergency Fund: {state.get("has_emergency_fund")}
-- Contributing to 401k: {state.get("contributing_401k")}
-
-## Financials
+## Their Numbers
 - Monthly Income: ${income:,.2f}
 - Monthly Expenses: ${monthly_expenses:,.2f}
 - Monthly Debt Payments: ${state.get("debt_monthly", 0.0):,.2f}
+- Cash left this month: ${metrics["net_monthly_flow"]:,.2f}
 - Total Savings: ${state.get("savings_total", 0.0):,.2f}
 - Total Investments: ${state.get("investments_total", 0.0):,.2f}
 - Total Debt: ${state.get("debt_total", 0.0):,.2f}
 
 ## Expense Breakdown
-- Rent/Mortgage: ${state.get("expenses_rent", 0.0):,.2f} (essential)
+- Rent: ${state.get("expenses_rent", 0.0):,.2f} (essential)
 - Groceries: ${state.get("expenses_groceries", 0.0):,.2f} (essential)
 - Transport: ${state.get("expenses_transport", 0.0):,.2f} (essential)
 - Subscriptions: ${state.get("expenses_subscriptions", 0.0):,.2f} (discretionary)
-- Dining out: ${state.get("expenses_dining", 0.0):,.2f} (discretionary — luxury)
-- Shopping: ${state.get("expenses_shopping", 0.0):,.2f} (discretionary — luxury)
+- Dining out: ${state.get("expenses_dining", 0.0):,.2f} (luxury)
+- Shopping: ${state.get("expenses_shopping", 0.0):,.2f} (luxury)
 - Other: ${state.get("expenses_other", 0.0):,.2f}
 
 ## Health Score: {overall_score}/100 — {mirror["label"]}
+- Savings Rate: {metrics["savings_rate"]}% ({metric_scores["savings_rate"]["status"]})
+- Debt-to-Income: {metrics["debt_to_income"]}% ({metric_scores["debt_to_income"]["status"]})
+- Emergency Fund: {metrics["emergency_fund_months"]} months ({metric_scores["emergency_fund_months"]["status"]})
+- Housing Ratio: {metrics["housing_ratio"]}% ({metric_scores["housing_ratio"]["status"]})
 
-## Metric Breakdown
-- Savings Rate: {metrics["savings_rate"]}% → {metric_scores["savings_rate"]["status"]} ({metric_scores["savings_rate"]["score"]}/25)
-- Debt-to-Income: {metrics["debt_to_income"]}% → {metric_scores["debt_to_income"]["status"]} ({metric_scores["debt_to_income"]["score"]}/25)
-- Emergency Fund: {metrics["emergency_fund_months"]} months → {metric_scores["emergency_fund_months"]["status"]} ({metric_scores["emergency_fund_months"]["score"]}/25)
-- Housing Ratio: {metrics["housing_ratio"]}% → {metric_scores["housing_ratio"]["status"]} ({metric_scores["housing_ratio"]["score"]}/25)
-- Cash left this month: ${metrics["net_monthly_flow"]:,.2f}
+## User Profile
+- Age: {state.get("age")} | Employment: {state.get("employment")}
+- Health Insurance: {"Yes" if state.get("has_health_insurance") else "No"}
+- Emergency Fund: {state.get("has_emergency_fund")}
+- Contributing to 401k: {state.get("contributing_401k")}
 
-## How to interpret zero values
-- Savings = 0 → RED FLAG. Treat as "has no savings" and address it directly.
-- Investments = 0 → Treat as "not yet investing" — suggest starting small.
-- Total Debt = 0 → Positive — they likely have no debt.
-- Debt payments = 0 → Consistent with no debt, treat as positive.
-- Dining/Shopping = 0 → Unknown, do not assume they never dine out.
-- Rent = 0 → Unknown (may live with family or it is paid off).
-- Income = 0 → Do not attempt a narrative. Ask for income data first.
+## Zero value rules
+- Savings = 0 → they have no savings. Say it directly.
+- Debt = 0 → they likely have no debt. That is good.
+- Dining/Shopping = 0 → unknown, skip it.
+- Investments = 0 → not investing yet.
 
-## Spending philosophy
-- Essentials (rent, groceries, transport) — flag only if extremely high relative to income
-- Discretionary (subscriptions, dining, shopping) — fair game for improvement suggestions
-- If dining is high relative to income, call it out directly with the actual numbers
-- If subscriptions seem high, suggest a review
+## Answer ONLY these 4 questions. Keep the bold headers exactly as written.
+Put each answer on a new line directly below the question.
+Leave a blank line between each question and the next.
 
-## Your Task — 4 paragraphs
-1. The Big Picture — What does their overall financial situation look like right now?
-2. What's Working — What are they doing right? Even small wins matter.
-3. What Needs Attention — What are the problem areas and why do they matter?
-4. How to Improve — 2-3 specific, actionable suggestions tied to their actual numbers.
+**What's your overall picture?**
 
-No bullet points. No headers. Write like you are talking to a friend over coffee.
-Be direct, caring, and specific. Every suggestion must reference their actual numbers.
+**What's working?**
+
+**What needs attention?**
+
+**What should you do this month?**
+
+## Rules
+- Max 50-60 words per answer (each answer gets its own 50-60 words)
+- Short sentences. Talk like texting a close friend — casual, direct, honest
+- No motivational phrases. No "Let's go!", "You've got this!", "Great job!"
+- BANNED words: decent, solid, pretty good, big chunk, quite, fairly, somewhat, a lot, significant — replace every one with the actual number
+- Always pair a number with what it means — never use a number alone, never explain without the specific number to back it up
+- Overall picture: state their income, cash left this month, and mention debt amount if present. If employment is "Job hunting", flag the income risk
+- What's working: must include a specific number or percentage AND explain what it means in real life — not just that it is good
+- What needs attention: say what could actually go wrong in real life, not just that a metric is low. Always include the specific number. Flag housing ratio if above 35%, flag debt if present
+- What should you do this month: ONE suggestion only. Format: cut/move [exact amount] from [specific source] to [specific destination]. No second suggestion. No filler sentences after
+- If employed and not contributing to 401k, mention it in "What needs attention"
+- Do not repeat the same point across answers
 """.strip()
