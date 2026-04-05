@@ -19,6 +19,20 @@ Each entry: what + why | files touched | priority
 
 ---
 
+## Product Direction — Retention Problem
+
+Right now FinFriend is a one-time diagnostic. Users have no recurring reason to return. Three directions to solve this:
+
+| Direction | What it means | Needs |
+|-----------|--------------|-------|
+| **Progress tracking** | User returns monthly, updates numbers, sees score change over time. "Last month: 60 → This month: 68" | Cloud storage (TODO #7) |
+| **Goal-based usage** | User sets a goal (e.g. build 3-month emergency fund), app tracks progress toward it | Budget planner (TODO #6) + storage |
+| **Decision helper** | Shift from diagnostic to advisor — "I got a raise, what do I do?" or "Should I take this loan?" | Mostly a prompt change, low infra cost |
+
+Decision helper is the lowest effort and highest immediate value — worth exploring before the others.
+
+---
+
 ## How to use this file
 - Pick a feature by number, bring it up in conversation
 - Do NOT load this file into context unless actively working on a feature

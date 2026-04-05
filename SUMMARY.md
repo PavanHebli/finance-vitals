@@ -51,16 +51,20 @@ App gives ONE clear next step
 
 ```
 finfriend/
-├── requirements.txt          # Dependencies (streamlit>=1.33.0)
+├── requirements.txt          # streamlit, anthropic, openai, groq, google-generativeai, watchdog
 ├── SUMMARY.md                # This file
 ├── TODO.md                   # Feature backlog
+├── README.md                 # Public-facing docs + live app link
+├── .gitignore
 └── app/
-    ├── main.py               # Panel switching only
+    ├── main.py               # Panel switching + session state init
     └── modules/
-        ├── snapshot.py       # Module 1: form data collection
-        ├── health.py         # Module 2: pure calculation logic
-        ├── panel_form.py     # Panel 1 UI (form + Clear all + CTA)
-        └── panel_results.py  # Panel 2 UI (score + breakdown)
+        ├── snapshot.py       # Module 1: form data collection + expense benchmarks
+        ├── health.py         # Module 2: pure calculation logic (no Streamlit)
+        ├── narrative.py      # Module 3: build_prompt() + call_llm() streaming
+        ├── education.py      # Module 4: pre-written education per flagged metric
+        ├── panel_form.py     # Panel 1 UI (form, Sample Input toggle, Clear all, CTA)
+        └── panel_results.py  # Panel 2 UI (score, breakdown, narrative, education)
 ```
 
 ---
@@ -71,7 +75,7 @@ finfriend/
 
 | Field | Widget Type | Options |
 |-------|-------------|---------|
-| AI Provider | selectbox | anthropic, openai, groq |
+| AI Provider | selectbox | anthropic, openai, groq, gemini |
 | API Key | text_input | type="password" (hidden) |
 
 ### Section A: Income
@@ -125,7 +129,7 @@ finfriend/
 ### `app/modules/snapshot.py`
 
 #### 1. `render_api_config()`
-- Renders AI provider dropdown and API key input
+- Renders AI provider dropdown (anthropic, openai, groq, gemini) and API key input
 - Uses `st.columns([1, 2])` for side-by-side layout
 - API key stored in session state with password masking
 - Returns: `(provider, api_key)`
@@ -138,7 +142,7 @@ finfriend/
 - Returns: `(main_income, additional_income)`
 
 #### 3. `render_expenses_section()`
-- Renders Section B: 7 expense categories
+- Renders Section B: 7 expense categories with `st.caption()` benchmark hints
 - Two-column layout (4 in col1, 3 in col2)
 - All default to 0.0
 - Returns: `expenses` dict
@@ -157,16 +161,88 @@ finfriend/
 ### `app/main.py`
 
 #### 1. `init_session_state()`
-- Initializes all 18 session state variables with defaults
-- All financial fields default to 0 or sensible defaults
-- Keys: llm_provider, api_key, income_main, income_additional, expenses_*, savings_total, investments_total, debt_total, debt_monthly, age, employment, has_health_insurance, has_emergency_fund, contributing_401k, data_entered
+- Initializes all session state variables with defaults
+- Keys: llm_provider, api_key, income_main, income_additional, expenses_*, savings_total, investments_total, debt_total, debt_monthly, age, employment, has_health_insurance, has_emergency_fund, contributing_401k, data_entered, current_page, sample_input_active
 
 #### 2. `main()`
 - Sets page config (title="FinFriend", icon="💰", layout="wide")
 - Calls init_session_state()
-- Renders title and all form sections
-- Handles CTA button with validation and success message
-- Calculates and displays totals on button click
+- Routes to `render_form_panel()` or `render_results_panel()` based on `current_page`
+
+### `app/modules/health.py`
+
+Pure calculation logic — no Streamlit imports.
+
+#### 1. `calculate_metrics(state)`
+- Computes: savings_rate, debt_to_income, emergency_fund_months, housing_ratio, net_monthly_flow
+- Edge case: if expenses=0 and income>0, emergency_fund = savings/income (treats full income as monthly flow)
+
+#### 2. `score_metrics(metrics)`
+- Returns dict of scored metrics: `{score: 0-25, status: "danger"|"warning"|"ok"|"good"}`
+- Benchmarks: CFPB (DTI 43%), HUD (housing 30%), Fidelity/Vanguard (emergency 3-6mo), 50/30/20 rule (savings 20%)
+- net_monthly_flow scored separately (not included in 0-100 total)
+
+#### 3. `calculate_overall_score(metric_scores)`
+- Sums scores for 4 metrics: savings_rate + debt_to_income + emergency_fund_months + housing_ratio
+- Returns: 0–100
+
+#### 4. `get_mirror_label(score)`
+- Returns `{"label": str, "description": str}` based on score range
+- Labels: Critical (0-29), At Risk (30-49), Fair (50-64), Good (65-79), Healthy (80-100)
+
+### `app/modules/narrative.py`
+
+#### 1. `build_prompt(state, metrics, metric_scores, overall_score, mirror)`
+- Constructs the full LLM prompt with all financial data
+- Q&A format: 4 fixed questions with bold headers
+- Rules enforced: 50-60 words per answer, banned vague adjectives, numbers paired with meaning, ONE action suggestion
+- Health insurance rendered as "Yes"/"No" (not True/False)
+
+#### 2. `call_llm(prompt, provider, api_key)`
+- Generator function yielding text chunks for streaming
+- Supports: anthropic (claude-opus-4-6), openai (gpt-4o), groq (llama-3.3-70b-versatile), gemini (gemini-1.5-flash)
+- Consumed by `st.write_stream()` in panel_results.py
+
+### `app/modules/education.py`
+
+#### 1. `get_education(metric_scores)`
+- Returns list of education items for flagged (danger/warning) metrics only
+- Skips net_monthly_flow and ok/good metrics
+
+#### 2. `render_education(metric_scores)`
+- Renders a "Why this matters" `st.expander()` for each flagged metric
+- Color-coded by status: danger=red, warning=orange
+- Called after narrative in panel_results.py
+
+### `app/modules/panel_form.py`
+
+#### 1. `fill_sample_data()`
+- Sets all session state fields to randomized realistic values
+- All values explicitly cast to `float()` to avoid StreamlitMixedNumericTypesError
+
+#### 2. `clear_all_fields()`
+- Resets all session state fields to defaults
+- Also sets `sample_input_active = False`
+
+#### 3. `render_form_panel()`
+- Renders title, Sample Input toggle, Clear All button, and form
+- Toggle uses `value=` (not `key=`) to avoid StreamlitAPIException
+- Previous-state tracking pattern: only calls fill/clear when toggle state actually changes
+- Form wrapped in `st.form("financial_form")` to batch interactions and reduce reruns
+
+### `app/modules/panel_results.py`
+
+#### 1. `render_health_score(score, mirror)`
+- Centered display of score (X/100) and mirror label with color coding
+
+#### 2. `render_metrics_breakdown(metrics, metric_scores)`
+- Table-style rows for each metric: name, raw value, colored status dot, score/25
+- Net monthly flow shown separately at the bottom with color (green/red)
+
+#### 3. `render_results_panel()`
+- "← Edit my data" button sets current_page="form" + st.rerun()
+- Warning banner if sample data is active
+- Renders: health score → metrics breakdown → narrative (streaming) → education expander
 
 ---
 
@@ -229,8 +305,8 @@ Open browser at: `http://localhost:8501`
 
 ### Immediate
 - ~~Build Module 2: Health Score + Mirror~~ ✓
-- Build Module 3: AI Narrative Story
-- Build Module 4: Contextual Education
+- ~~Build Module 3: AI Narrative Story~~ ✓
+- ~~Build Module 4: Contextual Education~~ ✓
 - Build Module 5: The One Next Step
 
 ### Future Enhancements
@@ -243,22 +319,33 @@ See TODO.md for full feature backlog.
 ### `requirements.txt`
 ```
 streamlit>=1.33.0
+watchdog>=6.0.0
+anthropic>=0.25.0
+openai>=1.0.0
+groq>=0.5.0
+google-generativeai>=0.5.0
 ```
 
-### `app/main.py` (56 lines)
-Entry point with:
-- Session state initialization
-- Page configuration
-- Form rendering
-- CTA button with validation and totals calculation
+### `app/main.py`
+Entry point: session state init + panel routing (form / results)
 
-### `app/modules/snapshot.py` (242 lines)
-Contains all form section functions:
-- render_api_config()
-- render_income_section()
-- render_expenses_section()
-- render_position_section()
-- render_context_section()
+### `app/modules/snapshot.py`
+Module 1: form data collection with benchmark captions
+
+### `app/modules/health.py`
+Module 2: pure calculation logic (no Streamlit)
+
+### `app/modules/narrative.py`
+Module 3: LLM prompt builder + streaming call_llm() for 4 providers
+
+### `app/modules/education.py`
+Module 4: pre-written education per flagged metric
+
+### `app/modules/panel_form.py`
+Panel 1 UI: form, Sample Input toggle, Clear All, CTA
+
+### `app/modules/panel_results.py`
+Panel 2 UI: score, breakdown, narrative stream, education expander
 
 ---
 
@@ -268,16 +355,20 @@ Contains all form section functions:
 |-------|----------|
 | API key + income validation | Both required to reach Panel 2 |
 | Optional fields | Default to 0 |
-| LLM providers | Anthropic, OpenAI, Groq |
+| LLM providers | Anthropic (claude-opus-4-6), OpenAI (gpt-4o), Groq (llama-3.3-70b-versatile), Gemini (gemini-1.5-flash) |
 | API key visibility | Simple password input (no toggle) |
 | Streamlit version | >=1.33.0 |
 | Panel navigation | session state `current_page` + `st.rerun()` on button click |
 | Scoring | 4 metrics × 25pts = 100. Net flow shown as raw value only |
 | Benchmarks | Industry standards — CFPB (DTI), HUD (housing), Fidelity/Vanguard (emergency fund), 50/30/20 rule (savings) |
 | Calculation layer | `health.py` is pure logic, no Streamlit — UI only in panel files |
+| Toggle state management | `st.toggle()` uses `value=` not `key=` to avoid StreamlitAPIException; previous-state tracking pattern to detect ON→OFF / OFF→ON transitions |
+| Narrative format | Q&A format with 4 fixed bold-header questions; 50-60 words per answer; banned vague adjectives; numbers always paired with meaning |
+| Navigation (back button) | "← Edit my data" sets `current_page="form"` + `st.rerun()` — same pattern as CTA forward |
+| Empty data guard | If expenses=0 and income=0, CTA is blocked to prevent a false 60/100 score from debt/housing scoring as "good" |
 
 ---
 
 ## Summary
 
-Modules 1 and 2 are complete. The app collects financial data, scores it across 4 industry-standard metrics, and displays an overall health score (0–100) with a plain-language label. Next focus is Module 3 — the first AI/LLM integration.
+Modules 1–4 are complete. The app collects financial data, scores it across 4 industry-standard metrics, streams an AI narrative in Q&A format, and shows contextual education for any flagged problem areas. The live app is hosted at https://finfriend-web.streamlit.app/. Next focus is Module 5 — The One Next Step.

@@ -27,6 +27,7 @@ def init_session_state():
         "contributing_401k": "No",
         "data_entered": False,
         "current_page": "form",
+        "sample_input_active": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:

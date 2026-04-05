@@ -1,6 +1,7 @@
 import streamlit as st
 from modules.health import calculate_metrics, score_metrics, calculate_overall_score, get_mirror_label
 from modules.narrative import build_prompt, call_llm
+from modules.education import render_education
 
 
 def render_health_score(score: int, mirror: dict):
@@ -81,6 +82,9 @@ def render_results_panel():
         st.session_state.current_page = "form"
         st.rerun()
 
+    if st.session_state.get("sample_input_active", False):
+        st.warning("You're viewing sample input data. Enter your real numbers for an accurate picture.")
+
     st.markdown("---")
 
     metrics = calculate_metrics(st.session_state)
@@ -117,3 +121,6 @@ def render_results_panel():
         ))
     except Exception as e:
         st.error(f"Could not generate narrative: {str(e)}")
+
+    st.markdown("---")
+    render_education(metric_scores)
