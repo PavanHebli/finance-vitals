@@ -4,6 +4,7 @@ from modules.health import calculate_metrics, score_metrics, calculate_overall_s
 from modules.narrative import build_prompt, call_llm
 from modules.education import render_education
 from modules.simulator import render_whatif_simulator
+from modules.storage import create_snapshot, append_or_overwrite, to_finfd
 
 
 _SIM_KEYS = ["sim_income", "sim_dining", "sim_shopping", "sim_subscriptions", "sim_debt_payment"]
@@ -162,28 +163,69 @@ def render_expense_chart(state: dict, metrics: dict, metric_scores: dict):
         showlegend=False,
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_results_panel():
-    if st.button("← Edit my data"):
-        st.session_state.pop("narrative_text", None)
-        for key in _SIM_KEYS:
-            st.session_state.pop(key, None)
-        st.session_state.current_page = "form"
-        st.rerun()
+    # Compute metrics first — needed by both the save button and the rest of the page
+    metrics       = calculate_metrics(st.session_state)
+    metric_scores = score_metrics(metrics)
+    overall_score = calculate_overall_score(metric_scores)
+    mirror        = get_mirror_label(overall_score)
+
+    # --- Top bar: back button + save button ---
+    col_back, _, col_save = st.columns([2, 3, 2])
+    with col_back:
+        if st.button("← Edit my data"):
+            st.session_state.pop("narrative_text", None)
+            for key in _SIM_KEYS:
+                st.session_state.pop(key, None)
+            st.session_state.current_page = "form"
+            st.rerun()
+    with col_save:
+        snapshot  = create_snapshot(
+            dict(st.session_state),
+            metrics,
+            metric_scores,
+            overall_score,
+            mirror,
+            st.session_state.get("narrative_text", ""),
+        )
+        snapshots = append_or_overwrite(
+            list(st.session_state.get("loaded_snapshots", [])),
+            snapshot,
+        )
+        st.download_button(
+            "💾 Save snapshot",
+            data=to_finfd(snapshots),
+            file_name="my_finances.fin",
+            mime="application/octet-stream",
+            type="secondary",
+        )
 
     if st.session_state.get("sample_input_active", False):
         st.warning("You're viewing sample input data. Enter your real numbers for an accurate picture.")
 
     st.markdown("---")
 
-    metrics       = calculate_metrics(st.session_state)
-    metric_scores = score_metrics(metrics)
-    overall_score = calculate_overall_score(metric_scores)
-    mirror        = get_mirror_label(overall_score)
-
     render_health_score(overall_score, mirror)
+
+    # Score delta vs previous snapshot
+    if "previous_snapshot" in st.session_state:
+        prev       = st.session_state.previous_snapshot
+        prev_score = prev["outputs"]["overall_score"]
+        prev_label = prev["outputs"]["mirror_label"]
+        prev_date  = prev["saved_at"]
+        delta      = overall_score - prev_score
+        delta_str  = f"+{delta}" if delta > 0 else str(delta)
+        color      = "#00C853" if delta > 0 else ("#FF4B4B" if delta < 0 else "#888888")
+        st.markdown(
+            f"<p style='text-align:center; color:{color};'>"
+            f"vs {prev_date}: {prev_score}/100 ({prev_label}) &nbsp;·&nbsp; <b>{delta_str} pts</b>"
+            f"</p>",
+            unsafe_allow_html=True,
+        )
+
     st.markdown("---")
     render_metrics_breakdown(metrics, metric_scores)
     st.caption("ℹ️ Ratios are calculated using take-home (after-tax) income — stricter than lender benchmarks, which use gross income.")

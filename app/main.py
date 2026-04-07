@@ -28,6 +28,9 @@ def init_session_state():
         "data_entered": False,
         "current_page": "form",
         "sample_input_active": False,
+        "file_uploader_key": 0,
+        "loaded_snapshots": [],
+
     }
     for key, value in defaults.items():
         if key not in st.session_state:

@@ -1,6 +1,7 @@
 import random
 import streamlit as st
 from modules.snapshot import render_api_config, render_income_section, render_expenses_section, render_position_section, render_context_section
+from modules.storage import load_finfd, get_latest, populate_state_from_snapshot
 
 
 def fill_sample_data():
@@ -60,6 +61,59 @@ def render_form_panel():
             clear_all_fields()
 
     st.markdown("---")
+
+    # --- Import previous snapshot ---
+    uploaded = st.file_uploader(
+        "Import previous data (my_finances.fin)",
+        type=["fin"],
+        key=f"snapshot_upload_{st.session_state.get('file_uploader_key', 0)}",
+        label_visibility="visible",
+    )
+
+    if uploaded and "snapshot_preview_data" not in st.session_state:
+        try:
+            st.session_state.snapshot_preview_data = load_finfd(uploaded)
+        except ValueError as e:
+            st.error(str(e))
+
+    if "snapshot_preview_data" in st.session_state:
+        data     = st.session_state.snapshot_preview_data
+        latest   = get_latest(data)
+        n        = len(data)
+        score    = latest["outputs"]["overall_score"]
+        label    = latest["outputs"]["mirror_label"]
+        date     = latest["saved_at"]
+
+        st.info(
+            f"📁 Found **{n} snapshot{'s' if n > 1 else ''}** — most recent: **{date}**  \n"
+            f"Score: **{score}/100 ({label})**  \n"
+            "This will pre-fill the form with your previous data. Review and update any values that have changed."
+        )
+
+        col_load, col_cancel, _ = st.columns([1, 1, 4])
+        with col_load:
+            if st.button("Load into form", type="primary"):
+                populate_state_from_snapshot(latest, st.session_state)
+                st.session_state.previous_snapshot  = latest
+                st.session_state.loaded_snapshots   = data
+                st.session_state.pop("narrative_text", None)
+                st.session_state.file_uploader_key  = st.session_state.get("file_uploader_key", 0) + 1
+                del st.session_state.snapshot_preview_data
+                st.rerun()
+        with col_cancel:
+            if st.button("Cancel", type="secondary"):
+                st.session_state.file_uploader_key = st.session_state.get("file_uploader_key", 0) + 1
+                del st.session_state.snapshot_preview_data
+                st.rerun()
+
+    st.markdown("---")
+
+    if st.session_state.get("previous_snapshot"):
+        date = st.session_state.previous_snapshot["saved_at"]
+        st.success(
+            f"Form loaded from your **{date}** snapshot. "
+            "Review your numbers — update anything that has changed since then."
+        )
 
     st.info(
         "**Don't have exact numbers?** Estimates are fine — a rough figure is better than leaving fields at 0. "
