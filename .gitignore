@@ -33,3 +33,4 @@ Thumbs.db
 # Logs & cache
 *.log
 .cache/
+SUMMARY.md
