@@ -67,6 +67,44 @@ The AI is not the product. The product is financial clarity. The AI is what make
 
 ---
 
+## Why a custom .fin file format with encryption
+
+FinFriend saves snapshots as `.fin` files rather than plain JSON. Two reasons.
+
+First, the format is branded — `.fin` is short, clearly means "financial", and signals to the user that this is a FinFriend file, not a generic data export. When a user sees `my_finances.fin` in their downloads folder they know exactly what it is and which app opens it.
+
+Second, plain JSON is readable by anyone. A `.fin` file on a shared computer, in a cloud sync folder, or accidentally attached to an email would expose someone's income, debt, and savings to anyone who opened it. Fernet encryption (AES-128 + HMAC) makes the file unreadable without the app. The key is baked into the app — no password friction, no "forgot my password" problem. The threat model is accidental exposure, not a determined attacker. This level of protection is appropriate and proportionate.
+
+The single-file strategy (all months in one array, same-month saves overwrite) means the user manages one file, not twelve. Re-downloading overwrites the old file in their downloads folder naturally.
+
+---
+
+## Why DTI uses take-home income, not gross
+
+The CFPB's 43% DTI threshold is defined against gross (pre-tax) income. FinFriend uses take-home (after-tax) income instead. This means FinFriend's DTI will always look stricter than a lender's calculation.
+
+This is deliberate. Your rent, groceries, and debt payments come out of what actually hits your bank account — not what you earn before tax. A ratio calculated against take-home income is more honest about what you can actually afford. The trade-off is that FinFriend's benchmarks are stricter than what a bank would tell you. That is the right trade-off for a tool whose job is to give an honest picture, not to tell users what they want to hear.
+
+The choice is disclosed via a caption on the results page and a note in the DTI simulator tooltip.
+
+---
+
+## Why the progress charts include the current unsaved session
+
+When a user uploads their `.fin` history and opens the Progress tab, they see their saved months plus their current session data plotted as a live point (hollow dot, dotted line). The current session is merged into the chart even before saving.
+
+The reason: if a user just updated their income or cut their dining budget, they should immediately see where that puts them on the trend line. Forcing them to save first before seeing the updated chart creates unnecessary friction and separates the action (editing data) from the feedback (seeing progress). The hollow marker makes it clear the point is unsaved — it is a preview, not a confirmed entry.
+
+---
+
+## Why FinFriend Chat has hard guardrails
+
+The chat feature (Tab 4) is scoped to finance-only questions with hard rules: no specific companies or products named, no investment advice, insurance guidance limited to type selection and evaluation criteria only.
+
+The reason is not legal caution — it is product focus. FinFriend's value is grounded, personalised financial analysis using the user's actual numbers. The moment it starts recommending "buy Company X insurance" or "invest in Fund Y", it becomes a generic chatbot that happens to know your income. That is worse, not better. Keeping the scope narrow keeps every answer grounded in the user's specific situation.
+
+---
+
 ## What FinFriend deliberately does not do
 
 **It does not track your spending in real time.**
