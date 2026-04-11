@@ -284,4 +284,4 @@ def render_results_panel():
         )
 
     st.markdown("---")
-    st.page_link("pages/feedback.py", label="How was your experience? Share feedback →", icon="💬")
+    st.caption("💬 [How was your experience? Share feedback →](/feedback)")
