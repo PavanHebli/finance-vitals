@@ -30,6 +30,8 @@ def init_session_state():
         "sample_input_active": False,
         "file_uploader_key": 0,
         "loaded_snapshots": [],
+        "chat_history": [],
+        "chat_summary": "",
 
     }
     for key, value in defaults.items():

@@ -7,6 +7,11 @@ from modules.education import render_education
 from modules.simulator import render_whatif_simulator
 from modules.storage import create_snapshot, append_or_overwrite, to_finfd
 from modules.progress import render_progress
+from modules.chat import (
+    is_out_of_scope, _OUT_OF_SCOPE_RESPONSE,
+    STARTER_QUESTIONS, build_snapshot_context,
+    build_messages, call_llm_chat,
+)
 
 
 _SIM_KEYS = ["sim_income", "sim_dining", "sim_shopping", "sim_subscriptions", "sim_debt_payment"]
@@ -277,11 +282,78 @@ def render_results_panel():
         render_progress(st.session_state.get("loaded_snapshots", []), current_snapshot)
 
     with tab4:
-        st.info(
-            "**FinFriend Chat coming soon.**  \n"
-            "Ask scenario questions, get progress coaching, and get insurance guidance — "
-            "all answered using your actual numbers."
+        # --- Compact context bar ---
+        st.caption(
+            f"**Score:** {overall_score}/100 &nbsp;·&nbsp; "
+            f"**Savings Rate:** {metrics['savings_rate']}% &nbsp;·&nbsp; "
+            f"**DTI:** {metrics['debt_to_income']}% &nbsp;·&nbsp; "
+            f"**Emergency Fund:** {metrics['emergency_fund_months']}mo &nbsp;·&nbsp; "
+            f"**Housing:** {metrics['housing_ratio']}% &nbsp;·&nbsp; "
+            f"*Every answer is grounded in your actual numbers.*"
         )
+        st.markdown("---")
+
+        # --- Initialise chat history ---
+        if "chat_history" not in st.session_state:
+            st.session_state.chat_history = []
+
+        # --- Starter questions (shown only before first message) ---
+        if not st.session_state.chat_history:
+            st.markdown("**Not sure where to start? Try one of these:**")
+            cols = st.columns(len(STARTER_QUESTIONS))
+            for col, q in zip(cols, STARTER_QUESTIONS):
+                with col:
+                    if st.button(q, key=f"starter_{q}", use_container_width=True):
+                        st.session_state.chat_history.append({"role": "user", "content": q})
+                        st.rerun()
+            st.markdown("")
+
+        # --- Scrollable chat history container ---
+        chat_container = st.container(height=480)
+        with chat_container:
+            for msg in st.session_state.chat_history:
+                avatar = "🧑" if msg["role"] == "user" else "💰"
+                with st.chat_message(msg["role"], avatar=avatar):
+                    st.markdown(msg["content"].replace("$", "\\$"))
+
+        # --- Chat input always below the history container ---
+        user_input = st.chat_input("Ask me anything about your finances…")
+
+        # Determine pending message — either new input or starter question after rerun
+        if user_input:
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
+
+        pending = (
+            st.session_state.chat_history
+            and st.session_state.chat_history[-1]["role"] == "user"
+        )
+
+        if pending:
+            pending_message = st.session_state.chat_history[-1]["content"]
+            if is_out_of_scope(pending_message):
+                st.session_state.chat_history.append({"role": "assistant", "content": _OUT_OF_SCOPE_RESPONSE})
+                st.rerun()
+            else:
+                snapshot_context = build_snapshot_context(
+                    dict(st.session_state), metrics, metric_scores, overall_score, mirror
+                )
+                messages = build_messages(
+                    snapshot_context,
+                    st.session_state.chat_history,
+                    st.session_state.get("chat_summary", ""),
+                )
+                try:
+                    with chat_container:
+                        with st.chat_message("assistant", avatar="💰"):
+                            response = st.write_stream(call_llm_chat(
+                                messages,
+                                st.session_state.llm_provider,
+                                st.session_state.api_key,
+                            ))
+                    st.session_state.chat_history.append({"role": "assistant", "content": response})
+                except Exception as e:
+                    st.error(f"Could not get a response: {e}")
+                st.rerun()
 
     st.markdown("---")
     st.caption("💬 [How was your experience? Share feedback →](/feedback)")

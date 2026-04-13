@@ -22,7 +22,18 @@ Each entry: what + why | files touched | priority | done
 | 2 | **What-If Simulator** | 5 sliders — see how income/expense changes affect score live. Pure math, no AI. | `simulator.py`, `panel_results.py`, `health.py` | ✅ |
 | 3 | **Snapshot Save / Load** | Save encrypted `.fin` file, re-upload next month to pre-fill form. Enables all history features. | `storage.py`, `panel_form.py`, `panel_results.py` | ✅ |
 | 4 | **Progress Charts** | Score + 4 metric trend lines + cash flow across all saved snapshots. Merges saved history with current session live. | `progress.py`, `panel_results.py` | ✅ |
-| 5 | **FinFriend Chat** | Finance-only chat (hard guardrails). Scope: scenario planning, progress coaching, insurance type guidance (no company/product names). Context: current + previous snapshot, both narratives, conversation history. | new `chat.py`, `panel_results.py` | ⬜ |
+| 5 | **FinFriend Chat** | Finance-only chat (hard guardrails). Scope: scenario planning, progress coaching, insurance type guidance (no company/product names). Context: current + previous snapshot, both narratives, conversation history. Built in 4 phases — see below. | new `chat.py`, `panel_results.py` | ⬜ |
+
+**FinFriend Chat — Build Phases**
+
+| Phase | What | Files | Done |
+|-------|------|-------|------|
+| 5a | **Base prompt + guardrails + chat UI** | `chat.py`, `panel_results.py` | ✅ |
+| 5b | **LLM classifier** — fast cheap call to classify question into: `debt`, `savings`, `housing`, `insurance`, `score`, `scenario`, `general` | `chat.py` | ⬜ |
+| 5c | **Category-specific prompts** — 7 prompts (including scenario), each injecting relevant user metrics. All share base system prompt as foundation. | `chat.py` | ⬜ |
+| 5d | **Conversation summarisation** — rolling summary after 8 turns. Snapshot context always injected, never dropped. | `chat.py` | ⬜ |
+| 5e | **Tool calls — What-If from chat** — chat detects scenario questions, calls `calculate_metrics()` + `score_metrics()` with modified inputs, returns real calculated score delta. Replaces LLM estimation with actual math. | `chat.py`, `health.py` | ⬜ |
+| 5f | **Cognitive offload handling** — when user says "you decide" / "you pick" / "give me your best guess", model uses snapshot anchors + standard financial rules of thumb (28% housing rule, 80% income for freelance estimate etc.) to fill in missing variables, then calls tool. Reasoning and tool call are one step — reasoning decides the estimate, tool validates with real math. | `chat.py` | ⬜ |
 
 ---
 
@@ -92,6 +103,8 @@ Each entry: what + why | files touched | priority | done
 | Module 2: Health Score + Mirror | ✅ |
 | Module 3: AI Narrative | ✅ |
 | Module 4: Contextual Education | ✅ |
+| Feedback page (/feedback) with Supabase backend | ✅ |
+| Feedback link on results page | ✅ |
 
 ---
 

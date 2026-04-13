@@ -97,6 +97,30 @@ The reason: if a user just updated their income or cut their dining budget, they
 
 ---
 
+## Why FinFriend Chat uses a routed multi-prompt architecture
+
+FinFriend Chat classifies each user question before answering it, then routes to a category-specific prompt rather than a single generic one. The categories are: debt, savings, housing, insurance, score, and general.
+
+The classification is done by a fast, cheap LLM call (Groq free tier) using a tiny prompt that returns one word. This adds negligible latency and cost. The classifier handles natural language that keyword matching would miss — "my rent is eating me alive" correctly routes to housing even without the word "mortgage".
+
+All category prompts share a common base: system guardrails, the user's financial snapshot (inputs, scores, metrics), and conversation history. The category-specific layer adds targeted instructions and injects only the metrics most relevant to that question type. This keeps answers precise without overwhelming the model with irrelevant context.
+
+A single generic prompt was considered and rejected. A generic prompt dilutes the model's focus — it has to hedge across all possible question types and ends up giving vaguer answers. A targeted prompt for a debt question can say "the user's DTI is 52% — focus your answer on that" rather than dumping all 8 metrics and hoping the model picks the right one.
+
+Guardrails are enforced at two layers: a keyword pre-filter blocks obvious out-of-scope requests before an API call is made, and the base system prompt handles edge cases the keyword filter misses. Both layers are always active regardless of which category prompt is routed to.
+
+The conversation summarisation strategy uses three tiers: full recent messages (last 6–8 turns), a rolling summary of older turns, and the user's financial snapshot which is always injected in full and never summarised or dropped. This keeps token count bounded while preserving the grounding that makes FinFriend Chat different from a generic chatbot.
+
+## Why FinFriend Chat does not use an external framework
+
+LangChain, LlamaIndex, and LangGraph were considered and rejected. They are the right tools for RAG pipelines, multi-agent orchestration, and complex chains. FinFriend's tool calls are local Python functions that already exist — `calculate_metrics()` and `score_metrics()` in `health.py`. Wrapping them in a framework would add heavy dependencies and abstractions without any real benefit.
+
+The chosen approach is native tool calling via each provider's own SDK: Anthropic tool use, OpenAI function calling, Groq function calling, Gemini function declarations. All four providers support this natively. The "framework" is `chat.py` itself.
+
+The classifier is a plain LLM call returning one word. No orchestration library needed for that either.
+
+---
+
 ## Why FinFriend Chat has hard guardrails
 
 The chat feature (Tab 4) is scoped to finance-only questions with hard rules: no specific companies or products named, no investment advice, insurance guidance limited to type selection and evaluation criteria only.
