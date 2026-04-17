@@ -30,9 +30,17 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Claude Code
+.claude/
+
+# Devcontainer (GitHub Codespaces config — remove from this list if you want Codespaces support)
+.devcontainer/
+
+# Snapshot files — may contain real financial data
+*.vit
+
 # Logs & cache
 *.log
 .cache/
 SUMMARY.md
-fake_data.vit
 TESTING.md
