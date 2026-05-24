@@ -1,3 +1,7 @@
+[client]
+toolbarMode = "viewer"
+showSidebarNavigation = false
+
 [server]
 # Disable WebSocket compression to reduce CPU overhead during LLM streaming,
 # which can help prevent the browser from missing keepalive pings.
