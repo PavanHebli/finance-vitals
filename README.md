@@ -2,7 +2,7 @@
 
 A 5-minute monthly financial health checkup. No bank connection. No account. Just your numbers and an honest score.
 
-**Live app:** https://myfinance-vitals.streamlit.app/
+**Live app:** https://myfinancevitals.app/
 
 ---
 
