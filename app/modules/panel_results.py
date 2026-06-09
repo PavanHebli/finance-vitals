@@ -53,14 +53,14 @@ def render_metrics_breakdown(metrics: dict, metric_scores: dict):
     }
 
     tiles = [
-        ("Savings Rate",   f"{metrics['savings_rate']}%",           metric_scores["savings_rate"], "Target ≥ 20%"),
-        ("Debt-to-Income", f"{metrics['debt_to_income']}%",          metric_scores["debt_to_income"], "Safe zone < 20%"),
-        ("Emergency Fund", f"{metrics['emergency_fund_months']} mo", metric_scores["emergency_fund_months"], "Goal: 3–6 months"),
-        ("Housing Ratio",  f"{metrics['housing_ratio']}%",           metric_scores["housing_ratio"], "HUD limit ≤ 30%"),
+        ("Savings Rate",   f"{metrics['savings_rate']}%",           metric_scores["savings_rate"], "Target ≥ 20%",      "50/30/20 rule"),
+        ("Debt-to-Income", f"{metrics['debt_to_income']}%",          metric_scores["debt_to_income"], "Safe zone < 20%", "CFPB mortgage standard"),
+        ("Emergency Fund", f"{metrics['emergency_fund_months']} mo", metric_scores["emergency_fund_months"], "Goal: 3–6 months", "Fidelity / Vanguard"),
+        ("Housing Ratio",  f"{metrics['housing_ratio']}%",           metric_scores["housing_ratio"], "HUD limit ≤ 30%",  "HUD affordability standard"),
     ]
 
     tiles_html = '<div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:16px;">'
-    for i, (name, value, score_data, benchmark) in enumerate(tiles):
+    for i, (name, value, score_data, benchmark, source) in enumerate(tiles):
         color = color_map[score_data["status"]]
         pct   = int(score_data["score"] / 25 * 100)
         tiles_html += f"""
@@ -87,6 +87,7 @@ def render_metrics_breakdown(metrics: dict, metric_scores: dict):
     <span style="font-size:0.8rem; font-weight:600; color:{color};">{score_data['status'].capitalize()}</span>
     <span style="font-size:0.75rem; color:var(--text-color); opacity:0.4;">{benchmark}</span>
   </div>
+  <div style="font-size:0.68rem; color:var(--text-color); opacity:0.3; margin-top:2px;">Source: {source}</div>
 </div>"""
     tiles_html += "</div>"
 
@@ -389,6 +390,8 @@ def render_results_panel():
                                 messages,
                                 st.session_state.llm_provider,
                                 st.session_state.api_key,
+                                state=dict(st.session_state),
+                                categories=categories,
                             ))
                     st.session_state.chat_history.append({"role": "assistant", "content": response})
                     # Phase 5d: summarise older turns if threshold reached

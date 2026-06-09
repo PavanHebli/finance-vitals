@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+from modules.landing import render_landing_page
 from modules.panel_form import render_form_panel
 from modules.panel_results import render_results_panel
 
@@ -27,7 +28,7 @@ def init_session_state():
         "has_emergency_fund": "Not sure",
         "contributing_401k": "No",
         "data_entered": False,
-        "current_page": "form",
+        "current_page": "landing",
         "sample_input_active": False,
         "file_uploader_key": 0,
         "loaded_snapshots": [],
@@ -57,7 +58,9 @@ def main():
 
     init_session_state()
 
-    if st.session_state.current_page == "form":
+    if st.session_state.current_page == "landing":
+        render_landing_page()
+    elif st.session_state.current_page == "form":
         render_form_panel()
     else:
         render_results_panel()

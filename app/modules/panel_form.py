@@ -67,6 +67,15 @@ def render_form_panel():
         )
 
     st.markdown("---")
+    st.markdown(
+        "<div style='background:var(--secondary-background-color); border-radius:8px; "
+        "padding:10px 16px; font-size:0.82rem; color:var(--text-color); opacity:0.7; "
+        "text-align:center; margin-bottom:8px;'>"
+        "🔒 Your data never leaves your browser session &nbsp;·&nbsp; "
+        "No account &nbsp;·&nbsp; No bank connection &nbsp;·&nbsp; No server storage"
+        "</div>",
+        unsafe_allow_html=True
+    )
 
     # --- Sample data banner ---
     col_txt, col_try, col_clear = st.columns([4, 1.2, 1])
@@ -88,11 +97,6 @@ def render_form_panel():
 
     if st.session_state.get("sample_input_active", False):
         st.success("✅ Form pre-filled with sample data — review and click **Show me my financial picture →**.")
-
-    st.markdown("---")
-
-    # --- Privacy note ---
-    st.caption("🔒 Your data is never stored. Just the figures are used to generate your report.")
 
     st.markdown("---")
 

@@ -1,9 +1,10 @@
 """
-Vitals Chat — Phase 5a + 5b
+Vitals Chat — Phase 5a–5e
 Base system prompt, guardrails, snapshot context builder, LLM chat streaming,
-question classifier with Pydantic-validated structured output.
+question classifier with Pydantic-validated structured output, tool calling for scenario questions.
 """
 from __future__ import annotations
+import json
 from typing import Optional, Literal
 from pydantic import BaseModel, ValidationError
 
@@ -62,7 +63,7 @@ Think of every question as falling into one of these buckets, and respond accord
    → This is your home turf. Dive in. Use their actual numbers. Be specific.
 
 3. FINANCE-ADJACENT questions (investment types, income strategies, insurance types, side income ideas)
-   → Answer helpfully with categories, strategies, and how things work. No specific company names. Think: "here are your options and how to think about them" — not "here's what to do."
+   → Answer helpfully with categories, strategies, and how things work. For insurance, you may name well-known providers (Cigna, Aetna, Blue Cross, Delta Dental, VSP etc.) and public resources (healthcare.gov, coveredtexas.gov) as educational references — not endorsements. Think: "here are your options and how to evaluate them" — not "sign up for this one."
 
 4. BORDERLINE questions (something mostly outside finance but with a financial angle)
    → Find the financial angle and answer that part. A question like "should I go back to school?" has a financial dimension — cost, opportunity cost, income impact. Engage with that part.
@@ -76,10 +77,11 @@ Think of every question as falling into one of these buckets, and respond accord
    → Don't refuse flatly. Explain why you're staying category-level, then give them what you can.
    → e.g. "I'd rather not point you to a specific one — that's really personal and depends on your situation. But here's what to look for when you're evaluating options…"
 
-7. WRITING TASKS (email templates, cover letters, messages, scripts)
-   → This is not your role. A friend who knows finance doesn't suddenly become a copywriter.
-   → Redirect warmly: "Writing's not really my thing — for templates, ChatGPT or Claude would do a much better job. What I can help with is the financial side of your situation."
-   → Never write email templates, job application messages, scripts, or any non-finance content.
+7. WRITING TASKS (email templates, cover letters, messages, scripts, letters)
+   → This is not your role — even if the topic is finance-related (e.g. "draft an email to my HR about insurance").
+   → A friend who knows finance explains your options clearly. They don't write your emails.
+   → Redirect warmly: "Writing's not really my thing — ChatGPT or Claude would nail that for you. What I can do is help you figure out exactly what to ask or look for, so you go in prepared."
+   → Never write email templates, messages, scripts, or any composed text intended to be sent to someone else.
 
 8. CAREER ADVICE / JOB HUNTING STRATEGY
    → You can engage with the FINANCIAL angle only — runway, urgency, income gap, burn rate.
@@ -232,82 +234,261 @@ METRICS:
 # LLM chat — streaming, all 4 providers, accepts full messages list
 # ---------------------------------------------------------------------------
 
-def call_llm_chat(messages: list, provider: str, api_key: str):
+def call_llm_chat(
+    messages: list,
+    provider: str,
+    api_key: str,
+    state: dict | None = None,
+    categories: list | None = None,
+):
     """
     Streaming chat call. Accepts a messages list:
       [{"role": "system"|"user"|"assistant", "content": "..."}]
     Yields text chunks. Use with st.write_stream().
+
+    When "scenario" is in categories and state is provided (Phase 5e),
+    runs a tool-calling flow: LLM decides whether to call calculate_score(),
+    real math executes, then LLM streams a response grounded in actual numbers.
+    All other question types use the regular streaming path unchanged.
     """
+    use_tools = bool(state and categories and "scenario" in categories)
+
+    # ── Anthropic ────────────────────────────────────────────────────────────
     if provider == "anthropic":
         import anthropic
-        # Anthropic takes system separately, not in messages list
-        system_content = " ".join(
-            m["content"] for m in messages if m["role"] == "system"
-        )
-        chat_messages = [m for m in messages if m["role"] != "system"]
+        system_content = " ".join(m["content"] for m in messages if m["role"] == "system")
+        chat_messages  = [m for m in messages if m["role"] != "system"]
         client = anthropic.Anthropic(api_key=api_key)
+
+        if use_tools:
+            tools_def = [{
+                "name": _TOOL_DEFINITION["name"],
+                "description": _TOOL_DEFINITION["description"],
+                "input_schema": _TOOL_DEFINITION["parameters"],
+            }]
+            resp = client.messages.create(
+                model="claude-opus-4-6", max_tokens=1024,
+                system=system_content, messages=chat_messages, tools=tools_def,
+            )
+            if resp.stop_reason == "tool_use":
+                tb = next(b for b in resp.content if b.type == "tool_use")
+                result = _execute_calculate_score(tb.input, state)
+                followup = chat_messages + [
+                    {"role": "assistant", "content": resp.content},
+                    {"role": "user", "content": [{"type": "tool_result", "tool_use_id": tb.id, "content": json.dumps(result)}]},
+                ]
+                with client.messages.stream(
+                    model="claude-opus-4-6", max_tokens=1024,
+                    system=system_content, messages=followup,
+                ) as stream:
+                    for text in stream.text_stream:
+                        yield text
+                return
+            # LLM chose not to call the tool — yield its text response
+            for block in resp.content:
+                if hasattr(block, "text"):
+                    yield block.text
+            return
+
         with client.messages.stream(
-            model="claude-opus-4-6",
-            max_tokens=1024,
-            system=system_content,
-            messages=chat_messages,
+            model="claude-opus-4-6", max_tokens=1024,
+            system=system_content, messages=chat_messages,
         ) as stream:
             for text in stream.text_stream:
                 yield text
 
+    # ── OpenAI ───────────────────────────────────────────────────────────────
     elif provider == "openai":
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
-        stream = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            stream=True,
-        )
+
+        if use_tools:
+            tools_def = [{"type": "function", "function": _TOOL_DEFINITION}]
+            resp = client.chat.completions.create(
+                model="gpt-4o", messages=messages, tools=tools_def, tool_choice="auto",
+            )
+            msg = resp.choices[0].message
+            if msg.tool_calls:
+                tc = msg.tool_calls[0]
+                result = _execute_calculate_score(json.loads(tc.function.arguments), state)
+                followup = messages + [
+                    {"role": "assistant", "content": msg.content,
+                     "tool_calls": [{"id": tc.id, "type": "function",
+                                     "function": {"name": tc.function.name, "arguments": tc.function.arguments}}]},
+                    {"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)},
+                ]
+                stream = client.chat.completions.create(model="gpt-4o", messages=followup, stream=True)
+                for chunk in stream:
+                    if chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
+                return
+            if msg.content:
+                yield msg.content
+            return
+
+        stream = client.chat.completions.create(model="gpt-4o", messages=messages, stream=True)
         for chunk in stream:
             if chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
+    # ── Groq ─────────────────────────────────────────────────────────────────
     elif provider == "groq":
         from groq import Groq
         client = Groq(api_key=api_key)
-        stream = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            stream=True,
-        )
+        model  = "llama-3.3-70b-versatile"
+
+        if use_tools:
+            tools_def = [{"type": "function", "function": _TOOL_DEFINITION}]
+            resp = client.chat.completions.create(
+                model=model, messages=messages, tools=tools_def, tool_choice="auto",
+            )
+            msg = resp.choices[0].message
+            if msg.tool_calls:
+                tc = msg.tool_calls[0]
+                result = _execute_calculate_score(json.loads(tc.function.arguments), state)
+                followup = messages + [
+                    {"role": "assistant", "content": msg.content,
+                     "tool_calls": [{"id": tc.id, "type": "function",
+                                     "function": {"name": tc.function.name, "arguments": tc.function.arguments}}]},
+                    {"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)},
+                ]
+                stream = client.chat.completions.create(model=model, messages=followup, stream=True)
+                for chunk in stream:
+                    if chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
+                return
+            if msg.content:
+                yield msg.content
+            return
+
+        stream = client.chat.completions.create(model=model, messages=messages, stream=True)
         for chunk in stream:
             if chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
+    # ── Gemini ───────────────────────────────────────────────────────────────
     elif provider == "gemini":
         import google.generativeai as genai
-        # Gemini handles system via model config, history separately
-        system_content = " ".join(
-            m["content"] for m in messages if m["role"] == "system"
-        )
-        chat_messages = [m for m in messages if m["role"] != "system"]
+        system_content = " ".join(m["content"] for m in messages if m["role"] == "system")
+        chat_messages  = [m for m in messages if m["role"] != "system"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(
-            "gemini-1.5-flash",
-            system_instruction=system_content,
-        )
-        # Convert to Gemini format
-        history = []
-        for m in chat_messages[:-1]:
-            history.append({
-                "role": "user" if m["role"] == "user" else "model",
-                "parts": [m["content"]],
-            })
+
+        if use_tools:
+            # Gemini: detect scenario intent, run tool, inject result as text
+            model_check = genai.GenerativeModel("gemini-1.5-flash", system_instruction=system_content)
+            history_check = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]}
+                             for m in chat_messages[:-1]]
+            chat_check = model_check.start_chat(history=history_check)
+            # Ask Gemini to extract scenario parameters as JSON
+            extract_prompt = (
+                f"{chat_messages[-1]['content']}\n\n"
+                "If this is a what-if scenario question, extract the changed financial values as JSON "
+                "with keys from: income_main, income_additional, expenses_rent, expenses_groceries, "
+                "expenses_transport, expenses_subscriptions, expenses_dining, expenses_shopping, "
+                "expenses_other, debt_monthly, savings_total. "
+                "Reply with ONLY the JSON object if it's a scenario, or ONLY the word 'none' if not."
+            )
+            extract_resp = chat_check.send_message(extract_prompt)
+            extract_text = extract_resp.text.strip()
+            if extract_text.lower() != "none":
+                try:
+                    raw = extract_text.strip("```json").strip("```").strip()
+                    args = json.loads(raw)
+                    result = _execute_calculate_score(args, state)
+                    injected = (
+                        f"{chat_messages[-1]['content']}\n\n"
+                        f"[Tool result — calculated scores for the modified scenario: {json.dumps(result)}]\n"
+                        "Use these exact numbers in your response."
+                    )
+                    final_messages = chat_messages[:-1] + [{"role": "user", "content": injected}]
+                    model_final = genai.GenerativeModel("gemini-1.5-flash", system_instruction=system_content)
+                    chat_final = model_final.start_chat(
+                        history=[{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]}
+                                 for m in final_messages[:-1]]
+                    )
+                    for chunk in chat_final.send_message(final_messages[-1]["content"], stream=True):
+                        if chunk.text:
+                            yield chunk.text
+                    return
+                except (json.JSONDecodeError, Exception):
+                    pass  # fall through to regular streaming
+
+        model = genai.GenerativeModel("gemini-1.5-flash", system_instruction=system_content)
+        history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]}
+                   for m in chat_messages[:-1]]
         chat = model.start_chat(history=history)
-        response = chat.send_message(
-            chat_messages[-1]["content"], stream=True
-        )
+        response = chat.send_message(chat_messages[-1]["content"], stream=True)
         for chunk in response:
             if chunk.text:
                 yield chunk.text
 
     else:
         yield "Unsupported provider selected."
+
+
+# ---------------------------------------------------------------------------
+# Phase 5e — Tool definition + execution
+# Used only when "scenario" is in the classified categories.
+# The LLM calls calculate_score() with modified inputs → real math, not estimation.
+# ---------------------------------------------------------------------------
+
+_TOOL_DEFINITION = {
+    "name": "calculate_score",
+    "description": (
+        "Calculate the real financial health score and metrics for a modified scenario. "
+        "Call this whenever the user asks a what-if question about changing their income, "
+        "expenses, debt payments, or savings. Pass only the values being changed — "
+        "all unspecified fields default to the user's current numbers."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "income_main":            {"type": "number", "description": "Modified monthly take-home income"},
+            "income_additional":      {"type": "number", "description": "Modified additional monthly income"},
+            "expenses_rent":          {"type": "number", "description": "Modified monthly rent or mortgage"},
+            "expenses_groceries":     {"type": "number", "description": "Modified monthly groceries"},
+            "expenses_transport":     {"type": "number", "description": "Modified monthly transport"},
+            "expenses_subscriptions": {"type": "number", "description": "Modified monthly subscriptions"},
+            "expenses_dining":        {"type": "number", "description": "Modified monthly dining"},
+            "expenses_shopping":      {"type": "number", "description": "Modified monthly shopping"},
+            "expenses_other":         {"type": "number", "description": "Modified monthly other expenses"},
+            "debt_monthly":           {"type": "number", "description": "Modified monthly debt payment"},
+            "savings_total":          {"type": "number", "description": "Modified total savings balance"},
+        },
+        "required": [],
+    },
+}
+
+
+def _execute_calculate_score(args: dict, current_state: dict) -> dict:
+    """Thin wrapper — overrides changed fields on current state, runs existing health.py functions."""
+    from modules.health import calculate_metrics, score_metrics, calculate_overall_score
+
+    modified = dict(current_state)
+    for key, value in args.items():
+        if value is not None:
+            modified[key] = float(value)
+
+    metrics       = calculate_metrics(modified)
+    metric_scores = score_metrics(metrics)
+    new_score     = calculate_overall_score(metric_scores)
+
+    return {
+        "new_overall_score": new_score,
+        "metrics": {
+            "savings_rate":          metrics["savings_rate"],
+            "debt_to_income":        metrics["debt_to_income"],
+            "emergency_fund_months": metrics["emergency_fund_months"],
+            "housing_ratio":         metrics["housing_ratio"],
+            "net_monthly_flow":      metrics["net_monthly_flow"],
+        },
+        "metric_scores": {
+            "savings_rate":          metric_scores["savings_rate"],
+            "debt_to_income":        metric_scores["debt_to_income"],
+            "emergency_fund_months": metric_scores["emergency_fund_months"],
+            "housing_ratio":         metric_scores["housing_ratio"],
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -540,24 +721,24 @@ Always reference their actual housing ratio from the snapshot.
     "insurance": """
 INSURANCE FOCUS — additional context for this conversation:
 
-Your role: explain types, frameworks, how to think about coverage. No company names. No product recommendations.
+Your role: be the financially savvy friend who explains insurance clearly and grounds advice in their actual numbers. You may reference well-known insurance providers, government marketplaces, and comparison tools by name as educational context — not as endorsements. The goal is helping them understand their options and how to evaluate them, not pointing to a specific product.
 
-Life insurance:
-- Term life: pure coverage for a fixed period. Much cheaper than whole life. Right choice for most people.
-- Whole/universal life: combines insurance + investment. High fees. Usually not the right fit.
-- Who needs it: people with dependents who rely on their income.
+Never draft emails, letters, or messages for the user to send — explain what to ask or look for instead.
 
-Health insurance:
-- HDHP (high-deductible health plan): lower premiums, higher out-of-pocket. Pairs with an HSA.
-- HSA: triple tax advantage — pre-tax contributions, tax-free growth, tax-free withdrawals for medical. One of the best savings vehicles available.
-- PPO: more flexibility, higher premium, lower deductible.
-- If generally healthy with a solid emergency fund, HDHP+HSA often wins on total cost.
+Cover what's relevant to the question — don't dump everything:
+- Health insurance plan types (HMO, PPO, EPO, HDHP) and when each makes sense
+- Key terms: premium, deductible, copay, coinsurance, out-of-pocket maximum, network
+- HSA vs FSA vs HRA — what each is, who qualifies, and why HSA is often underrated
+- Dental and vision — almost always separate plans; explain coverage tiers when relevant
+- Life insurance — term vs whole life, who actually needs it
+- Disability insurance — often overlooked, explain why it matters more than most people think
+- Where to shop — government marketplaces, private marketplaces, direct insurers — name them where helpful
 
-Disability insurance:
-- Often overlooked. Covers income if you can't work. More likely to be needed than life insurance for most working-age adults.
-- Check if employer provides short-term and long-term disability coverage first.
-
-Use their `has_health_insurance` flag from the snapshot. If they don't have health insurance, flag that gap plainly.
+Grounding in their snapshot:
+- Use their income to frame a realistic budget (5–8% of gross income is a common rule of thumb for health premiums)
+- Use their `has_health_insurance` flag — if uncovered, flag that gap plainly and point to where to start
+- If emergency fund is solid, HDHP + HSA is usually worth recommending for healthy people — lower premium, triple tax advantage
+- If emergency fund is thin, a lower-deductible plan reduces catastrophic financial risk
 """.strip(),
 
     "score": """
