@@ -137,7 +137,7 @@ _HTML = """
         <div class="step-card">
             <div class="step-number">STEP 03</div>
             <div class="step-title">Track over time</div>
-            <div class="step-desc">Save a snapshot and return next month. Watch your score move as your finances improve.</div>
+            <div class="step-desc">Save a snapshot and return next month. Watch your score move as your finances improve. Download a PDF report to share with a partner or advisor.</div>
         </div>
     </div>
     <div class="section-label">Why Vitals</div>
@@ -168,6 +168,13 @@ _HTML = """
             <div>
                 <div class="pill-title">Plain English</div>
                 <div class="pill-desc">Not a ratio dashboard. A diagnosis. Ask follow-up questions in the built-in chat.</div>
+            </div>
+        </div>
+        <div class="pill-card">
+            <div class="pill-icon">📄</div>
+            <div>
+                <div class="pill-title">Exportable report</div>
+                <div class="pill-desc">Download a clean PDF with your score, metrics, and full narrative — ready to share or print.</div>
             </div>
         </div>
     </div>

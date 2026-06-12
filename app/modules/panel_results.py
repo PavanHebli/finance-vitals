@@ -6,6 +6,7 @@ from modules.narrative import build_prompt, call_llm
 from modules.education import render_education
 from modules.simulator import render_whatif_simulator
 from modules.storage import create_snapshot, append_or_overwrite, to_vit
+from modules.export_pdf import generate_pdf
 from modules.progress import render_progress
 from modules.chat import (
     is_out_of_scope, _OUT_OF_SCOPE_RESPONSE,
@@ -215,24 +216,12 @@ def render_results_panel():
         snapshot,
     )
 
-    col_back, _, col_save = st.columns([2, 6, 2])
-    with col_back:
-        if st.button("← Edit my data"):
-            st.session_state.pop("narrative_text", None)
-            for key in _SIM_KEYS:
-                st.session_state.pop(key, None)
-            st.session_state.current_page = "form"
-            st.rerun()
-    with col_save:
-        if st.download_button(
-            "💾 Save snapshot",
-            data=to_vit(snapshots),
-            file_name="my_vitals.vit",
-            mime="application/octet-stream",
-            type="secondary",
-            use_container_width=True,
-        ):
-            log_snapshot_saved()
+    if st.button("← Edit my data"):
+        st.session_state.pop("narrative_text", None)
+        for key in _SIM_KEYS:
+            st.session_state.pop(key, None)
+        st.session_state.current_page = "form"
+        st.rerun()
 
     st.markdown("---")
 
@@ -286,10 +275,9 @@ def render_results_panel():
 
         st.markdown("---")
 
-        # Save callout — shown once after narrative is ready
         st.info(
-            "💾 **Want to track your progress next month?** "
-            "Save your snapshot using the button at the top of this page. "
+            "📥 **Want to track your progress next month?** "
+            "Use the **Export** button at the bottom of this page to save your data. "
             "Load it back in 30 days to see how your score has changed."
         )
 
@@ -408,4 +396,45 @@ def render_results_panel():
                 st.rerun()
 
     st.markdown("---")
-    st.caption("💬 [How was your experience? Share feedback →](/feedback)")
+
+    col_feedback, _, col_export = st.columns([4, 1, 2])
+    with col_feedback:
+        st.caption("💬 [How was your experience? Share feedback →](/feedback)")
+    with col_export:
+        with st.popover("📤 Export", use_container_width=True):
+            st.markdown("**📄 PDF Report**")
+            st.caption("Shareable, printable — includes your narrative and benchmarks.")
+            narrative = st.session_state.get("narrative_text", "")
+            if not narrative:
+                st.caption("_Visit the 'Your Story' tab first to include your narrative._")
+            try:
+                pdf_bytes = generate_pdf(
+                    dict(st.session_state),
+                    metrics,
+                    metric_scores,
+                    overall_score,
+                    mirror,
+                    narrative,
+                )
+                st.download_button(
+                    "Download PDF",
+                    data=pdf_bytes,
+                    file_name=f"vitals_report_{datetime.now().strftime('%Y_%m')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+            except Exception:
+                st.error("Could not generate PDF.")
+
+            st.markdown("---")
+
+            st.markdown("**📥 Save my data**")
+            st.caption("Reload your numbers next time — no re-entering required.")
+            if st.download_button(
+                "Download data file (.vit)",
+                data=to_vit(snapshots),
+                file_name="my_vitals.vit",
+                mime="application/octet-stream",
+                use_container_width=True,
+            ):
+                log_snapshot_saved()
