@@ -8,7 +8,7 @@ A 5-minute monthly financial health checkup. No bank connection. No account. Jus
 
 ## What it does
 
-Enter your rough monthly income and expenses. Vitals scores your financial health across four metrics — savings rate, debt-to-income, emergency fund, and housing cost — each benchmarked against published standards (CFPB, HUD, Fidelity). An AI then narrates your situation in plain English: what's working, what needs attention, and one concrete action for this month. Save a snapshot to track your progress over time.
+Enter your rough monthly income and expenses. Vitals scores your financial health across four metrics — savings rate, debt-to-income, emergency fund, and housing cost — each benchmarked against published standards (CFPB, HUD, Fidelity). An AI then narrates your situation in plain English: what's working, what needs attention, and one concrete action for this month. Save a snapshot to track your progress over time. Export a PDF report to share with a partner or advisor.
 
 ---
 
@@ -90,11 +90,13 @@ vitals/
 │   │   ├── get_api_key.py       # Step-by-step API key guide (all 4 providers)
 │   │   └── feedback.py          # Feedback form → Supabase
 │   └── modules/
+│       ├── landing.py           # Landing page — hero, steps, feature pills, CTA
 │       ├── panel_form.py        # Progressive form UI (income, expenses, position, context)
-│       ├── panel_results.py     # Score, 4-tile breakdown, chart, 4 result tabs
+│       ├── panel_results.py     # Score, 4-tile breakdown, chart, 4 result tabs, export popover
 │       ├── health.py            # Scoring logic + get_financial_context()
 │       ├── narrative.py         # AI narrative — 4 Q&A stream (all 4 providers)
-│       ├── chat.py              # Vitals Chat — classifier, category prompts, summarisation
+│       ├── chat.py              # Vitals Chat — classifier, category prompts, tool calls, summarisation
+│       ├── export_pdf.py        # PDF report — 2-page fpdf2 export
 │       ├── snapshot.py          # Form section render functions
 │       ├── storage.py           # Fernet encryption, .vit read/write
 │       ├── simulator.py         # What-If Simulator — sliders + live score recalculation
@@ -118,7 +120,7 @@ vitals/
 
 ## Tech stack
 
-Python · Streamlit · Plotly · Cryptography (Fernet) · Supabase · Anthropic / OpenAI / Groq / Gemini
+Python · Streamlit · Plotly · fpdf2 · Cryptography (Fernet) · Supabase · Anthropic / OpenAI / Groq / Gemini
 
 ---
 
