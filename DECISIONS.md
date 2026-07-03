@@ -76,23 +76,9 @@ Setting `ENABLE_LOGGING = false` in secrets disables all Supabase writes — use
 
 ## Progressive form
 
-The original form showed all sections at once, income, 7 expense categories, savings/debt, and personal context. This creates cognitive overload before the user has committed to anything.
+Dumping 15 fields on someone who has never used the app before is a fast way to lose them. The form needed to feel like a conversation, not a spreadsheet. Start with the two things everyone knows off the top of their head — income and rough monthly spend — and only ask for more detail once the user has seen enough to want to go deeper. Each section earns its right to appear.
 
-The current approach starts with two fields: income and a rough total expenses estimate. Sections 2–4 appear as collapsible expanders, unlocking one at a time as the user engages. Section 2 (expense breakdown) unlocks once income and total expenses are filled. Section 3 (financial position) unlocks after any expense detail is entered. Section 4 (personal context) unlocks after any position field is filled.
-
-The unlock flags are one-way: once `section2_visible = True`, it never goes back to False within a session. This prevents sections from disappearing when a widget re-renders. When detailed expenses are not provided, the rough total estimate proxies into `expenses_other` so the health score still calculates correctly from section 1 data alone.
-
-The `narrative.py` and `chat.py` prompts handle partial data gracefully — they show "not provided" for unfilled sections and instruct the model not to estimate or assume values for missing data. This means the app produces a useful result at every level of detail the user provides.
-
----
-
-## UI and theming
-
-The UI uses a custom CSS file (`.streamlit/custom.css`) loaded at startup rather than inline styles scattered across Python files. This separates styling from logic — any visual change happens in one place without touching Python.
-
-Theme colours are defined in `.streamlit/config.toml` as Streamlit theme variables. All HTML components use `var(--text-color)` and `var(--secondary-background-color)` rather than hardcoded colours — this makes every component adapt automatically to both the light and dark theme without any conditional logic. Users can toggle between light and dark via the settings menu.
-
-The default theme is a soft warm light (not harsh white) chosen deliberately. First-time users — the primary audience — are more likely to engage with something that feels calm and approachable than with a stark data-dashboard aesthetic. Dark mode is available for users who prefer it.
+This also means the tool produces something useful at every level of detail the user provides. Fill in only the first two fields and you still get a score and a narrative. Add expense breakdowns and you get more precision. The more you put in, the more accurate the picture — but you are never blocked from a result by missing fields.
 
 ---
 

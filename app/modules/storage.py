@@ -40,6 +40,7 @@ def create_snapshot(state: dict, metrics: dict, metric_scores: dict, overall_sco
             "metrics": metrics,
             "metric_scores": metric_scores,
             "narrative": narrative or "",
+            "goal": state.get("goal"),
         },
     }
 
@@ -95,3 +96,7 @@ def populate_state_from_snapshot(snapshot: dict, session_state) -> None:
     for key, value in snapshot["inputs"].items():
         if key in _INPUT_KEYS:
             session_state[key] = value
+    # Restore goal if one was saved with this snapshot
+    goal = snapshot.get("outputs", {}).get("goal")
+    if goal:
+        session_state["goal"] = goal

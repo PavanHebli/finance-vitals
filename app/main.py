@@ -38,6 +38,8 @@ def init_session_state():
         "section2_visible": False,
         "section3_visible": False,
         "section4_visible": False,
+        "goal": None,
+        "goal_dismissed": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:

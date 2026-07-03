@@ -7,6 +7,7 @@ from modules.education import render_education
 from modules.simulator import render_whatif_simulator
 from modules.storage import create_snapshot, append_or_overwrite, to_vit
 from modules.export_pdf import generate_pdf
+from modules.goal import extract_goal, render_goal_card
 from modules.progress import render_progress
 from modules.chat import (
     is_out_of_scope, _OUT_OF_SCOPE_RESPONSE,
@@ -275,6 +276,39 @@ def render_results_panel():
 
         st.markdown("---")
 
+        # Goal tracker opt-in — shown after narrative, skipped if goal already set or dismissed
+        if (
+            st.session_state.get("narrative_text")
+            and not st.session_state.get("goal")
+            and not st.session_state.get("goal_dismissed")
+        ):
+            st.markdown(
+                "<div style='font-size:0.9rem; color:var(--text-color); opacity:0.75;'>"
+                "🎯 <b>Want to track this month's recommended action as a goal?</b>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            col_set, col_skip, _ = st.columns([1.2, 0.8, 4])
+            with col_set:
+                if st.button("Set as my goal", type="primary", use_container_width=True):
+                    with st.spinner("Extracting your goal…"):
+                        goal = extract_goal(
+                            st.session_state.narrative_text,
+                            metrics,
+                            st.session_state.llm_provider,
+                            st.session_state.api_key,
+                        )
+                    if goal:
+                        st.session_state.goal = goal
+                    else:
+                        st.warning("Couldn't extract a goal from the narrative. Try again.")
+                    st.rerun()
+            with col_skip:
+                if st.button("Skip", type="secondary", use_container_width=True):
+                    st.session_state.goal_dismissed = True
+                    st.rerun()
+            st.markdown("")
+
         st.info(
             "📥 **Want to track your progress next month?** "
             "Use the **Export** button at the bottom of this page to save your data. "
@@ -291,6 +325,15 @@ def render_results_panel():
         render_whatif_simulator(overall_score, metric_scores)
 
     with tab3:
+        # Goal card — shown if a goal is set, before the charts
+        if st.session_state.get("goal"):
+            render_goal_card(
+                st.session_state.goal,
+                metrics,
+                metric_scores,
+                st.session_state.get("previous_snapshot"),
+            )
+
         current_snapshot = {
             "saved_at": datetime.now().strftime("%Y-%m"),
             "outputs": {
