@@ -2,6 +2,12 @@ import streamlit as st
 
 st.set_page_config(page_title="Get Your API Key — Vitals", page_icon="🔑", layout="wide", initial_sidebar_state="collapsed")
 
+st.markdown(
+    "<a href='/' target='_self' style='font-size:1.7rem; font-weight:700; color:var(--text-color); "
+    "text-decoration:none; letter-spacing:-0.02em;'>🩺 Vitals</a>",
+    unsafe_allow_html=True,
+)
+st.markdown("---")
 st.title("🔑 Get Your API Key")
 st.markdown("Vitals uses AI to generate your financial narrative. You bring your own API key — your data never touches our servers.")
 

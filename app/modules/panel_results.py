@@ -189,6 +189,8 @@ def render_expense_chart(state: dict, metrics: dict, metric_scores: dict):
 
 
 def render_results_panel():
+    from modules.nav import render_nav
+    render_nav()
     # Compute metrics first — needed by both the save button and the rest of the page
     metrics       = calculate_metrics(st.session_state)
     metric_scores = score_metrics(metrics)
@@ -308,12 +310,6 @@ def render_results_panel():
                     st.session_state.goal_dismissed = True
                     st.rerun()
             st.markdown("")
-
-        st.info(
-            "📥 **Want to track your progress next month?** "
-            "Use the **Export** button at the bottom of this page to save your data. "
-            "Load it back in 30 days to see how your score has changed."
-        )
 
         st.markdown("---")
         render_education(metric_scores)
@@ -440,16 +436,19 @@ def render_results_panel():
 
     st.markdown("---")
 
-    col_feedback, _, col_export = st.columns([4, 1, 2])
+    col_feedback, col_export = st.columns([6, 1])
     with col_feedback:
-        st.caption("💬 [How was your experience? Share feedback →](/feedback)")
+        st.markdown(
+            "<a href='/feedback' target='_blank' style='"
+            "font-size:0.82rem; color:var(--text-color); opacity:0.45; text-decoration:none;"
+            "letter-spacing:0.01em;'>"
+            "How was your experience? Share feedback."
+            "</a>",
+            unsafe_allow_html=True,
+        )
     with col_export:
-        with st.popover("📤 Export", use_container_width=True):
-            st.markdown("**📄 PDF Report**")
-            st.caption("Shareable, printable — includes your narrative and benchmarks.")
+        with st.popover("📤 Export"):
             narrative = st.session_state.get("narrative_text", "")
-            if not narrative:
-                st.caption("_Visit the 'Your Story' tab first to include your narrative._")
             try:
                 pdf_bytes = generate_pdf(
                     dict(st.session_state),
@@ -460,7 +459,7 @@ def render_results_panel():
                     narrative,
                 )
                 st.download_button(
-                    "Download PDF",
+                    "📄 PDF report",
                     data=pdf_bytes,
                     file_name=f"vitals_report_{datetime.now().strftime('%Y_%m')}.pdf",
                     mime="application/pdf",
@@ -469,12 +468,8 @@ def render_results_panel():
             except Exception:
                 st.error("Could not generate PDF.")
 
-            st.markdown("---")
-
-            st.markdown("**📥 Save my data**")
-            st.caption("Reload your numbers next time — no re-entering required.")
             if st.download_button(
-                "Download data file (.vit)",
+                "💾 Save data (.vit)",
                 data=to_vit(snapshots),
                 file_name="my_vitals.vit",
                 mime="application/octet-stream",

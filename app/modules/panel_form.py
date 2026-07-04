@@ -53,20 +53,8 @@ def clear_all_fields():
 
 
 def render_form_panel():
-    col1, col2 = st.columns([6, 1])
-    with col1:
-        st.title("🩺 Vitals")
-        st.markdown("### Your Personal Financial Health Checkup")
-    with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown(
-            "<a href='/feedback' target='_self' style='"
-            "font-size:1rem; padding:6px 14px; border:1.5px solid #ccc; border-radius:6px;"
-            "text-decoration:none; color:inherit;'>💬 Feedback</a>",
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("---")
+    from modules.nav import render_nav
+    render_nav()
     st.markdown(
         "<div style='background:var(--secondary-background-color); border-radius:8px; "
         "padding:10px 16px; font-size:0.82rem; color:var(--text-color); opacity:0.7; "

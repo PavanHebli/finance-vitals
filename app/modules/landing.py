@@ -2,193 +2,315 @@ import streamlit as st
 
 _CSS = """
 <style>
-[data-testid="stAppViewContainer"] { padding-top: 0 !important; }
-[data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
+[data-testid="stAppViewContainer"] { padding-top: 8px !important; }
+[data-testid="stMainBlockContainer"] { padding: 8px 5vw 0 5vw !important; max-width: 100% !important; }
 [data-testid="block-container"] { padding: 0 !important; max-width: 100% !important; }
+.main .block-container { padding: 0 !important; max-width: 100% !important; }
 
-.landing-wrap {
-    font-family: 'Inter', -apple-system, sans-serif;
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 60px 24px 40px;
+.lp-nav {
+    display: flex;
+    align-items: center;
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(128,128,128,0.1);
+    margin: 0 -5vw;
+    padding-left: 5vw;
+    padding-right: 5vw;
 }
-.hero-eyebrow {
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--primary-color);
-    margin-bottom: 18px;
-}
-.hero-headline {
-    font-size: clamp(2rem, 5vw, 3.2rem);
+.lp-logo {
+    font-size: 1.05rem;
     font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    margin-bottom: 20px;
     color: var(--text-color);
+    letter-spacing: -0.01em;
 }
-.hero-sub {
-    font-size: 1.1rem;
-    line-height: 1.7;
-    color: var(--text-color);
-    opacity: 0.65;
-    max-width: 600px;
-    margin-bottom: 12px;
+.lp-hero {
+    padding: 72px 0 40px;
 }
-.section-label {
+.lp-eyebrow {
     font-size: 0.72rem;
     font-weight: 600;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.13em;
     text-transform: uppercase;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+.lp-headline {
+    font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    color: var(--text-color);
+    max-width: 700px;
+    margin-bottom: 22px;
+}
+.lp-sub {
+    font-size: 1.1rem;
+    line-height: 1.72;
+    color: var(--text-color);
+    opacity: 0.62;
+    max-width: 540px;
+    margin-bottom: 0;
+}
+.lp-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: 40px;
+    margin-left: -5vw;
+    margin-right: -5vw;
+    border-top: 1px solid rgba(128,128,128,0.1);
+    border-bottom: 1px solid rgba(128,128,128,0.1);
+    background: var(--secondary-background-color);
+}
+.lp-stat {
+    padding: 26px 0;
+    text-align: center;
+}
+.lp-stat + .lp-stat {
+    border-left: 1px solid rgba(128,128,128,0.1);
+}
+.lp-stat-num {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+}
+.lp-stat-label {
+    display: block;
+    font-size: 0.68rem;
     color: var(--text-color);
     opacity: 0.4;
-    margin-bottom: 16px;
-    margin-top: 48px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-top: 5px;
 }
-.steps-grid {
+.lp-section {
+    padding: 56px 0;
+}
+.lp-section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-color);
+    opacity: 0.35;
+    margin-bottom: 28px;
+}
+.lp-steps {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+}
+.lp-step {
+    background: var(--secondary-background-color);
+    border-radius: 14px;
+    padding: 28px 22px;
+}
+.lp-step-num {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+}
+.lp-step-title {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+.lp-step-desc {
+    font-size: 0.83rem;
+    color: var(--text-color);
+    opacity: 0.58;
+    line-height: 1.62;
+}
+.lp-features {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 14px;
-    margin-bottom: 8px;
 }
-.step-card {
-    background: var(--secondary-background-color);
+.lp-feature {
+    padding: 22px 20px;
+    border: 1px solid rgba(128,128,128,0.11);
     border-radius: 12px;
-    padding: 20px 18px;
 }
-.step-number {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin-bottom: 10px;
-    letter-spacing: 0.05em;
+.lp-feature-icon {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+    display: block;
 }
-.step-title {
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: var(--text-color);
-    margin-bottom: 6px;
-}
-.step-desc {
-    font-size: 0.82rem;
-    color: var(--text-color);
-    opacity: 0.6;
-    line-height: 1.55;
-}
-.pills-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 8px;
-}
-.pill-card {
-    background: var(--secondary-background-color);
-    border-radius: 10px;
-    padding: 16px 18px;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-}
-.pill-icon { font-size: 1.2rem; line-height: 1; margin-top: 2px; }
-.pill-title {
+.lp-feature-title {
     font-size: 0.88rem;
     font-weight: 600;
     color: var(--text-color);
-    margin-bottom: 3px;
+    margin-bottom: 7px;
 }
-.pill-desc {
+.lp-feature-desc {
     font-size: 0.78rem;
     color: var(--text-color);
-    opacity: 0.55;
-    line-height: 1.5;
+    opacity: 0.54;
+    line-height: 1.58;
 }
-.trust-bar {
-    margin-top: 44px;
-    padding: 16px 20px;
+.lp-trust {
     background: var(--secondary-background-color);
-    border-radius: 10px;
-    font-size: 0.8rem;
-    color: var(--text-color);
-    opacity: 0.55;
+    border-top: 1px solid rgba(128,128,128,0.1);
+    padding: 20px 5vw;
+    margin-left: -5vw;
+    margin-right: -5vw;
     text-align: center;
-    line-height: 1.6;
+    font-size: 0.76rem;
+    color: var(--text-color);
+    opacity: 0.4;
+    letter-spacing: 0.03em;
 }
 </style>
 """
 
-_HTML = """
-<div class="landing-wrap">
-    <div class="hero-eyebrow">🩺 Vitals — Financial Health</div>
-    <div class="hero-headline">Know where you stand<br>financially.</div>
-    <div class="hero-sub">A 5-minute checkup that scores your finances against the same benchmarks banks and government agencies use — and explains what it all means in plain English, no jargon.</div>
-    <div class="section-label">How it works</div>
-    <div class="steps-grid">
-        <div class="step-card">
-            <div class="step-number">STEP 01</div>
-            <div class="step-title">Enter your numbers</div>
-            <div class="step-desc">Rough estimates are fine. Income, expenses, savings, debt — takes about 5 minutes.</div>
+_NAV = '<div class="lp-nav"><span class="lp-logo">🩺 Vitals</span></div>'
+
+_HERO = """
+<div class="lp-hero">
+    <div class="lp-eyebrow">Financial Health Checkup · Free · No account needed</div>
+    <div class="lp-headline">Finally know<br>where you stand.</div>
+    <div class="lp-sub">
+        Most financial tools are built for people who already get it. Vitals is for everyone else.
+        Enter your numbers, get a score, and hear in plain English exactly what's going on
+        and one concrete thing to do about it.
+    </div>
+</div>
+"""
+
+_STATS = """
+<div class="lp-stats">
+    <div class="lp-stat">
+        <span class="lp-stat-num">0–100</span>
+        <span class="lp-stat-label">Health score</span>
+    </div>
+    <div class="lp-stat">
+        <span class="lp-stat-num">4</span>
+        <span class="lp-stat-label">Metrics tracked</span>
+    </div>
+    <div class="lp-stat">
+        <span class="lp-stat-num">5 min</span>
+        <span class="lp-stat-label">To your score</span>
+    </div>
+    <div class="lp-stat">
+        <span class="lp-stat-num">0</span>
+        <span class="lp-stat-label">Data on our servers</span>
+    </div>
+</div>
+"""
+
+_HOW = """
+<div class="lp-section">
+    <div class="lp-section-label">How it works</div>
+    <div class="lp-steps">
+        <div class="lp-step">
+            <div class="lp-step-num">Step 01</div>
+            <div class="lp-step-title">Enter your numbers</div>
+            <div class="lp-step-desc">
+                Income and a rough monthly spend estimate is enough to start.
+                Add expense detail and savings for a more complete picture. Takes about 5 minutes.
+            </div>
         </div>
-        <div class="step-card">
-            <div class="step-number">STEP 02</div>
-            <div class="step-title">Get your score</div>
-            <div class="step-desc">0–100 health score across 4 metrics. AI explains your picture in plain English and gives you one action.</div>
+        <div class="lp-step">
+            <div class="lp-step-num">Step 02</div>
+            <div class="lp-step-title">Get your score and story</div>
+            <div class="lp-step-desc">
+                A 0–100 health score across four metrics. An AI narrative explains what your
+                numbers mean in plain English and gives you one concrete action for this month.
+            </div>
         </div>
-        <div class="step-card">
-            <div class="step-number">STEP 03</div>
-            <div class="step-title">Track over time</div>
-            <div class="step-desc">Save a snapshot and return next month. Watch your score move as your finances improve. Download a PDF report to share with a partner or advisor.</div>
+        <div class="lp-step">
+            <div class="lp-step-num">Step 03</div>
+            <div class="lp-step-title">Track your progress</div>
+            <div class="lp-step-desc">
+                Save a snapshot, return next month, and watch your score move.
+                Set a goal, chat with your data, or export a PDF to share with a partner or advisor.
+            </div>
         </div>
     </div>
-    <div class="section-label">Why Vitals</div>
-    <div class="pills-grid">
-        <div class="pill-card">
-            <div class="pill-icon">🏦</div>
-            <div>
-                <div class="pill-title">No bank connection</div>
-                <div class="pill-desc">Enter estimates manually. No OAuth, no account access, no risk.</div>
+</div>
+"""
+
+_WHY = """
+<div class="lp-section" style="padding-top:0;">
+    <div class="lp-section-label">Why Vitals</div>
+    <div class="lp-features">
+        <div class="lp-feature">
+            <span class="lp-feature-icon">📊</span>
+            <div class="lp-feature-title">Real benchmarks, not arbitrary thresholds</div>
+            <div class="lp-feature-desc">
+                CFPB, HUD, Fidelity — the same standards banks, lenders, and government agencies use.
+                You're measured against numbers that actually mean something.
             </div>
         </div>
-        <div class="pill-card">
-            <div class="pill-icon">🔒</div>
-            <div>
-                <div class="pill-title">No account required</div>
-                <div class="pill-desc">Nothing stored on our servers. Your data lives in your session and your file.</div>
+        <div class="lp-feature">
+            <span class="lp-feature-icon">💬</span>
+            <div class="lp-feature-title">A diagnosis, not a dashboard</div>
+            <div class="lp-feature-desc">
+                A 38% DTI means something different at 24 than at 40. Charts can't carry that nuance.
+                The AI narrative puts your numbers in context — no jargon required.
             </div>
         </div>
-        <div class="pill-card">
-            <div class="pill-icon">📊</div>
-            <div>
-                <div class="pill-title">Real benchmarks</div>
-                <div class="pill-desc">CFPB, HUD, Fidelity standards — the same thresholds lenders and advisors use.</div>
+        <div class="lp-feature">
+            <span class="lp-feature-icon">🔒</span>
+            <div class="lp-feature-title">No account, no bank connection</div>
+            <div class="lp-feature-desc">
+                You enter estimates manually. Nothing goes to a server. Your data lives in your session
+                and, if you want, an encrypted file on your own device.
             </div>
         </div>
-        <div class="pill-card">
-            <div class="pill-icon">💬</div>
-            <div>
-                <div class="pill-title">Plain English</div>
-                <div class="pill-desc">Not a ratio dashboard. A diagnosis. Ask follow-up questions in the built-in chat.</div>
+        <div class="lp-feature">
+            <span class="lp-feature-icon">🎯</span>
+            <div class="lp-feature-title">One action, not a list of twelve</div>
+            <div class="lp-feature-desc">
+                Every checkup ends with a single recommended action for this month. Set it as a goal
+                and track the one metric that matters most right now.
             </div>
         </div>
-        <div class="pill-card">
-            <div class="pill-icon">📄</div>
-            <div>
-                <div class="pill-title">Exportable report</div>
-                <div class="pill-desc">Download a clean PDF with your score, metrics, and full narrative — ready to share or print.</div>
+        <div class="lp-feature">
+            <span class="lp-feature-icon">📈</span>
+            <div class="lp-feature-title">Month-to-month tracking</div>
+            <div class="lp-feature-desc">
+                Come back each month with updated numbers. Progress charts show where you started
+                and how far you've come — in score points, not just gut feeling.
+            </div>
+        </div>
+        <div class="lp-feature">
+            <span class="lp-feature-icon">📄</span>
+            <div class="lp-feature-title">Exportable PDF report</div>
+            <div class="lp-feature-desc">
+                Download a clean report with your score, metrics, and full narrative —
+                ready to share with a partner or financial advisor.
             </div>
         </div>
     </div>
-    <div class="trust-bar">No account &nbsp;·&nbsp; No bank login &nbsp;·&nbsp; No data stored on our servers &nbsp;·&nbsp; Free to use</div>
+</div>
+"""
+
+_TRUST = """
+<div class="lp-trust">
+    No account &nbsp;·&nbsp; No bank login &nbsp;·&nbsp; No data stored on our servers
+    &nbsp;·&nbsp; Free to use &nbsp;·&nbsp; Open source
 </div>
 """
 
 
 def render_landing_page():
     st.markdown(_CSS, unsafe_allow_html=True)
-    st.markdown(_HTML, unsafe_allow_html=True)
+    st.markdown(_NAV, unsafe_allow_html=True)
+    st.markdown(_HERO, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([2, 2, 2])
-    with col2:
-        if st.button("Check my financial health →", use_container_width=True, type="primary"):
+    cta_col, _ = st.columns([1.6, 4])
+    with cta_col:
+        if st.button("Try it free here", use_container_width=True, type="primary"):
             st.session_state.current_page = "form"
             st.rerun()
+
+    st.markdown(_STATS, unsafe_allow_html=True)
+    st.markdown(_HOW, unsafe_allow_html=True)
+    st.markdown(_WHY, unsafe_allow_html=True)
+    st.markdown(_TRUST, unsafe_allow_html=True)

@@ -8,6 +8,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+st.markdown(
+    "<a href='/' target='_self' style='font-size:1.7rem; font-weight:700; color:var(--text-color); "
+    "text-decoration:none; letter-spacing:-0.02em;'>🩺 Vitals</a>",
+    unsafe_allow_html=True,
+)
+st.markdown("---")
 st.title("💬 Share Your Feedback")
 st.markdown(
     "Vitals is built in the open. Your feedback directly shapes what gets built next. "
