@@ -20,12 +20,13 @@ footer { display: none !important; }
 
 /* ── Scale variables ──────────────────────────────────────────── */
 :root {
-    --label-size:   1.05rem;
-    --caption-size: 0.5rem;
-    --body-size:    1.05rem;
-    --input-size:   1.0rem;
-    --button-size:  1.0rem;
-    --tab-size:     1.5rem;
+    --label-size:      1.05rem;
+    --caption-size:    0.5rem;
+    --body-size:       1.05rem;
+    --input-size:      1.0rem;
+    --button-size:     1.0rem;
+    --button-size-sm:  0.45rem;
+    --tab-size:        1.5rem;
 }
 
 /* ── Body / markdown ──────────────────────────────────────────── */
@@ -58,6 +59,13 @@ label p { font-size: var(--label-size) !important; font-weight: 500; }
 }
 .stButton > button:active, .stDownloadButton > button:active {
     transform: translateY(0) scale(0.99) !important;
+}
+
+/* ── Goal tracker utility buttons (scoped via container key) ──── */
+.st-key-goal_card_btns button,
+.st-key-goal_optin_btns button {
+    transform: scale(0.75) !important;
+    transform-origin: center center !important;
 }
 
 /* ── Tabs ─────────────────────────────────────────────────────── */

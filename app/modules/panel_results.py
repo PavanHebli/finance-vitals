@@ -219,7 +219,7 @@ def render_results_panel():
         snapshot,
     )
 
-    if st.button("← Edit my data"):
+    if st.button("Edit data"):
         st.session_state.pop("narrative_text", None)
         for key in _SIM_KEYS:
             st.session_state.pop(key, None)
@@ -276,39 +276,47 @@ def render_results_panel():
         else:
             st.markdown(st.session_state.narrative_text.replace("$", "\\$"))
 
-        st.markdown("---")
-
         # Goal tracker opt-in — shown after narrative, skipped if goal already set or dismissed
         if (
             st.session_state.get("narrative_text")
             and not st.session_state.get("goal")
             and not st.session_state.get("goal_dismissed")
         ):
+            st.markdown("---")
             st.markdown(
                 "<div style='font-size:0.9rem; color:var(--text-color); opacity:0.75;'>"
                 "🎯 <b>Want to track this month's recommended action as a goal?</b>"
                 "</div>",
                 unsafe_allow_html=True,
             )
-            col_set, col_skip, _ = st.columns([1.2, 0.8, 4])
-            with col_set:
-                if st.button("Set as my goal", type="primary", use_container_width=True):
-                    with st.spinner("Extracting your goal…"):
-                        goal = extract_goal(
-                            st.session_state.narrative_text,
-                            metrics,
-                            st.session_state.llm_provider,
-                            st.session_state.api_key,
-                        )
-                    if goal:
-                        st.session_state.goal = goal
-                    else:
-                        st.warning("Couldn't extract a goal from the narrative. Try again.")
-                    st.rerun()
-            with col_skip:
-                if st.button("Skip", type="secondary", use_container_width=True):
-                    st.session_state.goal_dismissed = True
-                    st.rerun()
+            timeline_months = st.select_slider(
+                "How long to give yourself?",
+                options=[1, 2, 3, 6],
+                value=3,
+                format_func=lambda x: f"{x} month{'s' if x > 1 else ''}",
+            )
+            with st.container(key="goal_optin_btns"):
+                col_set, col_skip, _ = st.columns([1.2, 0.8, 4], gap="small")
+                with col_set:
+                    if st.button("Set as my goal", type="primary", use_container_width=True):
+                        with st.spinner("Extracting your goal…"):
+                            goal = extract_goal(
+                                st.session_state.narrative_text,
+                                metrics,
+                                st.session_state.llm_provider,
+                                st.session_state.api_key,
+                            )
+                        if goal:
+                            goal["target_months"] = timeline_months
+                            goal["set_month"] = datetime.now().strftime("%Y-%m")
+                            st.session_state.goal = goal
+                        else:
+                            st.warning("Couldn't extract a goal from the narrative. Try again.")
+                        st.rerun()
+                with col_skip:
+                    if st.button("Skip", type="secondary", use_container_width=True):
+                        st.session_state.goal_dismissed = True
+                        st.rerun()
             st.markdown("")
 
         st.markdown("---")

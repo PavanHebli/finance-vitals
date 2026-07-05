@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime
 import streamlit as st
 
 
@@ -103,9 +104,37 @@ def render_goal_card(goal: dict, current_metrics: dict, metric_scores: dict, pre
         )
         return
 
+    # Timeline calculation
+    target_months  = goal.get("target_months", 3)
+    set_month_str  = goal.get("set_month", "")
+    timeline_line  = ""
+    deadline_passed = False
+    if set_month_str:
+        try:
+            set_dt          = datetime.strptime(set_month_str, "%Y-%m")
+            now_dt          = datetime.now()
+            months_elapsed  = (now_dt.year - set_dt.year) * 12 + (now_dt.month - set_dt.month)
+            months_remaining = target_months - months_elapsed
+            if months_remaining <= 0:
+                deadline_passed = True
+                timeline_line   = f"⏰ Deadline passed ({target_months}-month goal)"
+            elif months_remaining == 1:
+                timeline_line = f"1 month remaining of {target_months}"
+            else:
+                timeline_line = f"{months_remaining} months remaining of {target_months}"
+        except ValueError:
+            pass
+
+    deadline_color = "#FF8C00" if deadline_passed else "var(--primary-color)"
+    timeline_html  = (
+        f"<div style='font-size:0.78rem; color:{'#FF8C00' if deadline_passed else 'var(--text-color)'}; "
+        f"opacity:{'1' if deadline_passed else '0.45'}; margin-top:6px;'>{timeline_line}</div>"
+        if timeline_line else ""
+    )
+
     st.markdown(
         f"<div style='background:var(--secondary-background-color); border-radius:12px; "
-        f"padding:16px 20px; margin-bottom:16px; border-left:3px solid var(--primary-color);'>"
+        f"padding:16px 20px; margin-bottom:16px; border-left:3px solid {deadline_color};'>"
         f"<div style='font-size:0.72rem; font-weight:600; letter-spacing:0.1em; "
         f"text-transform:uppercase; color:var(--text-color); opacity:0.45; margin-bottom:8px;'>"
         f"🎯 Your goal</div>"
@@ -113,6 +142,7 @@ def render_goal_card(goal: dict, current_metrics: dict, metric_scores: dict, pre
         f"{action}</div>"
         f"<div style='font-size:0.82rem; color:var(--text-color); opacity:0.55;'>"
         f"Tracking: <b>{label}</b> &nbsp;·&nbsp; {benchmark_label}</div>"
+        f"{timeline_html}"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -141,11 +171,17 @@ def render_goal_card(goal: dict, current_metrics: dict, metric_scores: dict, pre
                     unsafe_allow_html=True,
                 )
 
-    col_update, _ = st.columns([1, 4])
-    with col_update:
-        if st.button("Update goal", key="goal_update_btn", type="secondary"):
+    with st.container(key="goal_card_btns"):
+        col_change, col_cancel, _ = st.columns([1, 1, 4], gap="small")
+    with col_change:
+        if st.button("Change goal", key="goal_change_btn", type="secondary"):
             del st.session_state["goal"]
             st.session_state["goal_dismissed"] = False
+            st.rerun()
+    with col_cancel:
+        if st.button("Cancel tracking", key="goal_cancel_btn", type="secondary"):
+            del st.session_state["goal"]
+            st.session_state["goal_dismissed"] = True
             st.rerun()
 
     st.markdown("---")

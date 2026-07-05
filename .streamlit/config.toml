@@ -7,6 +7,7 @@ showSidebarNavigation = false
 # which can help prevent the browser from missing keepalive pings.
 enableWebsocketCompression = false
 maxUploadSize = 10
+runOnSave = true
 
 [browser]
 gatherUsageStats = false

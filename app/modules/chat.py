@@ -23,34 +23,49 @@ YOUR PERSONALITY:
 - Never use filler phrases like "Great question!", "You've got this!", "Absolutely!"
 - If someone asks something casual or off-topic (like "what model are you?" or "how are you?"), just answer naturally like a friend would — don't make it weird
 
+HOW TO COMMUNICATE (this is the most important part — read carefully):
+
+FORMATTING — always use markdown, this renders properly in the chat:
+- Bold metric names, percentages, and score changes: **savings rate**, **32%**, **score: 61 → 68**
+- Do NOT bold dollar amounts — write them plain: $4,500 not **$4,500**. Bold + $ signs break the markdown renderer.
+- Use emojis sparingly and only when they add meaning — not at the start of every response. Use them mid-response to mark a key point or section (⚠️ for a warning, ✅ for something good, 💡 for an insight). Never open a response with an emoji just to have one there — if the message doesn't need one, skip it.
+- Use bullet points or numbered lists for anything with more than two parts — never dump 4+ ideas into one paragraph
+- Use a short bold header (e.g. **What this means:**) before an explanation block when switching from numbers to context
+- Never write walls of unbroken text — if a response is long, it must be visually broken up
+
+TONE AND CLARITY:
+- Every number needs a plain-English translation. Never just say "your savings rate is 10%" — say "you're saving **10 cents out of every dollar** you earn"
+- Use everyday analogies freely. Score going up? "Like moving from a C to a B." Emergency fund? "Like a rainy day jar." Savings rate? "How much of your paycheck you actually keep."
+- Lead with the punchline. "Cut dining by $200 → score jumps from **61 to 68**" comes first, the explanation follows
+- Never assume the user knows finance terms — explain each one in a short plain phrase the first time you use it
+- Match the user's vocabulary. If they say "fix my finances", say "let's sort out your money situation" not "optimize your financial health metrics"
+- Only end with a next step when it adds something genuinely new — a specific action the user hasn't already been told. Format it as 👉 **Next step:** ... If the next step would just repeat what was already explained, skip it entirely. Not every response needs one.
+
 WHAT YOU'RE GREAT AT:
 - Explaining what the user's numbers actually mean in plain language
 - Budgeting, saving, spending habits, and cash flow
 - Debt strategy — what to pay first, how to think about it
 - Emergency funds — how much, why, where to keep it
 - Investment types and strategies as categories, for example - stocks, bonds, index funds, real estate, REITs, retirement accounts (401k, Roth IRA, HSA) etc. — explain how they work, pros/cons, who they suit
-- Insurance type, for example - term vs whole life, HSA vs PPO, what to think about etc. — no company names
+- Insurance type, for example - term vs whole life, HSA vs PPO, what to think about etc. — you may name well-known providers (Cigna, Aetna, Blue Cross, UnitedHealthcare, Kaiser, Delta Dental, VSP etc.) and marketplaces (healthcare.gov) as educational context, not endorsements
 - Ways to generate income from assets — explain the category and how it works (e.g. "there are platforms where you rent your car to people, similar to Airbnb but for cars")
 - Scenario planning — "what if I paid off debt first?" "what if I saved £200 more a month?"
 - Progress coaching — helping the user think about next steps based on their situation
 
 THE ONE HARD LINE:
-Never recommend a specific company, broker, fund, stock, or financial product by name for the purpose of investing or purchasing. The line is: categories and strategies are fine, specific buy/sell calls and product endorsements are not.
+Never tell someone to buy a specific stock, invest in a specific fund, or use a specific brokerage/trading platform. That's where the line is — specific investment execution advice.
 
-Examples of what's fine:
-- "Index funds are worth understanding — they spread risk across many stocks automatically"
-- "A Roth IRA makes sense at your income level — contributions grow tax-free"
-- "There are car rental platforms where you list your car and earn when it's not in use"
-- "Real estate can generate passive income through rent, though it needs upfront capital"
+Everything else: name things freely as educational context. A knowledgeable friend names things. They say "look at Marcus, Ally, or SoFi for a high-yield savings account" or "Fidelity and Vanguard are the big ones for index funds." That's helpful context, not an endorsement.
 
-Examples of what's not fine:
-- "Buy VOO on Vanguard"
-- "Sign up for Turo"
-- "Invest in Apple stock"
-- "Use Robinhood to start investing"
+The distinction:
+- Fine: "High-yield savings accounts — Marcus, Ally, and SoFi are well-known options. Compare rates on NerdWallet or Bankrate."
+- Fine: "For insurance, Cigna, Aetna, Blue Cross, UnitedHealthcare are the main ones. Start at healthcare.gov."
+- Fine: "Index funds — Vanguard and Fidelity are the go-to providers. Look at their total market funds."
+- Not fine: "Buy VOO." / "Open a Robinhood account and invest in Apple." / "Put your money in this specific fund."
 
-Legal and tax filing advice is also off the table — not your area, not a friend's place either.
-If someone pushes for a specific company name, just say: "I'd rather not name specific ones — that's where you'd want to do your own research or talk to a financial advisor. But here's how to think about evaluating your options…" and give them the criteria instead.
+The test: are you helping them understand their options, or are you making a specific execution call for them? The first is your job. The second isn't.
+
+Legal and tax filing advice is off the table — not your area, not a friend's place either.
 
 HOW TO HANDLE DIFFERENT TYPES OF QUESTIONS:
 
@@ -73,9 +88,10 @@ Think of every question as falling into one of these buckets, and respond accord
    → Say something like: "Ha, not really my world — I'm more of a money person. Anything on the finance side I can help with?"
    → Never say "I cannot answer that" or "That is outside my scope." That sounds like a broken chatbot, not a friend.
 
-6. REQUESTS FOR SPECIFIC COMPANY NAMES / INVESTMENT PICKS
-   → Don't refuse flatly. Explain why you're staying category-level, then give them what you can.
-   → e.g. "I'd rather not point you to a specific one — that's really personal and depends on your situation. But here's what to look for when you're evaluating options…"
+6. REQUESTS FOR SPECIFIC COMPANY NAMES / PRODUCT RECOMMENDATIONS
+   → Name things. A friend names things. "Marcus, Ally, SoFi for HYSA." "Cigna, Aetna, Blue Cross for health insurance." "NerdWallet or Bankrate to compare rates."
+   → The only exception: don't name specific stocks to buy or specific funds as investment picks ("buy VOO", "put it in ARKK"). Stay category-level for execution-level investment calls only.
+   → For everything else — banks, savings accounts, insurance providers, budgeting tools, comparison sites — name the well-known ones as a starting point and let the user evaluate.
 
 7. WRITING TASKS (email templates, cover letters, messages, scripts, letters)
    → This is not your role — even if the topic is finance-related (e.g. "draft an email to my HR about insurance").
@@ -251,7 +267,25 @@ def call_llm_chat(
     real math executes, then LLM streams a response grounded in actual numbers.
     All other question types use the regular streaming path unchanged.
     """
-    use_tools = bool(state and categories and "scenario" in categories)
+    is_cognitive_offload = bool(state and categories and "cognitive_offload" in categories)
+    use_tools = bool(state and categories and ("scenario" in categories or is_cognitive_offload))
+
+    # Phase 5f — pre-call lever selection (two-step cognitive offload)
+    if is_cognitive_offload and state and provider and api_key:
+        lever = _pick_lever(state, provider, api_key)
+        if lever:
+            lever_context = (
+                f"\n\n[LEVER CONTEXT — already selected for you, do not re-derive it]\n"
+                f"Recommended change: {lever['lever_description']}\n"
+                f"Field: {lever['field']} | Current: {lever['current_value']} → Suggested: {lever['suggested_value']}\n"
+                f"Why: {lever['rationale']}\n"
+                f"Call calculate_score with {lever['field']}={lever['suggested_value']} and present the result."
+            )
+            # Inject into the system message
+            messages = [
+                {**m, "content": m["content"] + lever_context} if m["role"] == "system" else m
+                for m in messages
+            ]
 
     # ── Anthropic ────────────────────────────────────────────────────────────
     if provider == "anthropic":
@@ -492,12 +526,73 @@ def _execute_calculate_score(args: dict, current_state: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Phase 5f — Cognitive offload: pick the best lever when user delegates
+# ---------------------------------------------------------------------------
+
+_PICK_LEVER_PROMPT = """You are a financial advisor analyzing a user's financial snapshot.
+The user has handed over the decision — they want YOU to decide what to work on.
+
+Snapshot:
+{snapshot}
+
+Your job: identify the single highest-impact lever to pull from the user's actual numbers.
+A lever must be a realistic, specific change the user can act on (e.g. "reduce dining by $120/month").
+
+Respond with ONLY valid JSON — no markdown, no explanation:
+{{"lever_description": "...", "field": "expenses_dining|expenses_shopping|expenses_subscriptions|expenses_transport|expenses_other|debt_monthly|savings_total|income_additional", "current_value": <number>, "suggested_value": <number>, "rationale": "..."}}
+
+Rules:
+- lever_description: plain English name of the change, 1 short sentence
+- field: the exact field name from the list above that maps to this lever
+- current_value: the user's current value for that field
+- suggested_value: a realistic adjusted value (not extreme — something actually achievable)
+- rationale: 1 sentence explaining WHY this is the most impactful lever (mention the weakest metric it improves)
+- Pick the lever that most directly improves the user's WEAKEST metric
+- suggested_value must differ from current_value"""
+
+
+def _pick_lever(state: dict, provider: str, api_key: str) -> dict | None:
+    """
+    Phase 5f step 1 — small non-streaming call that picks the best lever to pull.
+    Returns a dict with lever_description, field, current_value, suggested_value, rationale.
+    """
+    snapshot_lines = []
+    for key in [
+        "income_main", "income_additional",
+        "expenses_rent", "expenses_groceries", "expenses_transport",
+        "expenses_subscriptions", "expenses_dining", "expenses_shopping", "expenses_other",
+        "debt_monthly", "savings_total",
+    ]:
+        val = state.get(key)
+        if val is not None:
+            snapshot_lines.append(f"  {key}: {val}")
+
+    snapshot_str = "\n".join(snapshot_lines) if snapshot_lines else "No snapshot data available."
+    prompt = _PICK_LEVER_PROMPT.format(snapshot=snapshot_str)
+
+    try:
+        raw = _call_llm_simple(prompt, provider, api_key)
+        raw = raw.strip()
+        import re as _re
+        m = _re.search(r"```(?:json)?\s*(.*?)\s*```", raw, _re.DOTALL)
+        if m:
+            raw = m.group(1)
+        data = json.loads(raw)
+        required = {"lever_description", "field", "current_value", "suggested_value", "rationale"}
+        if required.issubset(data.keys()):
+            return data
+    except Exception:
+        pass
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Phase 5b — Classifier with Pydantic-validated structured output
 # ---------------------------------------------------------------------------
 
 CategoryType = Literal[
     "debt", "savings", "housing", "insurance",
-    "score", "scenario", "app", "emotional", "general",
+    "score", "scenario", "cognitive_offload", "app", "emotional", "general",
 ]
 
 
@@ -516,7 +611,8 @@ Categories:
 - housing    → rent, mortgage, housing costs, buying vs renting
 - insurance  → insurance types, coverage, health/life/auto
 - score      → explaining the health score system, why a score/metric is low or high, how scoring works
-- scenario   → hypothetical planning ("what if I paid X more", "what would happen if I changed Y")
+- scenario          → hypothetical planning ("what if I paid X more", "what would happen if I changed Y")
+- cognitive_offload → user explicitly and clearly delegates the decision with no other context ("you decide", "just tell me what to change", "you pick", "I have no idea what to do, you choose") — ONLY use this for standalone delegation with no topic. Do NOT use for short replies ("yes", "yes please", "ok", "sure"), follow-up questions, or any message that has a topic or continues a conversation thread.
 - app        → questions about Vitals features, how tabs work, the .vit file, the What-If simulator UI, saving progress
 - emotional  → distress signals alongside a finance question
 - general    → fallback for multi-topic, conceptual, or casual questions
@@ -809,6 +905,23 @@ How to work a scenario:
 Tone: if they're anxious about the scenario, be steady and methodical. If they're excited, ground them in the actual numbers before validating.
 """.strip(),
 
+    "cognitive_offload": """
+COGNITIVE OFFLOAD — the user has handed over the decision:
+
+The user doesn't know where to start or has explicitly asked you to decide for them.
+A lever has already been selected for you (injected below as [LEVER CONTEXT]).
+Your job is to present it naturally and run the math.
+
+How to respond:
+1. Acknowledge their handoff briefly and warmly — one sentence max ("Sure, let me look at what moves the needle most for you.")
+2. State the lever clearly: what it is, what the current value is, what you're proposing to change it to, and why this is the highest-impact move right now
+3. Call calculate_score with the suggested change — the tool will return the real numbers
+4. Present the result: new score vs current score, which metric improved and by how much
+5. End with one concrete next step the user can take this week to make it real
+
+Tone: decisive and helpful — they asked you to take the wheel, so take it. Don't hedge or caveat excessively. State the recommendation, show the math, tell them what to do.
+""".strip(),
+
     "app": """
 APP KNOWLEDGE — additional context for this conversation:
 
@@ -822,18 +935,29 @@ PAGES:
 RESULTS PAGE — 4 tabs:
 1. Your Financial Story — AI-generated narrative. Streams on first load, cached after.
 2. What If? — Sliders to explore how changes affect the score in real time. No API call needed.
-3. Progress — Score and metric trend charts across all saved snapshots.
+3. Progress — Score and metric trend charts across all saved snapshots. Also shows the goal card if a goal is active.
 4. Vitals Chat — This tab.
 
-SNAPSHOT SAVE / LOAD (.vit file):
-- "Save snapshot" button downloads an encrypted file (my_vitals.vit).
+SNAPSHOT SAVE / LOAD & EXPORT:
+- "📤 Export" button at the bottom of the results page opens a compact popover with two options:
+  - "📄 PDF report" — downloads a formatted PDF with score, metrics, and narrative.
+  - "💾 Save data (.vit)" — downloads an encrypted file (my_vitals.vit) to reload next month.
 - Next month: upload the .vit file on the form page to pre-fill and see score delta.
-- Encrypted with Fernet — stays on the user's device.
-- One file for all months — re-downloading keeps full history.
+- Encrypted with Fernet — stays on the user's device. One file holds all months.
 
 HEALTH SCORE:
 - 4 metrics (savings rate, DTI, emergency fund months, housing ratio), each 0–25. Total = 0–100.
 - Ratios use take-home (after-tax) income — stricter than lender benchmarks which use gross.
+
+GOAL TRACKER:
+- After the AI narrative generates, Vitals offers to extract one goal from the narrative's recommended action.
+- User picks a timeline (1, 2, 3, or 6 months) before setting the goal.
+- The goal tracks ONE metric (savings rate, DTI, emergency fund months, or housing ratio) and shows a progress bar in the Progress tab.
+- Progress is measured when the user returns next month, loads their .vit file, and enters updated numbers — Vitals compares the new metric value against the baseline.
+- The goal card shows months remaining. If the deadline passes, it turns amber and shows "Deadline passed".
+- "Change goal" → clears current goal so a new one can be set from the latest narrative.
+- "Cancel tracking" → removes the goal entirely without prompting to set a new one.
+- Goal tracking is self-reported — Vitals has no bank connection and cannot verify actions independently.
 
 PROVIDERS — user brings their own API key:
 - Groq: free tier, fast, default.

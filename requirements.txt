@@ -8,3 +8,4 @@ plotly>=5.0.0
 cryptography>=3.0.0
 supabase>=2.0.0
 fpdf2>=2.7.0
+streamlit-extras>=0.4.0
