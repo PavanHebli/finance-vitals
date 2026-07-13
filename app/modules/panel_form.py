@@ -1,7 +1,7 @@
 import random
 from pathlib import Path
 import streamlit as st
-from modules.snapshot import render_api_config, render_income_section, render_expenses_section, render_position_section, render_context_section
+from modules.snapshot import get_llm_config, render_api_config, render_income_section, render_expenses_section, render_position_section, render_context_section
 from modules.storage import load_vit, get_latest, populate_state_from_snapshot
 from modules.analytics import log_snapshot_loaded
 
@@ -52,6 +52,178 @@ def clear_all_fields():
     st.session_state.sample_input_active = False
 
 
+_CATEGORY_LABELS = {
+    "rent":          "Rent / Mortgage",
+    "groceries":     "Groceries",
+    "transport":     "Transport",
+    "subscriptions": "Subscriptions",
+    "dining":        "Dining out",
+    "shopping":      "Shopping",
+    "other":         "Other",
+    "income":        "Income",
+}
+
+_EXPENSE_CATEGORIES = ["rent", "groceries", "transport", "subscriptions", "dining", "shopping", "other"]
+
+_CATEGORY_STATE_KEYS = {
+    "rent":          "expenses_rent",
+    "groceries":     "expenses_groceries",
+    "transport":     "expenses_transport",
+    "subscriptions": "expenses_subscriptions",
+    "dining":        "expenses_dining",
+    "shopping":      "expenses_shopping",
+    "other":         "expenses_other",
+}
+
+
+def _render_pdf_import():
+    with st.expander("📄 Import from bank statement  ·  optional — auto-fills the expense form"):
+        st.caption(
+            "Upload a PDF bank statement. "
+            "Parsing happens locally — only merchant names and amounts are sent to AI for categorization. "
+            "No account numbers, names, or balances ever leave your device."
+        )
+
+        pdf_file = st.file_uploader(
+            "Bank statement PDF",
+            type=["pdf"],
+            key="pdf_import_upload",
+            label_visibility="collapsed",
+        )
+
+        if pdf_file is None:
+            st.session_state.pop("pdf_import_result", None)
+            return
+
+        if st.button("Parse statement →", type="primary"):
+            provider, api_key = get_llm_config()
+            if not api_key:
+                st.error("Please enter your API key above before importing.")
+                return
+
+            from modules.importer import extract_lines, parse_transactions, categorize_expenses
+            with st.spinner("Step 1 of 2 — reading PDF locally…"):
+                lines, _ = extract_lines(pdf_file.read())
+
+            if not lines:
+                st.error(
+                    "Could not find transaction data in this PDF. "
+                    "Check the terminal logs for details on what was detected."
+                )
+                return
+
+            with st.spinner(f"Step 2 of 2 — identifying {len(lines)} lines of transactions…"):
+                transactions, _ = parse_transactions(lines, provider, api_key)
+
+            if not transactions:
+                st.error("Could not identify any transactions. Try a different statement or format.")
+                return
+
+            with st.spinner("Categorizing expenses…"):
+                categorized, _ = categorize_expenses(transactions, provider, api_key)
+
+            if not categorized:
+                st.error("Categorization failed. Please try again.")
+                return
+
+            st.session_state["pdf_import_result"] = {
+                "transactions": categorized,
+            }
+            st.rerun()
+
+        result = st.session_state.get("pdf_import_result")
+        if not result:
+            return
+
+        txns  = result["transactions"]
+        n_exp = sum(1 for t in txns if t.get("type") == "expense")
+        n_inc = sum(1 for t in txns if t.get("type") == "income")
+        n_unk = sum(1 for t in txns if t.get("type") == "unknown")
+
+
+        st.success(
+            f"Found **{len(txns)} transactions** — "
+            f"{n_exp} expenses, {n_inc} income"
+            + (f", {n_unk} unrecognized" if n_unk else "") + "."
+        )
+
+        # Per-transaction category assignment
+        st.markdown("**Assign each transaction to a category — then fill the form:**")
+        st.caption("Income rows are marked automatically and won't affect expense totals.")
+
+        all_options = list(_CATEGORY_LABELS.keys())  # includes "income"
+        option_labels = list(_CATEGORY_LABELS.values())
+
+        assigned: dict[int, str] = {}
+        for i, t in enumerate(txns):
+            default_cat = t.get("category", "other")
+            if default_cat not in all_options:
+                default_cat = "other"
+
+            amt  = float(t.get("amount", 0))
+            desc = t.get("description", "")
+            date = t.get("date") or "—"
+
+            col_desc, col_sel = st.columns([3, 1])
+            with col_desc:
+                st.markdown(f"**{desc}** &nbsp; ${amt:,.2f} &nbsp;·&nbsp; {date}")
+            with col_sel:
+                chosen = st.selectbox(
+                    "Category",
+                    options=all_options,
+                    format_func=lambda k: _CATEGORY_LABELS[k],
+                    index=all_options.index(default_cat),
+                    key=f"pdf_cat_{i}",
+                    label_visibility="collapsed",
+                )
+            assigned[i] = chosen
+
+        # Compute totals from assignments
+        totals: dict[str, float] = {cat: 0.0 for cat in _EXPENSE_CATEGORIES}
+        income_total = 0.0
+        for i, t in enumerate(txns):
+            amt = float(t.get("amount", 0))
+            cat = assigned.get(i, "other")
+            if cat == "income":
+                income_total += amt
+            elif cat in totals:
+                totals[cat] += amt
+
+        # Summary of totals
+        st.markdown("---")
+        st.markdown("**Expense totals from your assignments:**")
+        summary_cols = st.columns(4)
+        non_zero = [(c, v) for c, v in totals.items() if v > 0]
+        for j, (cat, val) in enumerate(non_zero):
+            with summary_cols[j % 4]:
+                st.metric(_CATEGORY_LABELS[cat], f"${val:,.2f}")
+
+        if income_total > 0:
+            st.info(f"Income detected: **${income_total:,.2f}** — will be filled into your monthly income field.")
+
+        col_fill, col_discard, _ = st.columns([1.5, 1, 3])
+        with col_fill:
+            if st.button("Fill form with these numbers →", type="primary", use_container_width=True):
+                for cat, state_key in _CATEGORY_STATE_KEYS.items():
+                    st.session_state[state_key] = round(totals[cat], 2)
+
+                if income_total > 0:
+                    st.session_state["income_main"] = round(income_total, 2)
+
+                total = sum(totals.values())
+                st.session_state["expenses_total_estimate"] = round(total, 2)
+                st.session_state["section2_visible"] = True
+                st.session_state["section3_visible"] = True
+                st.session_state.pop("pdf_import_result", None)
+                st.rerun()
+        with col_discard:
+            if st.button("Discard", type="secondary", use_container_width=True):
+                st.session_state.pop("pdf_import_result", None)
+                st.rerun()
+
+    st.markdown("---")
+
+
 def render_form_panel():
     from modules.nav import render_nav
     render_nav()
@@ -87,6 +259,9 @@ def render_form_panel():
         st.success("✅ Form pre-filled with sample data — review and click **Show me my financial picture →**.")
 
     st.markdown("---")
+
+    # --- PDF bank statement import ---
+    _render_pdf_import()
 
     if st.session_state.get("previous_snapshot"):
         date = st.session_state.previous_snapshot["saved_at"]

@@ -1041,14 +1041,14 @@ Do not include the user's financial snapshot (income, score, metrics) — that i
 Return only the summary text, no headers or labels."""
 
 
-def _call_llm_simple(prompt: str, provider: str, api_key: str) -> str:
+def _call_llm_simple(prompt: str, provider: str, api_key: str, max_tokens: int = 300) -> str:
     """Non-streaming single-turn LLM call. Returns the response as a string."""
     if provider == "anthropic":
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
         resp = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=300,
+            model="claude-sonnet-4-6",
+            max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
         return resp.content[0].text
@@ -1057,7 +1057,7 @@ def _call_llm_simple(prompt: str, provider: str, api_key: str) -> str:
         from openai import OpenAI
         resp = OpenAI(api_key=api_key).chat.completions.create(
             model="gpt-4o",
-            max_tokens=300,
+            max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
         return resp.choices[0].message.content
@@ -1066,7 +1066,7 @@ def _call_llm_simple(prompt: str, provider: str, api_key: str) -> str:
         from groq import Groq
         resp = Groq(api_key=api_key).chat.completions.create(
             model="llama-3.3-70b-versatile",
-            max_tokens=300,
+            max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
         return resp.choices[0].message.content

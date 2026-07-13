@@ -211,8 +211,8 @@ _HOW = """
             <div class="lp-step-num">Step 01</div>
             <div class="lp-step-title">Enter your numbers</div>
             <div class="lp-step-desc">
-                Income and a rough monthly spend estimate is enough to start.
-                Add expense detail and savings for a more complete picture. Takes about 5 minutes.
+                Type in estimates, or upload a PDF bank statement and let Vitals fill the form for you.
+                Either way, nothing leaves your device — parsing happens locally.
             </div>
         </div>
         <div class="lp-step">
@@ -259,8 +259,9 @@ _WHY = """
             <span class="lp-feature-icon">🔒</span>
             <div class="lp-feature-title">No account, no bank connection</div>
             <div class="lp-feature-desc">
-                You enter estimates manually. Nothing goes to a server. Your data lives in your session
-                and, if you want, an encrypted file on your own device.
+                Upload a PDF statement or type estimates manually — either way, account numbers,
+                names, and balances never leave your device. Only merchant names and amounts
+                go to AI for categorization.
             </div>
         </div>
         <div class="lp-feature">

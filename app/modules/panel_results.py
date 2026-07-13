@@ -9,6 +9,7 @@ from modules.storage import create_snapshot, append_or_overwrite, to_vit
 from modules.export_pdf import generate_pdf
 from modules.goal import extract_goal, render_goal_card
 from modules.progress import render_progress
+from modules.snapshot import get_llm_config
 from modules.chat import (
     is_out_of_scope, _OUT_OF_SCOPE_RESPONSE,
     STARTER_QUESTIONS, build_snapshot_context,
@@ -191,6 +192,7 @@ def render_expense_chart(state: dict, metrics: dict, metric_scores: dict):
 def render_results_panel():
     from modules.nav import render_nav
     render_nav()
+    provider, api_key = get_llm_config()
     # Compute metrics first — needed by both the save button and the rest of the page
     metrics       = calculate_metrics(st.session_state)
     metric_scores = score_metrics(metrics)
@@ -266,8 +268,8 @@ def render_results_panel():
             try:
                 result = st.write_stream(call_llm(
                     prompt,
-                    st.session_state.llm_provider,
-                    st.session_state.api_key
+                    provider,
+                    api_key
                 ))
                 st.session_state.narrative_text = result
                 log_narrative_done()
@@ -303,8 +305,8 @@ def render_results_panel():
                             goal = extract_goal(
                                 st.session_state.narrative_text,
                                 metrics,
-                                st.session_state.llm_provider,
-                                st.session_state.api_key,
+                                provider,
+                                api_key,
                             )
                         if goal:
                             goal["target_months"] = timeline_months
@@ -405,8 +407,8 @@ def render_results_panel():
             else:
                 categories = classify_question(
                     pending_message,
-                    st.session_state.llm_provider,
-                    st.session_state.api_key,
+                    provider,
+                    api_key,
                 )
                 log_chat_message(categories[0] if categories else "general")
                 snapshot_context = build_snapshot_context(
@@ -423,8 +425,8 @@ def render_results_panel():
                         with st.chat_message("assistant", avatar="🩺"):
                             response = st.write_stream(call_llm_chat(
                                 messages,
-                                st.session_state.llm_provider,
-                                st.session_state.api_key,
+                                provider,
+                                api_key,
                                 state=dict(st.session_state),
                                 categories=categories,
                             ))
@@ -433,8 +435,8 @@ def render_results_panel():
                     updated_history, updated_summary = maybe_summarise(
                         st.session_state.chat_history,
                         st.session_state.get("chat_summary", ""),
-                        st.session_state.llm_provider,
-                        st.session_state.api_key,
+                        provider,
+                        api_key,
                     )
                     st.session_state.chat_history = updated_history
                     st.session_state.chat_summary = updated_summary

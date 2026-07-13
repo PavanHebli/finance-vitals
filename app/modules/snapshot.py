@@ -1,6 +1,11 @@
 import streamlit as st
 
 
+def get_llm_config() -> tuple[str, str]:
+    """Returns (provider, api_key) from session state. Use everywhere instead of reading keys directly."""
+    return st.session_state.get("llm_provider", "groq"), st.session_state.get("api_key", "")
+
+
 def render_api_config():
     """
     Renders the API configuration section at the top of the form.
