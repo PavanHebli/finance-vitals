@@ -2,20 +2,21 @@
 Bank statement PDF importer.
 
 Two-step flow:
-  Step 1 (local)  — coordinate-based table detection extracts only description + amount rows
-  Step 2 (LLM #1) — parse extracted rows into structured transactions {date, description, amount, type}
+  Step 1 (local)  — coordinate-based extraction finds all numeric clusters on each page
+  Step 2 (LLM #1) — parse ALL clusters into structured transactions {date, description, amount, type}
   Step 3 (LLM #2) — categorize expense transactions into Vitals form fields
 
 How table detection works:
   - Amounts in bank statements are always right-aligned in consistent x-coordinate columns
   - pdfplumber gives every word an exact x-position (e.g. 480.3, 481.1, 479.8)
   - Words in the same column vary by a few pixels — we snap to 15px buckets to group them
-  - This reveals distinct columns: [description col, amount col, balance col]
-  - Rightmost bucket = running balance (skip); second rightmost = transaction amount (keep)
-  - Table y-range found via row spacing: table rows are evenly spaced, non-table text has
-    large irregular gaps — we walk the amount column rows and stop at the first big gap
+  - We find ALL contiguous clusters of amount rows on each page (transactions, summaries, fee tables)
+  - All clusters are sent to the LLM with section labels — it identifies and uses only transactions
+  - Running balance column is included — LLM knows to ignore it and use transaction amounts
+  - Separate debit/credit columns handled naturally — LLM picks whichever has a value per row
 
-What goes to LLM: description text + amounts only. Balance, account numbers, header PII — never sent.
+What goes to LLM: all extracted table rows including amounts. Account numbers, names,
+addresses are never in the table rows and never sent.
 """
 from __future__ import annotations
 import json
@@ -61,23 +62,19 @@ def _find_amount_columns(all_words: list[dict]) -> list[int]:
     return sorted(Counter(xs).keys())
 
 
-def _find_table_y_range(
+def _find_clusters(
     words: list[dict],
     amount_cols: list[int],
     col_tolerance: int = 20,
-) -> tuple[float, float] | tuple[None, None]:
+) -> list[tuple[float, float]]:
     """
-    Finds the y-range (start_y, end_y) of the transaction table on a single page.
+    Returns (start_y, end_y) for EVERY contiguous cluster of amount rows on this page.
 
-    Key property: table rows are evenly spaced (consistent line height).
-    Non-table content (account summaries, headers, footers) sits in separate blocks
-    with larger gaps between them.
+    A cluster is a group of rows where consecutive row gaps stay within 3× the median
+    row gap. A larger gap means a section break (new table, header, footer, etc.).
 
-    Accepts ALL non-balance amount columns so that rows with only a deposit OR only
-    a withdrawal are both detected — a row only needs an amount in any one column.
-
-    We collect y-positions of all numbers across all detection columns, deduplicate,
-    then walk them in order. A gap more than 3x the median gap = table ended.
+    Returning all clusters lets the LLM decide which one is the transaction table —
+    we never have to guess locally.
     """
     ys = sorted(set(
         w["top"]
@@ -87,50 +84,44 @@ def _find_table_y_range(
     ))
 
     if not ys:
-        return None, None
-
+        return []
     if len(ys) == 1:
-        # Single transaction — wrap a small window around it
-        return ys[0] - 4, ys[0] + 20
+        return [(ys[0] - 4, ys[0] + 20)]
 
     gaps = [ys[i + 1] - ys[i] for i in range(len(ys) - 1)]
     median_gap = sorted(gaps)[len(gaps) // 2]
 
-    table_ys = [ys[0]]
+    clusters: list[list[float]] = []
+    current: list[float] = [ys[0]]
     for i, gap in enumerate(gaps):
         if gap <= median_gap * 3:
-            table_ys.append(ys[i + 1])    # consistent spacing — still in table
+            current.append(ys[i + 1])
         else:
-            if len(table_ys) >= 1:
-                break                      # big gap = table ended
-            table_ys = [ys[i + 1]]        # pre-table noise, reset
+            clusters.append(current)
+            current = [ys[i + 1]]
+    clusters.append(current)
 
-    return min(table_ys), max(table_ys)
+    return [(min(c), max(c)) for c in clusters]
 
 
 def _reconstruct_rows(
     words: list[dict],
-    balance_col_x: int,
     table_start_y: float,
     table_end_y: float,
-    col_tolerance: int = 20,
     y_bucket_px: int = 4,
 ) -> list[str]:
     """
-    Reconstructs text lines from words that fall inside the table y-range,
-    excluding the balance column.
+    Reconstructs text lines from words that fall inside the table y-range.
+    All columns included — balance column identification is left to the LLM.
 
     Words on the same visual row have y-positions within a few pixels of each other.
     We snap to 4px y-buckets to group them into lines, then sort by x to preserve
-    left-to-right reading order (date → description → amount).
+    left-to-right reading order (date → description → amount → balance).
     """
     rows: dict[int, list[dict]] = {}
     for w in words:
         if not (table_start_y - 4 <= w["top"] <= table_end_y + 4):
-            continue                                     # outside table
-        if w["x0"] >= balance_col_x - col_tolerance:
-            continue                                     # balance column — skip
-
+            continue
         bucket = round(w["top"] / y_bucket_px) * y_bucket_px
         rows.setdefault(bucket, []).append(w)
 
@@ -196,11 +187,9 @@ def extract_lines(pdf_bytes: bytes) -> tuple[list[str], list[str]]:
         return [], debug
 
     # ── Global column detection (all pages combined) ──────────────────────
-    # More pages = more data points = more reliable clustering
     amount_cols = _find_amount_columns(all_words_global)
 
     if not amount_cols:
-        # Sample words that look numeric so we can diagnose the format
         sample_numeric = [
             w["text"] for w in all_words_global
             if any(c.isdigit() for c in w["text"]) and len(w["text"]) <= 12
@@ -208,66 +197,44 @@ def extract_lines(pdf_bytes: bytes) -> tuple[list[str], list[str]]:
         _log(f"No amount columns found. Sample numeric-looking words: {sample_numeric}")
         debug.append("❌ No financial amounts detected — could not find transaction columns.")
         debug.append(f"   Sample words with digits: {sample_numeric[:10]}")
-        debug.append("   If amounts use an unusual format, report this so support can be added.")
         return [], debug
 
-    # Rightmost cluster = balance column (skip it)
-    # Everything to its left = transaction columns (debit, credit, or single amount)
-    # For TABLE DETECTION we use the leftmost amount column — most likely to have
-    # a number on every transaction row (some rows only have a debit OR a credit,
-    # but the leftmost non-balance column appears most frequently)
-    # For EXTRACTION we skip only the balance column and keep everything else
-    balance_col_x  = amount_cols[-1]
-    # Pick the column with the most hits for table detection (most reliable anchor)
-    all_words_nums = [w for w in all_words_global if _NUM_RE.match(w["text"])]
-    col_counts = Counter(round(w["x0"] / 15) * 15 for w in all_words_nums)
-    non_balance_cols = [x for x in amount_cols if x != balance_col_x]
-    if not non_balance_cols:
-        non_balance_cols = [balance_col_x]  # only one column — use it for detection
-
+    col_counts = Counter(round(w["x0"] / 15) * 15 for w in all_words_global if _NUM_RE.match(w["text"]))
     _log(f"All amount columns: x={amount_cols}  |  counts={dict(col_counts)}")
-    _log(f"  Detection columns: x={non_balance_cols}  |  Balance column (skip): x≈{balance_col_x}")
     debug.append(f"📊 Amount columns: x={amount_cols}")
-    debug.append(f"   Detection columns: x={non_balance_cols}  |  Skipping balance at x≈{balance_col_x}")
 
-    # ── Per-page table detection + row extraction ─────────────────────────
+    # ── Per-page cluster detection + row extraction ───────────────────────
+    # All clusters on every page are extracted and labelled.
+    # The LLM receives all sections and identifies the transaction table itself.
     all_table_lines: list[str] = []
 
     for page_num, words in pages_words:
         if not words:
             continue
 
-        start_y, end_y = _find_table_y_range(words, non_balance_cols)
+        clusters = _find_clusters(words, amount_cols)
 
-        if start_y is None:
-            _log(f"  Page {page_num}: no table rows found — skipping")
-            debug.append(f"  Page {page_num}: no table rows detected — skipping")
+        if not clusters:
+            _log(f"  Page {page_num}: no clusters found — skipping")
+            debug.append(f"  Page {page_num}: no clusters found — skipping")
             continue
 
-        _log(f"  Page {page_num}: table at y={start_y:.0f}–{end_y:.0f}")
-        debug.append(f"  Page {page_num}: table at y={start_y:.0f}–{end_y:.0f}")
+        _log(f"  Page {page_num}: {len(clusters)} cluster(s)")
+        debug.append(f"  Page {page_num}: {len(clusters)} cluster(s)")
 
-        # Raw dump — everything inside the table y-range before any column filtering
-        raw_rows: dict[int, list[dict]] = {}
-        for w in words:
-            if start_y - 4 <= w["top"] <= end_y + 4:
-                bucket = round(w["top"] / 4) * 4
-                raw_rows.setdefault(bucket, []).append(w)
+        for ci, (start_y, end_y) in enumerate(clusters, start=1):
+            page_lines = _reconstruct_rows(words, start_y, end_y)
+            if not page_lines:
+                continue
 
-        _log(f"  Page {page_num}: RAW TABLE ({len(raw_rows)} rows):")
-        debug.append(f"  Page {page_num}: raw table dump ({len(raw_rows)} rows):")
-        for y in sorted(raw_rows):
-            raw_line = " ".join(
-                w["text"] for w in sorted(raw_rows[y], key=lambda w: w["x0"])
-            )
-            _log(f"    {raw_line}")
-            debug.append(f"    {raw_line}")
+            label = f"=== Page {page_num} · Section {ci} ({len(page_lines)} rows) ==="
+            _log(f"  {label}")
+            for line in page_lines:
+                _log(f"    {line}")
+            debug.append(f"  {label}")
 
-        page_lines = _reconstruct_rows(words, balance_col_x, start_y, end_y)
-
-        _log(f"  Page {page_num}: {len(page_lines)} lines after balance column removed")
-        debug.append(f"  Page {page_num}: {len(page_lines)} lines after balance column removed")
-        all_table_lines.extend(page_lines)
+            all_table_lines.append(label)
+            all_table_lines.extend(page_lines)
 
     if not all_table_lines:
         debug.append("❌ No table content extracted.")
@@ -285,32 +252,39 @@ def extract_lines(pdf_bytes: bytes) -> tuple[list[str], list[str]]:
 
 # ── Step 2: LLM call #1 — parse rows into structured transactions ─────────────
 
-_PARSE_PROMPT = """You are parsing rows extracted from a bank statement transaction table.
+_PARSE_PROMPT = """You are parsing raw text rows extracted from a bank statement PDF.
 
-Rows (date · description · amount — balance column already removed):
+The input below may contain MULTIPLE SECTIONS from the same PDF — transaction tables,
+account summaries, fee tables, balance worksheets, and other non-transaction content.
+Section markers (=== Page X · Section Y ===) separate distinct clusters of rows.
+
 {lines}
 
-Task: return a JSON array of transactions. One object per transaction.
-Skip: column header rows, subtotal rows, blank rows, section labels.
+YOUR TASKS:
+1. Identify which section(s) contain real bank or credit card transactions.
+2. Extract ONLY those transactions — ignore summaries, fee tables, headers, totals rows.
+3. Return a JSON array of transaction objects.
 
-IMPORTANT: If the rows do not contain real bank/credit card transactions with recognisable
-dates, merchant descriptions, and amounts — return an empty array [].
-Do NOT invent or fabricate transactions. If the input looks like a report, summary, or
-non-transaction document, return [].
+IMPORTANT RULES:
+- If NO section contains real transactions, return [].
+- Do NOT invent or fabricate transactions.
+- Each row may end with a running balance (e.g. "127.13 209.39" — 127.13 is the amount,
+  209.39 is the running balance). Use the transaction amount, ignore the balance.
+- Some statements have separate Deposits and Withdrawals columns — one will be blank per row.
+  Use whichever column has a value as the transaction amount.
+- Multi-line transactions: if a description wraps across rows before the amount appears,
+  merge into one record.
 
-Each object must have exactly:
-  "date"        — YYYY-MM-DD. If only month/day given (e.g. "4/24"), infer year from context. null if truly unknown.
-  "description" — merchant or narrative text only. No amounts, no dates, no reference numbers.
+Each transaction object must have exactly:
+  "date"        — YYYY-MM-DD. Infer year from statement context if only month/day given. null if unknown.
+  "description" — merchant or narrative text only. No amounts, dates, or reference numbers.
   "amount"      — positive number always
   "type"        — "expense" | "income" | "unknown"
 
-Determine type from description alone — not from sign or column position:
-- expense : stores, restaurants, streaming, fuel, rent payments, ATM, phone bills
-- income  : salary, payroll, direct deposit, Zelle received, BACS credit, interest
-- unknown : bare "PAYMENT", bare "TRANSFER", pure reference codes with no merchant context
-
-Multi-line transactions: if a description wraps across multiple rows before the amount
-appears, merge all those rows into one transaction record.
+Determine type from description:
+- expense : stores, restaurants, streaming, fuel, rent, ATM, phone bills, transfers out
+- income  : salary, payroll, direct deposit, Zelle received, transfers in, interest
+- unknown : bare PAYMENT/TRANSFER with no merchant context
 
 Respond with ONLY a valid JSON array — no explanation, no markdown."""
 
