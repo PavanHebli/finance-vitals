@@ -63,7 +63,7 @@ def _find_amount_columns(all_words: list[dict]) -> list[int]:
 
 def _find_table_y_range(
     words: list[dict],
-    amount_col_x: int,
+    amount_cols: list[int],
     col_tolerance: int = 20,
 ) -> tuple[float, float] | tuple[None, None]:
     """
@@ -73,17 +73,18 @@ def _find_table_y_range(
     Non-table content (account summaries, headers, footers) sits in separate blocks
     with larger gaps between them.
 
-    We collect y-positions of all numbers in the transaction amount column, then
-    walk them in order. A gap more than 3x the median gap = section break = table ended.
+    Accepts ALL non-balance amount columns so that rows with only a deposit OR only
+    a withdrawal are both detected — a row only needs an amount in any one column.
 
-    Works for a single transaction — returns a small window around that row.
+    We collect y-positions of all numbers across all detection columns, deduplicate,
+    then walk them in order. A gap more than 3x the median gap = table ended.
     """
-    ys = sorted(
+    ys = sorted(set(
         w["top"]
         for w in words
         if _NUM_RE.match(w["text"])
-        and abs(w["x0"] - amount_col_x) <= col_tolerance
-    )
+        and any(abs(w["x0"] - cx) <= col_tolerance for cx in amount_cols)
+    ))
 
     if not ys:
         return None, None
@@ -221,13 +222,13 @@ def extract_lines(pdf_bytes: bytes) -> tuple[list[str], list[str]]:
     all_words_nums = [w for w in all_words_global if _NUM_RE.match(w["text"])]
     col_counts = Counter(round(w["x0"] / 15) * 15 for w in all_words_nums)
     non_balance_cols = [x for x in amount_cols if x != balance_col_x]
-    # Use the non-balance column that appears most often = strongest anchor for detection
-    detect_col_x = max(non_balance_cols, key=lambda x: col_counts.get(x, 0)) if non_balance_cols else balance_col_x
+    if not non_balance_cols:
+        non_balance_cols = [balance_col_x]  # only one column — use it for detection
 
     _log(f"All amount columns: x={amount_cols}  |  counts={dict(col_counts)}")
-    _log(f"  Detection column : x≈{detect_col_x}  |  Balance column (skip): x≈{balance_col_x}")
+    _log(f"  Detection columns: x={non_balance_cols}  |  Balance column (skip): x≈{balance_col_x}")
     debug.append(f"📊 Amount columns: x={amount_cols}")
-    debug.append(f"   Using x≈{detect_col_x} for table detection  |  Skipping balance at x≈{balance_col_x}")
+    debug.append(f"   Detection columns: x={non_balance_cols}  |  Skipping balance at x≈{balance_col_x}")
 
     # ── Per-page table detection + row extraction ─────────────────────────
     all_table_lines: list[str] = []
@@ -236,7 +237,7 @@ def extract_lines(pdf_bytes: bytes) -> tuple[list[str], list[str]]:
         if not words:
             continue
 
-        start_y, end_y = _find_table_y_range(words, detect_col_x)
+        start_y, end_y = _find_table_y_range(words, non_balance_cols)
 
         if start_y is None:
             _log(f"  Page {page_num}: no table rows found — skipping")
@@ -291,6 +292,11 @@ Rows (date · description · amount — balance column already removed):
 
 Task: return a JSON array of transactions. One object per transaction.
 Skip: column header rows, subtotal rows, blank rows, section labels.
+
+IMPORTANT: If the rows do not contain real bank/credit card transactions with recognisable
+dates, merchant descriptions, and amounts — return an empty array [].
+Do NOT invent or fabricate transactions. If the input looks like a report, summary, or
+non-transaction document, return [].
 
 Each object must have exactly:
   "date"        — YYYY-MM-DD. If only month/day given (e.g. "4/24"), infer year from context. null if truly unknown.

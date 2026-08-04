@@ -18,12 +18,14 @@ Each entry: what + why | files touched | priority | done
 
 | # | Feature | What + Why | Files | Done |
 |---|---------|------------|-------|------|
+| 18 | **Calendar Reminder Button** | 2 hours of work. Directly addresses zero return-visit problem. After results page: "Want a reminder to check your Vitals next month?" Opens a pre-filled `.ics` file or Google Calendar link. No account, no email, no server. | `panel_results.py` | ⬜ |
+| 19 | **Score Delta Prominence** | Already built — just make it more visible. When someone loads a previous snapshot, the score change should be impossible to miss. Current delta is there but easy to overlook. | `panel_results.py` | ⬜ |
 | 0 | **Landing Page** | No value proposition shown before the form — users land cold with zero context. Fatal trust gap for a finance app. Single page: what Vitals does, why it's safe, one CTA. Must ship before any other outreach. | new `landing.py`, `main.py` | ✅ |
 | 1 | **Form Framing Change** | Estimate-friendly labels and captions. Unblocks users who don't track spending precisely. | `snapshot.py`, `panel_form.py` | ✅ |
 | 2 | **What-If Simulator** | 5 sliders — see how income/expense changes affect score live. Pure math, no AI. | `simulator.py`, `panel_results.py`, `health.py` | ✅ |
 | 3 | **Snapshot Save / Load** | Save encrypted `.vit` file, re-upload next month to pre-fill form. Enables all history features. | `storage.py`, `panel_form.py`, `panel_results.py` | ✅ |
 | 4 | **Progress Charts** | Score + 4 metric trend lines + cash flow across all saved snapshots. Merges saved history with current session live. | `progress.py`, `panel_results.py` | ✅ |
-| 5 | **Vitals Chat** | Finance-only chat (hard guardrails). Scope: scenario planning, progress coaching, insurance type guidance (no company/product names). Context: current + previous snapshot, both narratives, conversation history. Built in phases — see below. | `chat.py`, `panel_results.py` | ⬜ |
+| 5 | **Vitals Chat** | Finance-only chat (hard guardrails). Scope: scenario planning, progress coaching, insurance type guidance (no company/product names). Context: current + previous snapshot, both narratives, conversation history. Built in phases — see below. | `chat.py`, `panel_results.py` | ✅ |
 
 **Vitals Chat — Build Phases**
 
@@ -34,7 +36,7 @@ Each entry: what + why | files touched | priority | done
 | 5c | **Category-specific prompts** — 9 prompt blocks injected on top of base prompt. `emotional` is both a standalone category and a modifier. `app` block contains full Vitals feature knowledge. `scenario` block has scoring thresholds inlined for accurate what-if reasoning. | `chat.py` | ✅ |
 | 5d | **Conversation summarisation** — rolling summary after 8 turns. Snapshot context always injected, never dropped. | `chat.py` | ✅ |
 | 5e | **Tool calls — What-If from chat** — chat detects scenario questions, calls `calculate_metrics()` + `score_metrics()` with modified inputs, returns real calculated score delta. Replaces LLM estimation with actual math. | `chat.py`, `health.py` | ✅ |
-| 5f | **Cognitive offload handling** — when user says "you decide" / "you pick" / "give me your best guess", model uses snapshot anchors + standard financial rules of thumb (28% housing rule, 80% income for freelance estimate etc.) to fill in missing variables, then calls tool. Reasoning and tool call are one step — reasoning decides the estimate, tool validates with real math. | `chat.py` | ⬜ |
+| 5f | **Cognitive offload handling** — when user says "you decide" / "you pick" / "give me your best guess", model uses snapshot anchors + standard financial rules of thumb (28% housing rule, 80% income for freelance estimate etc.) to fill in missing variables, then calls tool. Reasoning and tool call are one step — reasoning decides the estimate, tool validates with real math. | `chat.py` | ✅ |
 
 ---
 
@@ -42,8 +44,10 @@ Each entry: what + why | files touched | priority | done
 
 | # | Feature | What + Why | Files | Done |
 |---|---------|------------|-------|------|
+| 23 | **Multi-Statement Import** | Allow up to 10 PDF bank statements to be uploaded at once. Transactions from all statements are merged, deduplicated, and shown in a single per-transaction review UI before filling the form. Useful when income and expenses span multiple accounts (e.g. checking + credit card). Extension of #7. | `importer.py`, `panel_form.py` | ⬜ |
+| 20 | **Month Streak Counter** | Half a day of work. Uses snapshot data already saved. Shows consecutive months with saved snapshots. Small but motivating — gives users a reason to come back even when score hasn't moved much. | `panel_results.py`, `progress.py` | ⬜ |
 | 6 | **Goal Tracker** | User sets ONE goal tied to narrative Q4 action. Progress bar shown when snapshot loaded. Needs storage (already done). | new `goals.py`, `panel_results.py` | ⬜ |
-| 7 | **CSV / Bank Statement Import** | User exports last month's bank CSV → Vitals parses and auto-fills the expense form. Solves "I don't know my numbers" for users who can't fill from memory. | new `importer.py`, `panel_form.py` | ⬜ |
+| 7 | **PDF Bank Statement Import** | Upload a PDF bank statement → Vitals extracts transactions, LLM categorises them, user reviews and edits before numbers fill the form. Solves "I don't know my numbers". Multi-statement (up to 10 PDFs) tracked as #23. | `importer.py`, `panel_form.py` | ✅ |
 | 8 | **Metric Citations** | Show benchmark source (CFPB, HUD, Fidelity/Vanguard, 50/30/20) next to each metric. Builds trust. | `panel_results.py` | ✅ |
 | 11b | **Trust Signals on Form Page** | "No account, no server storage, your data stays local" bar above the form fields. Directly addresses user concern about financial data security. | `panel_form.py` | ✅ |
 | 9 | **AI Personas** | Narrative tone selector: Honest Friend (default), Finance Professional, Tough Love. System prompt variation. | `narrative.py`, `panel_form.py` | ⬜ |
@@ -57,6 +61,8 @@ Each entry: what + why | files touched | priority | done
 | # | Feature | What + Why | Files | Depends On | Done |
 |---|---------|------------|-------|------------|------|
 | 12 | **Monthly Check-in Score Delta** | User returns next month, sees score change: "Last month: 58 → This month: 65". Storage already done — this is the UI layer. | `panel_results.py` | #3 | ⬜ |
+| 21 | **Optional Email Reminder** | ~1 week of work. Highest long-term retention impact. Email field after results: "Remind me next month." No account, just a scheduled email. Requires email backend (Resend/Postmark) + cron job or Supabase scheduled function. | new `reminders.py`, `panel_results.py` | ⬜ |
+| 22 | **Shareable Score Card** | Generate a simple image of the score and key metrics shareable on X or WhatsApp. "I scored 72/100 on my financial health checkup" with a link to Vitals. Dual purpose: retention mechanic + distribution. Requires server-side image generation (`Pillow` or `playwright` screenshot). | new `scorecard.py`, `panel_results.py` | ⬜ |
 | 13 | **Google Drive Connector** | Save/load `.vit` file directly from Google Drive. Removes manual download/upload step. Requires OAuth + Google verification. Build after traction. | new `drive.py` | — | ⬜ |
 | 17 | **Insurance Plan Finder (chat)** | User asks about insurance in chat → Vitals filters and recommends relevant plans/providers based on their financial snapshot (income, emergency fund, employment). One approach active at a time — options ranked by effort: **A** Curated JSON knowledge base (~15–20 providers per category, no API, ships fast); **B** Healthcare.gov Plans & Benefits API (real ACA quotes, ZIP + age + household + income, US only); **C** Web search tool (Serper/Brave API, real-time NerdWallet/Bankrate lookups). Start with A, layer B or C after traction. | `chat.py`, new `insurance_kb.py` | — | ⬜ |
 | 14 | **User-configurable Metric Weights** | Let users set priority % for each metric. Different life situations need different focus. | `health.py`, `panel_results.py` | — | ⬜ |
@@ -95,6 +101,9 @@ Each entry: what + why | files touched | priority | done
 | Phase 5e tool calls — scenario chat uses real `calculate_metrics()` math, not LLM estimation | ✅ |
 | PDF export — 2-page report: score + metrics p1, narrative + why-this-matters p2. `fpdf2`. | ✅ |
 | Export popover — single "📤 Export" button at bottom of results with PDF + Save my data inside | ✅ |
+| PDF bank statement import — PDF parsing, coordinate-based table detection, LLM categorisation with per-transaction review UI, hallucination guard, multi-column detection fix | ✅ |
+| Vitals Chat Phase 5f — cognitive offload, goal tracker, narrative formatting, chat UX improvements | ✅ |
+| Form number input bug fix — added `key=` to all `number_input` widgets so + / − buttons respond immediately without bouncing | ✅ |
 | Form Framing Change | ✅ |
 | Expense Benchmark Hints | ✅ |
 | What-If Simulator | ✅ |

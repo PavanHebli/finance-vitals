@@ -52,7 +52,7 @@ def render_api_config():
 
 def render_income_section():
     col1, col2 = st.columns(2)
-    
+
     with col1:
         main_income = st.number_input(
             "Monthly take-home income (after tax)",
@@ -60,10 +60,10 @@ def render_income_section():
             value=st.session_state.get("income_main", 0.0),
             step=100.0,
             format="%.2f",
-            help="Your monthly take-home pay after all taxes"
+            help="Your monthly take-home pay after all taxes",
+            key="income_main",
         )
-        st.session_state.income_main = main_income
-    
+
     with col2:
         additional_income = st.number_input(
             "Additional income (freelance, side income)",
@@ -71,10 +71,10 @@ def render_income_section():
             value=st.session_state.get("income_additional", 0.0),
             step=100.0,
             format="%.2f",
-            help="Optional: Any extra monthly income"
+            help="Optional: Any extra monthly income",
+            key="income_additional",
         )
-        st.session_state.income_additional = additional_income
-    
+
     return main_income, additional_income
 
 
@@ -90,7 +90,8 @@ def render_expenses_section():
             min_value=0.0,
             value=st.session_state.get("expenses_rent", 0.0),
             step=50.0,
-            format="%.2f"
+            format="%.2f",
+            key="expenses_rent",
         )
         st.caption("Avg: $1,000–2,000/month")
         expenses["groceries"] = st.number_input(
@@ -98,7 +99,8 @@ def render_expenses_section():
             min_value=0.0,
             value=st.session_state.get("expenses_groceries", 0.0),
             step=25.0,
-            format="%.2f"
+            format="%.2f",
+            key="expenses_groceries",
         )
         st.caption("Avg: $200–400/month · Tip: weekly shop amount × 4")
         expenses["transport"] = st.number_input(
@@ -106,7 +108,8 @@ def render_expenses_section():
             min_value=0.0,
             value=st.session_state.get("expenses_transport", 0.0),
             step=25.0,
-            format="%.2f"
+            format="%.2f",
+            key="expenses_transport",
         )
         st.caption("Avg: $150–400/month")
         expenses["subscriptions"] = st.number_input(
@@ -114,7 +117,8 @@ def render_expenses_section():
             min_value=0.0,
             value=st.session_state.get("expenses_subscriptions", 0.0),
             step=5.0,
-            format="%.2f"
+            format="%.2f",
+            key="expenses_subscriptions",
         )
         st.caption("Avg: $50–150/month · Tip: list them out (Netflix, Spotify, gym…)")
 
@@ -124,7 +128,8 @@ def render_expenses_section():
             min_value=0.0,
             value=st.session_state.get("expenses_dining", 0.0),
             step=25.0,
-            format="%.2f"
+            format="%.2f",
+            key="expenses_dining",
         )
         st.caption("Avg: $150–300/month · Tip: meals out per week × avg cost × 4")
         expenses["shopping"] = st.number_input(
@@ -132,7 +137,8 @@ def render_expenses_section():
             min_value=0.0,
             value=st.session_state.get("expenses_shopping", 0.0),
             step=25.0,
-            format="%.2f"
+            format="%.2f",
+            key="expenses_shopping",
         )
         st.caption("Avg: $100–300/month")
         expenses["other"] = st.number_input(
@@ -140,13 +146,11 @@ def render_expenses_section():
             min_value=0.0,
             value=st.session_state.get("expenses_other", 0.0),
             step=25.0,
-            format="%.2f"
+            format="%.2f",
+            key="expenses_other",
         )
         st.caption("Anything not covered above")
-    
-    for key, value in expenses.items():
-        st.session_state[f"expenses_{key}"] = value
-    
+
     return expenses
 
 
@@ -160,39 +164,39 @@ def render_position_section():
             value=st.session_state.get("savings_total", 0.0),
             step=100.0,
             format="%.2f",
-            help="Add up all your bank account balances — checking, savings, and any cash on hand"
+            help="Add up all your bank account balances — checking, savings, and any cash on hand",
+            key="savings_total",
         )
-        st.session_state.savings_total = savings
-        
+
         investments = st.number_input(
             "Total investments (401k, stocks, etc.)",
             min_value=0.0,
             value=st.session_state.get("investments_total", 0.0),
             step=100.0,
             format="%.2f",
-            help="Optional, enter 0 if none"
+            help="Optional, enter 0 if none",
+            key="investments_total",
         )
-        st.session_state.investments_total = investments
-    
+
     with col2:
         debt = st.number_input(
             "Total debt (student loans, credit card, car loan)",
             min_value=0.0,
             value=st.session_state.get("debt_total", 0.0),
             step=100.0,
-            format="%.2f"
+            format="%.2f",
+            key="debt_total",
         )
-        st.session_state.debt_total = debt
-        
+
         debt_payment = st.number_input(
             "Monthly debt payments",
             min_value=0.0,
             value=st.session_state.get("debt_monthly", 0.0),
             step=25.0,
-            format="%.2f"
+            format="%.2f",
+            key="debt_monthly",
         )
-        st.session_state.debt_monthly = debt_payment
-    
+
     return savings, investments, debt, debt_payment
 
 
@@ -205,9 +209,9 @@ def render_context_section():
             min_value=1,
             max_value=120,
             value=st.session_state.get("age", 25),
-            step=1
+            step=1,
+            key="age",
         )
-        st.session_state.age = age
         
         employment = st.selectbox(
             "Employment status",

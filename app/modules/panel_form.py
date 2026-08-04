@@ -283,8 +283,8 @@ def render_form_panel():
         step=100.0,
         format="%.2f",
         help="All spending combined — rent, food, transport, everything. An estimate is fine.",
+        key="expenses_total_estimate",
     )
-    st.session_state.expenses_total_estimate = total_est
     # Proxy for health.py when detailed breakdown not provided
     if not st.session_state.get("section2_visible", False):
         st.session_state.expenses_other = total_est

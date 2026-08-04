@@ -82,6 +82,16 @@ This also means the tool produces something useful at every level of detail the 
 
 ---
 
+## PDF bank statement import
+
+The biggest friction point in the form is that most people don't have their numbers memorised. They know roughly what they spend, but not precisely — and the form asking for groceries, dining, and transport as separate line items is exactly the kind of question that makes people close the tab.
+
+The PDF import removes that friction. Upload last month's statement, Vitals reads it, and the form fills itself. You still review every transaction and can reassign any category before the numbers go in. The LLM's guess is a starting point, not a verdict.
+
+The privacy constraint is non-negotiable: account numbers, names, addresses, and balances never leave your device. Only merchant names and amounts go to the AI for categorisation. This is the same principle as the rest of Vitals — the tool's job is analysis, not data collection. The fact that the parsing is local and the LLM only sees what it needs to see is worth stating plainly, because users who are cautious enough to read that caveat are exactly the users who would otherwise not upload anything.
+
+---
+
 ## PDF export
 
 Several users tried to open their `.vit` file and found it confusing — it is encrypted, not human-readable, and that is a legitimate friction point. But PDF is not the answer to that problem. PDF solves a different problem: communication. Showing your picture to a partner, sharing it with an advisor, printing it out. The two serve different purposes and both belong.
