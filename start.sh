@@ -10,5 +10,6 @@ HOSTED_PROVIDER   = "${HOSTED_PROVIDER:-groq}"
 SHOW_API_INPUT    = ${SHOW_API_INPUT:-false}
 ENABLE_LOGGING    = ${ENABLE_LOGGING:-true}
 DEBUG             = ${DEBUG:-false}
+FOUNDER_PHOTO     = "${FOUNDER_PHOTO}"
 EOF
 streamlit run app/main.py --server.port=${PORT:-8501} --server.address=0.0.0.0

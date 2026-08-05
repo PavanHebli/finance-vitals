@@ -408,8 +408,7 @@ _BUILDER_TEMPLATE = """
 
 
 def _founder_avatar_html() -> str:
-    import os
-    photo_b64 = st.secrets.get("FOUNDER_PHOTO", "") or os.environ.get("FOUNDER_PHOTO", "")
+    photo_b64 = st.secrets.get("FOUNDER_PHOTO", "")
     if photo_b64:
         return f'<img src="data:image/jpeg;base64,{photo_b64}" alt="Pavan Hebli">'
     return "PH"
