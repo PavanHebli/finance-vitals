@@ -57,7 +57,7 @@ def render_income_section():
         main_income = st.number_input(
             "Monthly take-home income (after tax)",
             min_value=0.0,
-            value=st.session_state.get("income_main", 0.0),
+            value=0.0,
             step=100.0,
             format="%.2f",
             help="Your monthly take-home pay after all taxes",
@@ -68,7 +68,7 @@ def render_income_section():
         additional_income = st.number_input(
             "Additional income (freelance, side income)",
             min_value=0.0,
-            value=st.session_state.get("income_additional", 0.0),
+            value=0.0,
             step=100.0,
             format="%.2f",
             help="Optional: Any extra monthly income",
@@ -88,7 +88,7 @@ def render_expenses_section():
         expenses["rent"] = st.number_input(
             "Rent / Mortgage",
             min_value=0.0,
-            value=st.session_state.get("expenses_rent", 0.0),
+            value=0.0,
             step=50.0,
             format="%.2f",
             key="expenses_rent",
@@ -97,7 +97,7 @@ def render_expenses_section():
         expenses["groceries"] = st.number_input(
             "Groceries",
             min_value=0.0,
-            value=st.session_state.get("expenses_groceries", 0.0),
+            value=0.0,
             step=25.0,
             format="%.2f",
             key="expenses_groceries",
@@ -106,7 +106,7 @@ def render_expenses_section():
         expenses["transport"] = st.number_input(
             "Transport (car, gas, public transit)",
             min_value=0.0,
-            value=st.session_state.get("expenses_transport", 0.0),
+            value=0.0,
             step=25.0,
             format="%.2f",
             key="expenses_transport",
@@ -115,7 +115,7 @@ def render_expenses_section():
         expenses["subscriptions"] = st.number_input(
             "Subscriptions (Netflix, Spotify, gym, etc.)",
             min_value=0.0,
-            value=st.session_state.get("expenses_subscriptions", 0.0),
+            value=0.0,
             step=5.0,
             format="%.2f",
             key="expenses_subscriptions",
@@ -126,7 +126,7 @@ def render_expenses_section():
         expenses["dining"] = st.number_input(
             "Dining out / Food delivery",
             min_value=0.0,
-            value=st.session_state.get("expenses_dining", 0.0),
+            value=0.0,
             step=25.0,
             format="%.2f",
             key="expenses_dining",
@@ -135,7 +135,7 @@ def render_expenses_section():
         expenses["shopping"] = st.number_input(
             "Shopping / Personal",
             min_value=0.0,
-            value=st.session_state.get("expenses_shopping", 0.0),
+            value=0.0,
             step=25.0,
             format="%.2f",
             key="expenses_shopping",
@@ -144,7 +144,7 @@ def render_expenses_section():
         expenses["other"] = st.number_input(
             "Other expenses",
             min_value=0.0,
-            value=st.session_state.get("expenses_other", 0.0),
+            value=0.0,
             step=25.0,
             format="%.2f",
             key="expenses_other",
@@ -161,7 +161,7 @@ def render_position_section():
         savings = st.number_input(
             "Total savings (checking + savings accounts)",
             min_value=0.0,
-            value=st.session_state.get("savings_total", 0.0),
+            value=0.0,
             step=100.0,
             format="%.2f",
             help="Add up all your bank account balances — checking, savings, and any cash on hand",
@@ -171,7 +171,7 @@ def render_position_section():
         investments = st.number_input(
             "Total investments (401k, stocks, etc.)",
             min_value=0.0,
-            value=st.session_state.get("investments_total", 0.0),
+            value=0.0,
             step=100.0,
             format="%.2f",
             help="Optional, enter 0 if none",
@@ -182,7 +182,7 @@ def render_position_section():
         debt = st.number_input(
             "Total debt (student loans, credit card, car loan)",
             min_value=0.0,
-            value=st.session_state.get("debt_total", 0.0),
+            value=0.0,
             step=100.0,
             format="%.2f",
             key="debt_total",
@@ -191,7 +191,7 @@ def render_position_section():
         debt_payment = st.number_input(
             "Monthly debt payments",
             min_value=0.0,
-            value=st.session_state.get("debt_monthly", 0.0),
+            value=0.0,
             step=25.0,
             format="%.2f",
             key="debt_monthly",
@@ -208,7 +208,7 @@ def render_context_section():
             "Age",
             min_value=1,
             max_value=120,
-            value=st.session_state.get("age", 25),
+            value=25,
             step=1,
             key="age",
         )

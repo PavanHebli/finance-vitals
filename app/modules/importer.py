@@ -26,11 +26,11 @@ from collections import Counter
 
 # Matches financial amounts across common bank statement formats:
 #   127.13   1,300.00            plain
-#   $127.13  $1,300.00           dollar sign prefix
+#   $127.13  ₹1,300.00           currency symbol prefix ($, ₹, €, £, ¥, ₩, ₦)
 #   (127.13) (1,300.00)          parentheses = debit notation
 #   -127.13  -1,300.00           negative prefix
 # Must match BEFORE stripping commas to preserve \d{1,3} group assumption.
-_NUM_RE = re.compile(r'^\$?-?\(?\d{1,3}(?:,\d{3})*\.\d{2}\)?$')
+_NUM_RE = re.compile(r'^[$₹€£¥₩₦₨]?-?\(?\d{1,3}(?:,\d{3})*\.\d{2}\)?$')
 
 
 def _log(msg: str):

@@ -76,60 +76,104 @@ _CATEGORY_STATE_KEYS = {
 }
 
 
+_PDF_STATE_KEYS = ["pdf_active_file_ids", "pdf_combined_lines", "pdf_transactions", "pdf_pipeline_active"]
+
+
+def _clear_pdf_pipeline():
+    for k in _PDF_STATE_KEYS:
+        st.session_state.pop(k, None)
+
+
 def _render_pdf_import():
     with st.expander("📄 Import from bank statement  ·  optional — auto-fills the expense form"):
         st.caption(
-            "Upload a PDF bank statement. "
-            "Parsing happens locally — only merchant names and amounts are sent to AI for categorization. "
+            "Upload up to 10 PDF bank statements — checking, credit card, whatever. "
+            "Parsing happens locally — only merchant names and amounts are sent to AI. "
             "No account numbers, names, or balances ever leave your device."
         )
 
-        pdf_file = st.file_uploader(
-            "Bank statement PDF",
+        pdf_files = st.file_uploader(
+            "Bank statement PDF(s)",
             type=["pdf"],
             key="pdf_import_upload",
             label_visibility="collapsed",
+            accept_multiple_files=True,
         )
 
-        if pdf_file is None:
+        if not pdf_files:
+            _clear_pdf_pipeline()
             st.session_state.pop("pdf_import_result", None)
             return
 
-        if st.button("Parse statement →", type="primary"):
+        # Reset pipeline if the uploaded file set changed
+        current_ids = sorted(f.file_id for f in pdf_files)
+        if st.session_state.get("pdf_active_file_ids") != current_ids:
+            _clear_pdf_pipeline()
+            st.session_state.pop("pdf_import_result", None)
+            st.session_state["pdf_active_file_ids"] = current_ids
+
+        from modules.importer import extract_lines, parse_transactions, categorize_expenses
+
+        # ── Step 1: Extract (fast, local — runs automatically on upload) ──────
+        if "pdf_combined_lines" not in st.session_state and "pdf_import_result" not in st.session_state:
+            n = len(pdf_files)
+            all_lines: list[str] = []
+            with st.spinner(f"Reading {n} PDF{'s' if n > 1 else ''} locally…"):
+                for pdf_file in pdf_files:
+                    lines, _ = extract_lines(pdf_file.read())
+                    if lines:
+                        all_lines.extend(lines)
+            if not all_lines:
+                st.error(
+                    "Could not find transaction data in the uploaded PDF(s). "
+                    "Make sure you're uploading a bank or credit card statement."
+                )
+                return
+            st.session_state["pdf_combined_lines"] = all_lines
+
+        # ── Steps 2 + 3: Parse then categorize (LLM — state machine) ──────────
+        if st.session_state.get("pdf_pipeline_active") and "pdf_import_result" not in st.session_state:
             provider, api_key = get_llm_config()
             if not api_key:
                 st.error("Please enter your API key above before importing.")
+                st.session_state.pop("pdf_pipeline_active", None)
                 return
 
-            from modules.importer import extract_lines, parse_transactions, categorize_expenses
-            with st.spinner("Step 1 of 2 — reading PDF locally…"):
-                lines, _ = extract_lines(pdf_file.read())
-
-            if not lines:
-                st.error(
-                    "Could not find transaction data in this PDF. "
-                    "Check the terminal logs for details on what was detected."
-                )
-                return
-
-            with st.spinner(f"Step 2 of 2 — identifying {len(lines)} lines of transactions…"):
-                transactions, _ = parse_transactions(lines, provider, api_key)
-
-            if not transactions:
-                st.error("Could not identify any transactions. Try a different statement or format.")
-                return
+            if "pdf_transactions" not in st.session_state:
+                n = len(pdf_files)
+                lines = st.session_state["pdf_combined_lines"]
+                with st.spinner(f"Identifying transactions across {n} statement{'s' if n > 1 else ''}…"):
+                    transactions, _ = parse_transactions(lines, provider, api_key)
+                if not transactions:
+                    st.error("Could not identify any transactions. Try a different statement or format.")
+                    st.session_state.pop("pdf_pipeline_active", None)
+                    return
+                st.session_state["pdf_transactions"] = transactions
+                st.rerun()
 
             with st.spinner("Categorizing expenses…"):
-                categorized, _ = categorize_expenses(transactions, provider, api_key)
-
+                categorized, _ = categorize_expenses(st.session_state["pdf_transactions"], provider, api_key)
             if not categorized:
                 st.error("Categorization failed. Please try again.")
+                st.session_state.pop("pdf_pipeline_active", None)
                 return
 
-            st.session_state["pdf_import_result"] = {
-                "transactions": categorized,
-            }
+            st.session_state["pdf_import_result"] = {"transactions": categorized}
+            _clear_pdf_pipeline()
             st.rerun()
+
+        # ── Parse button — shown once lines are ready ──────────────────────────
+        if "pdf_combined_lines" in st.session_state and "pdf_import_result" not in st.session_state:
+            n = len(pdf_files)
+            n_lines = len(st.session_state["pdf_combined_lines"])
+            st.caption(f"Extracted **{n_lines} lines** from {n} file{'s' if n > 1 else ''}. Ready to parse.")
+            if st.button(f"Parse {'all statements' if n > 1 else 'statement'} →", type="primary"):
+                provider, api_key = get_llm_config()
+                if not api_key:
+                    st.error("Please enter your API key above before importing.")
+                    return
+                st.session_state["pdf_pipeline_active"] = True
+                st.rerun()
 
         result = st.session_state.get("pdf_import_result")
         if not result:
@@ -279,7 +323,7 @@ def render_form_panel():
     total_est = st.number_input(
         "Total monthly expenses (rough estimate)",
         min_value=0.0,
-        value=st.session_state.get("expenses_total_estimate", 0.0),
+        value=0.0,
         step=100.0,
         format="%.2f",
         help="All spending combined — rent, food, transport, everything. An estimate is fine.",

@@ -50,6 +50,11 @@ _CSS = """
     max-width: 540px;
     margin-bottom: 0;
 }
+.lp-sub-strong {
+    opacity: 0.88;
+    font-size: 1.05rem;
+    margin-bottom: 10px;
+}
 .lp-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -165,6 +170,86 @@ _CSS = """
     opacity: 0.4;
     letter-spacing: 0.03em;
 }
+.lp-builder {
+    background: var(--secondary-background-color);
+    border-top: 1px solid rgba(128,128,128,0.1);
+    border-bottom: 1px solid rgba(128,128,128,0.1);
+    margin-left: -5vw;
+    margin-right: -5vw;
+    padding: 44px 5vw;
+}
+.lp-builder-inner {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    max-width: 600px;
+}
+.lp-builder-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+}
+.lp-builder-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+.lp-builder-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-color);
+    opacity: 0.4;
+    margin-bottom: 10px;
+}
+.lp-builder-name {
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: var(--text-color);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+.lp-builder-role {
+    font-size: 0.8rem;
+    color: var(--text-color);
+    opacity: 0.5;
+    margin-top: 4px;
+    margin-bottom: 12px;
+    letter-spacing: 0.02em;
+}
+.lp-builder-blurb {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    opacity: 0.7;
+    line-height: 1.65;
+    margin-bottom: 16px;
+}
+.lp-builder-links {
+    display: flex;
+    gap: 20px;
+}
+.lp-link {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    text-decoration: none;
+    letter-spacing: 0.01em;
+}
+.lp-link:hover {
+    opacity: 0.75;
+}
 </style>
 """
 
@@ -172,12 +257,13 @@ _NAV = '<div class="lp-nav"><span class="lp-logo">🩺 Vitals</span></div>'
 
 _HERO = """
 <div class="lp-hero">
-    <div class="lp-eyebrow">Financial Health Checkup · Free · No account needed</div>
+    <div class="lp-eyebrow">No bank connection &nbsp;·&nbsp; No signup &nbsp;·&nbsp; Free</div>
     <div class="lp-headline">Finally know<br>where you stand.</div>
+    <div class="lp-sub lp-sub-strong">
+        Enter your income and expenses, get a 0–100 financial health score and a plain-English explanation of what to fix first.
+    </div>
     <div class="lp-sub">
         Most financial tools are built for people who already get it. Vitals is for everyone else.
-        Enter your numbers, get a score, and hear in plain English exactly what's going on
-        and one concrete thing to do about it.
     </div>
 </div>
 """
@@ -299,6 +385,34 @@ _TRUST = """
 </div>
 """
 
+_BUILDER_TEMPLATE = """
+<div class="lp-builder">
+    <div class="lp-builder-inner">
+        <div class="lp-builder-avatar">{avatar}</div>
+        <div class="lp-builder-text">
+            <div class="lp-builder-label">Built by</div>
+            <div class="lp-builder-name">Pavan Hebli</div>
+            <div class="lp-builder-role">Software Engineer</div>
+            <div class="lp-builder-blurb">
+                I built Vitals because I wanted a financial health check that felt honest, not salesy.
+            </div>
+            <div class="lp-builder-links">
+                <a href="https://www.linkedin.com/in/heblipavan/" class="lp-link" target="_blank" rel="noopener">LinkedIn</a>
+                <a href="https://github.com/PavanHebli" class="lp-link" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://x.com/heblipavan?s=11" class="lp-link" target="_blank" rel="noopener">Twitter / X</a>
+            </div>
+        </div>
+    </div>
+</div>
+"""
+
+
+def _founder_avatar_html() -> str:
+    photo_b64 = st.secrets.get("FOUNDER_PHOTO", "")
+    if photo_b64:
+        return f'<img src="data:image/jpeg;base64,{photo_b64}" alt="Pavan Hebli">'
+    return "PH"
+
 
 def render_landing_page():
     st.markdown(_CSS, unsafe_allow_html=True)
@@ -307,11 +421,12 @@ def render_landing_page():
 
     cta_col, _ = st.columns([1.6, 4])
     with cta_col:
-        if st.button("Try it free here", use_container_width=True, type="primary"):
+        if st.button("Check my financial health →", use_container_width=True, type="primary"):
             st.session_state.current_page = "form"
             st.rerun()
 
     st.markdown(_STATS, unsafe_allow_html=True)
     st.markdown(_HOW, unsafe_allow_html=True)
     st.markdown(_WHY, unsafe_allow_html=True)
+    st.markdown(_BUILDER_TEMPLATE.format(avatar=_founder_avatar_html()), unsafe_allow_html=True)
     st.markdown(_TRUST, unsafe_allow_html=True)

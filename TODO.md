@@ -44,7 +44,7 @@ Each entry: what + why | files touched | priority | done
 
 | # | Feature | What + Why | Files | Done |
 |---|---------|------------|-------|------|
-| 23 | **Multi-Statement Import** | Allow up to 10 PDF bank statements to be uploaded at once. Transactions from all statements are merged, deduplicated, and shown in a single per-transaction review UI before filling the form. Useful when income and expenses span multiple accounts (e.g. checking + credit card). Extension of #7. | `importer.py`, `panel_form.py` | ⬜ |
+| 23 | **Multi-Statement Import** | Allow up to 10 PDF bank statements to be uploaded at once. Transactions from all statements are merged, deduplicated, and shown in a single per-transaction review UI before filling the form. Useful when income and expenses span multiple accounts (e.g. checking + credit card). Extension of #7. | `importer.py`, `panel_form.py` | ✅ |
 | 20 | **Month Streak Counter** | Half a day of work. Uses snapshot data already saved. Shows consecutive months with saved snapshots. Small but motivating — gives users a reason to come back even when score hasn't moved much. | `panel_results.py`, `progress.py` | ⬜ |
 | 6 | **Goal Tracker** | User sets ONE goal tied to narrative Q4 action. Progress bar shown when snapshot loaded. Needs storage (already done). | new `goals.py`, `panel_results.py` | ⬜ |
 | 7 | **PDF Bank Statement Import** | Upload a PDF bank statement → Vitals extracts transactions, LLM categorises them, user reviews and edits before numbers fill the form. Solves "I don't know my numbers". Multi-statement (up to 10 PDFs) tracked as #23. | `importer.py`, `panel_form.py` | ✅ |
@@ -101,8 +101,12 @@ Each entry: what + why | files touched | priority | done
 | Phase 5e tool calls — scenario chat uses real `calculate_metrics()` math, not LLM estimation | ✅ |
 | PDF export — 2-page report: score + metrics p1, narrative + why-this-matters p2. `fpdf2`. | ✅ |
 | Export popover — single "📤 Export" button at bottom of results with PDF + Save my data inside | ✅ |
+| Multi-statement PDF import — multi-file uploader (up to 10 PDFs), one-click state machine pipeline (extract all → parse merged lines → categorize), resets cleanly on file set change | ✅ |
 | PDF bank statement import — PDF parsing, coordinate-based table detection, LLM categorisation with per-transaction review UI, hallucination guard, multi-column detection fix | ✅ |
 | Vitals Chat Phase 5f — cognitive offload, goal tracker, narrative formatting, chat UX improvements | ✅ |
+| Landing page founder section — "Built by" card with circular avatar (photo from Railway secret `FOUNDER_PHOTO`), name, tagline, blurb, LinkedIn / GitHub / Twitter links | ✅ |
+| Landing page above-the-fold copy — trust eyebrow ("No bank connection · No signup · Free"), concrete one-liner sub-headline, CTA renamed to "Check my financial health →" | ✅ |
+| Streamlit widget state warning fix — removed `st.session_state.get()` from `value=` on all `number_input` widgets with `key=`; fixes warning on Clear / Try sample data | ✅ |
 | Form number input bug fix — added `key=` to all `number_input` widgets so + / − buttons respond immediately without bouncing | ✅ |
 | Form Framing Change | ✅ |
 | Expense Benchmark Hints | ✅ |
