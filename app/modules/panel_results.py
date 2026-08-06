@@ -57,7 +57,7 @@ def render_metrics_breakdown(metrics: dict, metric_scores: dict):
 
     tiles = [
         ("Savings Rate",   f"{metrics['savings_rate']}%",           metric_scores["savings_rate"], "Target ≥ 20%",      "50/30/20 rule"),
-        ("Debt-to-Income", f"{metrics['debt_to_income']}%",          metric_scores["debt_to_income"], "Safe zone < 20%", "CFPB mortgage standard"),
+        ("Debt-to-Income", f"{metrics['debt_to_income']}%",          metric_scores["debt_to_income"], "Debt recorded, $0/mo payment?" if metrics.get("debt_payment_missing") else "Safe zone < 20%", "CFPB mortgage standard"),
         ("Emergency Fund", f"{metrics['emergency_fund_months']} mo", metric_scores["emergency_fund_months"], "Goal: 3–6 months", "Fidelity / Vanguard"),
         ("Housing Ratio",  f"{metrics['housing_ratio']}%",           metric_scores["housing_ratio"], "HUD limit ≤ 30%",  "HUD affordability standard"),
     ]
