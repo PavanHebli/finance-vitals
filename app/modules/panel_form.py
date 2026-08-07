@@ -105,9 +105,12 @@ def _render_pdf_import():
             st.session_state.pop("pdf_import_result", None)
             return
 
-        # Reset pipeline if the uploaded file set changed
+        # Reset pipeline only when files actually change, not on first upload or post-pipeline reruns
         current_ids = sorted(f.file_id for f in pdf_files)
-        if st.session_state.get("pdf_active_file_ids") != current_ids:
+        existing_ids = st.session_state.get("pdf_active_file_ids")
+        if existing_ids is None:
+            st.session_state["pdf_active_file_ids"] = current_ids
+        elif existing_ids != current_ids:
             _clear_pdf_pipeline()
             st.session_state.pop("pdf_import_result", None)
             st.session_state["pdf_active_file_ids"] = current_ids
@@ -323,7 +326,6 @@ def render_form_panel():
     total_est = st.number_input(
         "Total monthly expenses (rough estimate)",
         min_value=0.0,
-        value=0.0,
         step=100.0,
         format="%.2f",
         help="All spending combined — rent, food, transport, everything. An estimate is fine.",
@@ -424,7 +426,5 @@ def render_form_panel():
             elif st.session_state.income_main == 0:
                 st.error("Please enter your monthly income to continue.")
             else:
-                if st.session_state.debt_monthly > 0 and st.session_state.debt_total == 0:
-                    st.session_state.debt_monthly = 0.0
                 st.session_state.current_page = "results"
                 st.rerun()

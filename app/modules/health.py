@@ -70,6 +70,8 @@ def calculate_metrics(state) -> dict:
     )
 
     debt_payments = state.get("debt_monthly", 0.0)
+    if state.get("debt_total", 0.0) == 0:
+        debt_payments = 0.0
     savings = state.get("savings_total", 0.0)
     rent = state.get("expenses_rent", 0.0)
 
