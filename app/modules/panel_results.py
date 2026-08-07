@@ -186,7 +186,7 @@ def render_expense_chart(state: dict, metrics: dict, metric_scores: dict):
         showlegend=False,
     )
 
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_results_panel():
