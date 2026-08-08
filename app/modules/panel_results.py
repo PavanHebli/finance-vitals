@@ -165,13 +165,13 @@ def render_expense_chart(state: dict, metrics: dict, metric_scores: dict):
     ))
 
     # HUD housing benchmark reference line
-    fig.add_vline(
-        x=30,
-        line_dash="dash",
-        line_color="rgba(255,255,255,0.25)",
-        annotation_text="30% housing limit",
-        annotation_font_color="rgba(255,255,255,0.45)",
-        annotation_position="top right",
+    fig.add_vline(x=30, line_dash="dash", line_color="rgba(255,255,255,0.25)")
+    fig.add_annotation(
+        x=30, y=1, yref="paper",
+        text="30% housing limit",
+        showarrow=False,
+        xanchor="right", yanchor="top",
+        font=dict(color="rgba(255,255,255,0.45)", size=11),
     )
 
     fig.update_layout(
@@ -193,8 +193,22 @@ def render_results_panel():
     from modules.nav import render_nav
     render_nav()
     provider, api_key = get_llm_config()
-    # Compute metrics first — needed by both the save button and the rest of the page
-    metrics       = calculate_metrics(st.session_state)
+
+    # Form widget keys are wiped after first rerun on the results page (form not rendering).
+    # Build a stable state from _snap_* keys written at form submission.
+    _form_keys = [
+        "income_main", "income_additional",
+        "expenses_rent", "expenses_groceries", "expenses_transport",
+        "expenses_subscriptions", "expenses_dining", "expenses_shopping", "expenses_other",
+        "savings_total", "investments_total", "debt_total", "debt_monthly",
+    ]
+    snap_state = dict(st.session_state)
+    for _k in _form_keys:
+        _v = st.session_state.get(f"_snap_{_k}")
+        if _v is not None:
+            snap_state[_k] = _v
+
+    metrics       = calculate_metrics(snap_state)
     metric_scores = score_metrics(metrics)
     overall_score = calculate_overall_score(metric_scores)
     mirror        = get_mirror_label(overall_score)
@@ -252,10 +266,10 @@ def render_results_panel():
     render_metrics_breakdown(metrics, metric_scores)
     st.caption("ℹ️ Ratios are calculated using take-home (after-tax) income — stricter than lender benchmarks, which use gross income.")
     st.markdown("---")
-    render_expense_chart(st.session_state, metrics, metric_scores)
+    render_expense_chart(snap_state, metrics, metric_scores)
     st.markdown("---")
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Your Story", "What If?", "Progress", "Ask Vitals"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Your Story", "What If?", "Progress", "Ask Vitals"], key="results_tabs")
 
     with tab1:
         st.markdown(
@@ -370,14 +384,14 @@ def render_results_panel():
 
         # --- Starter questions (shown only before first message) ---
         if not st.session_state.chat_history:
-            st.markdown("**Not sure where to start? Try one of these:**")
-            cols = st.columns(len(STARTER_QUESTIONS))
-            for col, q in zip(cols, STARTER_QUESTIONS):
-                with col:
-                    if st.button(q, key=f"starter_{q}", use_container_width=True):
-                        st.session_state.chat_history.append({"role": "user", "content": q})
-                        st.rerun()
-            st.markdown("")
+            selected = st.pills(
+                "Not sure where to start?",
+                STARTER_QUESTIONS,
+                label_visibility="visible",
+            )
+            if selected:
+                st.session_state.chat_history.append({"role": "user", "content": selected})
+                st.rerun()
 
         # --- Scrollable chat history container ---
         chat_container = st.container(height=480)

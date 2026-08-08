@@ -3,49 +3,60 @@ from modules.health import calculate_metrics, score_metrics, calculate_overall_s
 
 
 def _seed_sim_values():
-    """Seeds simulator sliders from current form values. Called on first visit."""
-    income = st.session_state.get("income_main", 0.0) + st.session_state.get("income_additional", 0.0)
+    # Read from _snap_* keys — manually set at form submission, never wiped by Streamlit.
+    # Falls back to the widget-bound keys in case snapshot hasn't been written yet.
+    def _get(key):
+        return st.session_state.get(f"_snap_{key}") or st.session_state.get(key, 0.0)
+
+    income = _get("income_main") + _get("income_additional")
+    dining = _get("expenses_dining")
+    shopping = _get("expenses_shopping")
+    subs = _get("expenses_subscriptions")
+    debt = _get("debt_monthly")
+
     st.session_state.sim_income        = int(income)
-    st.session_state.sim_dining        = int(st.session_state.get("expenses_dining", 0.0))
-    st.session_state.sim_shopping      = int(st.session_state.get("expenses_shopping", 0.0))
-    st.session_state.sim_subscriptions = int(st.session_state.get("expenses_subscriptions", 0.0))
-    st.session_state.sim_debt_payment  = int(st.session_state.get("debt_monthly", 0.0))
+    st.session_state.sim_dining        = int(dining)
+    st.session_state.sim_shopping      = int(shopping)
+    st.session_state.sim_subscriptions = int(subs)
+    st.session_state.sim_debt_payment  = int(debt)
+
+    st.session_state.sim_income_max        = int(max(income * 2, 10000))
+    st.session_state.sim_dining_max        = int(max(dining * 3, 600))
+    st.session_state.sim_shopping_max      = int(max(shopping * 3, 600))
+    st.session_state.sim_subscriptions_max = int(max(subs * 3, 300))
+    st.session_state.sim_debt_payment_max  = int(max(debt * 3, 1500))
 
 
 def _metric_delta_color(delta: float, inverse: bool = False) -> str:
-    """
-    Returns st.metric delta_color.
-    - When delta is 0: always "off" (no color, no arrow — avoids misleading red/green on unchanged metrics)
-    - inverse=True: positive delta is bad (red), negative is good (green) — used for DTI and housing ratio
-    """
     if abs(delta) < 0.01:
         return "off"
     return "inverse" if inverse else "normal"
 
 
 def render_whatif_simulator(current_score: int, current_metric_scores: dict):
-    """
-    Interactive simulator — adjust income and discretionary expenses to see
-    how changes would affect the health score and individual metrics.
-    """
     st.caption(
-        "Adjust the sliders to explore how changes would affect your score. "
+        "Adjust any value to see how it would affect your score. "
         "Your original data is not changed."
     )
 
-    # Seed on first visit, or when reset was requested on the previous rerun.
-    # Must run BEFORE sliders are instantiated — avoids StreamlitAPIException.
-    if st.session_state.pop("sim_reset", False) or "sim_income" not in st.session_state:
+    # Reset button must sit BEFORE sliders so clearing keys happens before
+    # sliders are instantiated — no st.rerun() needed, no tab position reset.
+    if st.button("Reset to my current values", type="secondary"):
+        for _k in ["sim_income", "sim_dining", "sim_shopping", "sim_subscriptions",
+                   "sim_debt_payment", "sim_income_max", "sim_dining_max",
+                   "sim_shopping_max", "sim_subscriptions_max", "sim_debt_payment_max"]:
+            st.session_state.pop(_k, None)
+
+    if "sim_income" not in st.session_state or "sim_income_max" not in st.session_state:
         _seed_sim_values()
 
-    # --- Sliders ---
     col1, col2 = st.columns(2)
 
     with col1:
         st.slider(
             "Total monthly income",
             min_value=0,
-            max_value=int(max((st.session_state.get("income_main", 0.0) + st.session_state.get("income_additional", 0.0)) * 2, 10000)),
+            max_value=st.session_state.sim_income_max,
             step=100,
             key="sim_income",
             help="Affects all 4 metrics — savings rate, debt-to-income, emergency fund, and housing ratio all divide by income."
@@ -53,7 +64,7 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
         st.slider(
             "Dining out / Food delivery",
             min_value=0,
-            max_value=int(max(st.session_state.get("expenses_dining", 0.0) * 3, 600)),
+            max_value=st.session_state.sim_dining_max,
             step=25,
             key="sim_dining",
             help="Affects savings rate and emergency fund months. Does not affect debt-to-income or housing ratio."
@@ -61,7 +72,7 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
         st.slider(
             "Shopping / Personal",
             min_value=0,
-            max_value=int(max(st.session_state.get("expenses_shopping", 0.0) * 3, 600)),
+            max_value=st.session_state.sim_shopping_max,
             step=25,
             key="sim_shopping",
             help="Affects savings rate and emergency fund months. Does not affect debt-to-income or housing ratio."
@@ -71,7 +82,7 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
         st.slider(
             "Subscriptions",
             min_value=0,
-            max_value=int(max(st.session_state.get("expenses_subscriptions", 0.0) * 3, 300)),
+            max_value=st.session_state.sim_subscriptions_max,
             step=5,
             key="sim_subscriptions",
             help="Affects savings rate and emergency fund months. Does not affect debt-to-income or housing ratio."
@@ -79,10 +90,10 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
         st.slider(
             "Monthly debt payment",
             min_value=0,
-            max_value=int(max(st.session_state.get("debt_monthly", 0.0) * 3, 1500)),
+            max_value=st.session_state.sim_debt_payment_max,
             step=25,
             key="sim_debt_payment",
-            help="Affects debt-to-income ratio only. Note: DTI is calculated from your monthly payment amount, not your total debt balance."
+            help="Affects debt-to-income ratio only. DTI is calculated from your monthly payment amount, not total debt balance."
         )
 
     st.caption(
@@ -90,12 +101,18 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
         "To see housing ratio change, adjust the income slider."
     )
 
-    if st.button("Reset to my current values", type="secondary"):
-        st.session_state.sim_reset = True
-        st.rerun()
+    # All non-slider fields must come from _snap_ keys — widget-bound keys are wiped
+    # on the results page because the form widgets are not rendering.
+    _non_slider = [
+        "expenses_rent", "expenses_groceries", "expenses_transport", "expenses_other",
+        "savings_total", "investments_total", "debt_total",
+    ]
 
-    # --- Build simulated state ---
     sim_state = dict(st.session_state)
+    for k in _non_slider:
+        snap = st.session_state.get(f"_snap_{k}")
+        if snap is not None:
+            sim_state[k] = snap
     sim_state["income_main"]            = float(st.session_state.sim_income)
     sim_state["income_additional"]      = 0.0
     sim_state["expenses_dining"]        = float(st.session_state.sim_dining)
@@ -107,7 +124,14 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
     sim_metric_scores = score_metrics(sim_metrics)
     sim_score         = calculate_overall_score(sim_metric_scores)
 
-    cur_metrics = calculate_metrics(dict(st.session_state))
+    # cur_state uses original (pre-slider) values entirely from _snap_ keys.
+    cur_state = dict(st.session_state)
+    for k in _non_slider + ["income_main", "income_additional", "expenses_dining",
+                             "expenses_shopping", "expenses_subscriptions", "debt_monthly"]:
+        snap = st.session_state.get(f"_snap_{k}")
+        if snap is not None:
+            cur_state[k] = snap
+    cur_metrics = calculate_metrics(cur_state)
 
     score_delta = sim_score - current_score
     cur_flow    = current_metric_scores["net_monthly_flow"]["value"]
@@ -116,7 +140,6 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
 
     st.markdown("---")
 
-    # --- Score + cash summary ---
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Current Score", f"{current_score} / 100")
@@ -133,12 +156,8 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
             delta=f"${flow_delta:+,.0f}" if abs(flow_delta) >= 1 else None,
         )
 
-    # --- Raw metric deltas ---
     st.markdown("##### How your metrics shift")
-    st.caption(
-        "Metrics that are not affected by the sliders you moved will show no change. "
-        "Green = improving · Red = worsening · Grey = unchanged."
-    )
+    st.caption("Green = improving · Red = worsening · Grey = unchanged.")
 
     d_sr  = round(sim_metrics["savings_rate"]          - cur_metrics["savings_rate"],          1)
     d_dti = round(sim_metrics["debt_to_income"]        - cur_metrics["debt_to_income"],         1)
@@ -151,8 +170,8 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
             "Savings Rate",
             f"{sim_metrics['savings_rate']}%",
             delta=f"{d_sr:+.1f}%" if d_sr != 0 else None,
-            delta_color=_metric_delta_color(d_sr, inverse=False),
-            help="% of income left after expenses. Target: ≥20%. Income ↑ = better · Dining/Shopping/Subscriptions ↑ = worse."
+            delta_color=_metric_delta_color(d_sr),
+            help="% of income left after expenses. Target: ≥20%."
         )
     with m2:
         st.metric(
@@ -160,15 +179,15 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
             f"{sim_metrics['debt_to_income']}%",
             delta=f"{d_dti:+.1f}%" if d_dti != 0 else None,
             delta_color=_metric_delta_color(d_dti, inverse=True),
-            help="Monthly debt payments as % of take-home income. Target: <20% (danger: >43%). Uses net income — stricter than lender benchmarks. Income ↑ = better · Debt payment ↑ = worse."
+            help="Monthly debt payments as % of take-home income. Target: <20%."
         )
     with m3:
         st.metric(
             "Emergency Fund",
             f"{sim_metrics['emergency_fund_months']} mo",
             delta=f"{d_ef:+.1f} mo" if d_ef != 0 else None,
-            delta_color=_metric_delta_color(d_ef, inverse=False),
-            help="Months your savings would last if income stopped. Target: 3–6 mo. Dining/Shopping/Subscriptions ↓ = savings stretch further. Change savings balance in the form."
+            delta_color=_metric_delta_color(d_ef),
+            help="Months your savings would last if income stopped. Target: 3–6 mo."
         )
     with m4:
         st.metric(
@@ -176,5 +195,5 @@ def render_whatif_simulator(current_score: int, current_metric_scores: dict):
             f"{sim_metrics['housing_ratio']}%",
             delta=f"{d_hr:+.1f}%" if d_hr != 0 else None,
             delta_color=_metric_delta_color(d_hr, inverse=True),
-            help="Rent as % of income. Target: ≤30%. Income slider only — rent is fixed in the simulator."
+            help="Rent as % of income. Target: ≤30%. Only income slider moves this."
         )

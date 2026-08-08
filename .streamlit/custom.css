@@ -76,11 +76,15 @@ label p { font-size: var(--label-size) !important; font-weight: 500; }
 .stTabs [data-baseweb="tab-list"] {
     width: 100%;
     display: flex;
+    flex-wrap: nowrap;
+    overflow-x: visible !important;
     gap: 4px;
     border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
-.stTabs [data-baseweb="tab"] {
-    flex: 1;
+.stTabs [data-baseweb="tab"],
+.stTabs [role="tab"] {
+    flex: 1 1 0;
+    min-width: 0;
     justify-content: center;
     padding: 10px 0;
     border-radius: 8px 8px 0 0;
@@ -92,11 +96,13 @@ label p { font-size: var(--label-size) !important; font-weight: 500; }
     border-bottom: none;
     transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
-.stTabs [data-baseweb="tab"]:hover {
+.stTabs [data-baseweb="tab"]:hover,
+.stTabs [role="tab"]:hover {
     background: rgba(128, 128, 128, 0.08);
     transform: translateY(-1px);
 }
-.stTabs [data-baseweb="tab"][aria-selected="true"] {
+.stTabs [data-baseweb="tab"][aria-selected="true"],
+.stTabs [role="tab"][aria-selected="true"] {
     background: var(--secondary-background-color) !important;
     border-color: rgba(128, 128, 128, 0.15) !important;
     border-bottom: 2px solid var(--primary-color) !important;
@@ -105,9 +111,15 @@ label p { font-size: var(--label-size) !important; font-weight: 500; }
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08), 0 4px 0 var(--secondary-background-color);
     z-index: 1;
 }
-.stTabs [data-baseweb="tab"] p { font-size: var(--tab-size) !important; }
-.stTabs [data-baseweb="tab"][aria-selected="true"] p { font-size: var(--tab-size) !important; font-weight: 600 !important; }
-.stTabs button p { font-size: var(--tab-size) !important; }
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [role="tab"] p,
+.stTabs [role="tab"] span { font-size: var(--tab-size) !important; }
+
+.stTabs [data-baseweb="tab"][aria-selected="true"] p,
+.stTabs [data-baseweb="tab"][aria-selected="true"] span,
+.stTabs [role="tab"][aria-selected="true"] p,
+.stTabs [role="tab"][aria-selected="true"] span { font-size: var(--tab-size) !important; font-weight: 600 !important; }
 
 /* ── Expanders ────────────────────────────────────────────────── */
 [data-testid="stExpander"] details summary {

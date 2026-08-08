@@ -52,6 +52,18 @@ def clear_all_fields():
     st.session_state.sample_input_active = False
 
 
+_FORM_KEYS = [
+    "income_main", "income_additional",
+    "expenses_rent", "expenses_groceries", "expenses_transport",
+    "expenses_subscriptions", "expenses_dining", "expenses_shopping", "expenses_other",
+    "savings_total", "investments_total", "debt_total", "debt_monthly",
+]
+
+def _snapshot_form_values():
+    for k in _FORM_KEYS:
+        st.session_state[f"_snap_{k}"] = st.session_state.get(k, 0.0)
+
+
 _CATEGORY_LABELS = {
     "rent":          "Rent / Mortgage",
     "groceries":     "Groceries",
@@ -426,5 +438,6 @@ def render_form_panel():
             elif st.session_state.income_main == 0:
                 st.error("Please enter your monthly income to continue.")
             else:
+                _snapshot_form_values()
                 st.session_state.current_page = "results"
                 st.rerun()
