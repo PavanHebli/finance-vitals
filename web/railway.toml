@@ -2,6 +2,6 @@
 builder = "RAILPACK"
 
 [deploy]
-startCommand = "npm run start"
+startCommand = "PORT=$PORT node .next/standalone/server.js"
 healthcheckPath = "/"
 healthcheckTimeout = 30
