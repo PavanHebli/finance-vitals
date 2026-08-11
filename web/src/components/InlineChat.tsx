@@ -6,13 +6,43 @@ import remarkGfm from "remark-gfm";
 import { ArrowUp } from "lucide-react";
 import { useStore, toApiFormData } from "@/lib/store";
 import { streamChat } from "@/lib/api";
+import type { FormData, MetricScores } from "@/lib/types";
 
-const STARTERS = [
-  "Why is my score low and what should I focus on first?",
-  "Should I pay off debt or build my emergency fund first?",
-  "How much emergency fund do I actually need?",
-  "How can I improve my savings rate?",
-];
+function buildStarters(fd: FormData, scores: MetricScores | null): string[] {
+  const qs: string[] = ["What should I focus on first to improve my finances?"];
+  if (!scores) return qs;
+
+  const hasDebt    = fd.debtMonthly > 0 || fd.debtTotal > 0;
+  const hasSavings = fd.savingsTotal > 0;
+  const dtiSt      = scores.debt_to_income.status;
+  const efSt       = scores.emergency_fund_months.status;
+  const srSt       = scores.savings_rate.status;
+  const hrSt       = scores.housing_ratio.status;
+
+  if ((dtiSt === "danger" || dtiSt === "warning") && hasDebt)
+    qs.push("My debt payments are eating my income — what's the smartest way to bring that down?");
+
+  if (efSt === "danger" || efSt === "warning") {
+    if (hasDebt)
+      qs.push("Should I pay off debt or build my emergency fund first?");
+    else
+      qs.push("I have almost no emergency fund — where do I start?");
+  }
+
+  if (srSt === "danger" || srSt === "warning")
+    qs.push("How can I increase how much I save each month?");
+
+  if (hrSt === "danger" || hrSt === "warning")
+    qs.push("My rent is taking up a big chunk of my income — what are my options?");
+
+  if (qs.length < 3 && !hasSavings)
+    qs.push("I haven't started saving yet — where do I begin?");
+
+  if (qs.length < 3)
+    qs.push("Am I on track given my income and expenses?");
+
+  return qs.slice(0, 4);
+}
 
 export function InlineChat() {
   const {
@@ -79,10 +109,10 @@ export function InlineChat() {
       {/* Scrollable conversation thread */}
       <div className="max-h-[480px] overflow-y-auto space-y-6 pr-1 pb-2">
 
-        {/* Starter suggestions — only before first message */}
+        {/* Starter suggestions — only before first message, personalized to user's data */}
         {chatHistory.length === 0 && !streaming && (
           <div className="flex flex-wrap gap-2">
-            {STARTERS.map((q) => (
+            {buildStarters(formData, metricScores).map((q) => (
               <button
                 key={q}
                 type="button"

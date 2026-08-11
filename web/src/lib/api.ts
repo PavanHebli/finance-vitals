@@ -61,6 +61,37 @@ export async function fetchSimulate(
   return res.json();
 }
 
+// ── Simulate interpret ────────────────────────────────────────────────────────
+
+export async function fetchSimulateInterpret(payload: {
+  scenario: string;
+  form_data: Record<string, unknown>;
+  provider: string;
+  api_key: string;
+}): Promise<{
+  adjustments: {
+    income_main:            number | null;
+    expenses_rent:          number | null;
+    expenses_groceries:     number | null;
+    expenses_transport:     number | null;
+    expenses_subscriptions: number | null;
+    expenses_dining:        number | null;
+    expenses_shopping:      number | null;
+    expenses_other:         number | null;
+    debt_monthly:           number | null;
+    savings_total:          number | null;
+  };
+  scenario_label: string;
+}> {
+  const res = await fetch(`${API_URL}/simulate/interpret`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 // ── Chat streaming ────────────────────────────────────────────────────────────
 
 export async function streamChat(

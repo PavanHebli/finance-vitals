@@ -56,12 +56,14 @@ function NumInput({
   onChange,
   prefix = "$",
   placeholder = "0",
+  hint,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   prefix?: string;
   placeholder?: string;
+  hint?: string;
 }) {
   return (
     <div>
@@ -81,6 +83,7 @@ function NumInput({
           className={`input ${prefix ? "pl-7" : ""}`}
         />
       </div>
+      {hint && <p className="text-xs text-[var(--text-muted)] mt-1 leading-snug">{hint}</p>}
     </div>
   );
 }
@@ -266,7 +269,12 @@ export default function FormPage() {
             onToggle={() => setFormField("section3Open", !formData.section3Open)}
           >
             <div className="grid grid-cols-2 gap-3">
-              <NumInput label="Total savings"             value={formData.savingsTotal}     onChange={(v) => setFormField("savingsTotal", v)} />
+              <NumInput
+                label="Total savings"
+                value={formData.savingsTotal}
+                onChange={(v) => setFormField("savingsTotal", v)}
+                hint="Money already in your bank or savings account — not what you save monthly"
+              />
               <NumInput label="Total investments"         value={formData.investmentsTotal} onChange={(v) => setFormField("investmentsTotal", v)} />
               <NumInput label="Total debt (all accounts)" value={formData.debtTotal}        onChange={(v) => setFormField("debtTotal", v)} />
               <NumInput label="Monthly debt payments"     value={formData.debtMonthly}      onChange={(v) => setFormField("debtMonthly", v)} />

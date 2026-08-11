@@ -113,6 +113,33 @@ class SimulateResponse(BaseModel):
     sim_metric_scores: MetricScores
 
 
+# ── /simulate/interpret ───────────────────────────────────────────────────────
+
+class InterpretRequest(BaseModel):
+    scenario: str
+    form_data: FormData
+    provider: str = ""
+    api_key: str = ""
+
+
+class InterpretAdjustments(BaseModel):
+    income_main:             Optional[float] = None
+    expenses_rent:           Optional[float] = None
+    expenses_groceries:      Optional[float] = None
+    expenses_transport:      Optional[float] = None
+    expenses_subscriptions:  Optional[float] = None
+    expenses_dining:         Optional[float] = None
+    expenses_shopping:       Optional[float] = None
+    expenses_other:          Optional[float] = None
+    debt_monthly:            Optional[float] = None
+    savings_total:           Optional[float] = None
+
+
+class InterpretResponse(BaseModel):
+    adjustments:    InterpretAdjustments
+    scenario_label: str
+
+
 # ── /chat ─────────────────────────────────────────────────────────────────────
 
 class Message(BaseModel):
