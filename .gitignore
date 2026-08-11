@@ -14,6 +14,11 @@ venv/
 env/
 ENV/
 
+# Node
+node_modules/
+.next/
+out/
+
 # Streamlit — only secrets excluded; config.toml and custom.css are safe to commit
 .streamlit/secrets.toml
 
@@ -44,3 +49,7 @@ tests/logs/
 .cache/
 SUMMARY.md
 TESTING.md
+
+# Streamlit agent skills (environment-specific symlinks)
+.agents/skills/developing-with-streamlit
+.claude/skills/developing-with-streamlit
