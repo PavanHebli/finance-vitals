@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import * as Tabs from "@radix-ui/react-tabs";
-import { Sparkles, Zap, TrendingUp } from "lucide-react";
+import { Sparkles, Zap } from "lucide-react";
 import { useStore, toApiFormData } from "@/lib/store";
 import { streamNarrative } from "@/lib/api";
 import { HealthScore } from "@/components/HealthScore";
@@ -11,7 +11,6 @@ import { Narrative } from "@/components/Narrative";
 import { Simulator } from "@/components/Simulator";
 import { InlineChat } from "@/components/InlineChat";
 import { ExportMenu } from "@/components/ExportMenu";
-import { ProgressTab } from "@/components/Progress";
 import type { Snapshot } from "@/lib/types";
 
 // Returns snapshots from months other than the current one
@@ -44,9 +43,8 @@ function calcStreak(snapshots: Snapshot[]): number {
 }
 
 const TABS = [
-  { id: "story",    label: "Your Story", Icon: Sparkles  },
-  { id: "whatif",   label: "What If?",   Icon: Zap       },
-  { id: "progress", label: "Progress",   Icon: TrendingUp },
+  { id: "story",  label: "Your Story", Icon: Sparkles },
+  { id: "whatif", label: "What If?",   Icon: Zap      },
 ];
 
 export default function ResultsPage() {
@@ -156,9 +154,7 @@ export default function ResultsPage() {
           <Simulator />
         </Tabs.Content>
 
-        <Tabs.Content value="progress" className="outline-none">
-          <ProgressTab />
-        </Tabs.Content>
+
       </Tabs.Root>
     </div>
   );
