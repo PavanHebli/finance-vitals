@@ -40,10 +40,24 @@ export function ProgressTab() {
       )}
 
       {snapshots.length < 2 ? (
-        <div className="card text-center py-10">
-          <p className="text-[var(--text-muted)] text-sm">
-            Save your first snapshot using the Export button, then come back next month with updated numbers to see your progress here.
-          </p>
+        <div className="card py-10 text-center space-y-3">
+          {snapshots.length === 1 ? (
+            <>
+              <div className="text-3xl font-extrabold text-[var(--brand)]" style={{ fontVariantNumeric: "tabular-nums" }}>
+                {snapshots[0].outputs.overall_score}
+              </div>
+              <p className="text-sm font-medium text-[var(--text)]">
+                Your baseline is set — {snapshots[0].saved_at}.
+              </p>
+              <p className="text-sm text-[var(--text-muted)] max-w-xs mx-auto">
+                Come back next month with updated numbers. Your score, savings rate, and every metric will chart here automatically.
+              </p>
+            </>
+          ) : (
+            <p className="text-[var(--text-muted)] text-sm">
+              Fill in your numbers to get your baseline score.
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-6">

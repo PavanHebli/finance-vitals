@@ -35,7 +35,7 @@ const HOW = [
   { step: "1", title: "Enter your numbers", body: "Income, expenses, savings, and debt — takes about 3 minutes. No bank connection required." },
   { step: "2", title: "Get your score",     body: "A 0-100 health score calculated from 4 key financial ratios with industry benchmarks." },
   { step: "3", title: "Read your story",    body: "An AI gives you a plain-English breakdown of what's working and one thing to fix this month." },
-  { step: "4", title: "Track progress",     body: "Save your data each month as a .vit file. Come back and see how your score moves over time." },
+  { step: "4", title: "Track progress",     body: "Your score is saved automatically. Come back next month and see exactly how far you've moved." },
 ];
 
 export default function Landing() {
