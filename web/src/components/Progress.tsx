@@ -4,7 +4,6 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { useStore } from "@/lib/store";
-import { GoalCard } from "./GoalCard";
 
 const METRIC_LINES = [
   { key: "savings_rate",          label: "Savings Rate (%)",  color: "#4f6ef7" },
@@ -14,11 +13,8 @@ const METRIC_LINES = [
 ];
 
 export function ProgressTab() {
-  const { snapshots, goal, metrics, metricScores, overallScore } = useStore();
+  const { snapshots } = useStore();
 
-  const previousSnapshot = snapshots.length >= 2 ? snapshots[snapshots.length - 2] : null;
-
-  // Build chart data from snapshots
   const chartData = snapshots.map((snap) => ({
     month:  snap.saved_at,
     score:  snap.outputs.overall_score,
@@ -29,16 +25,6 @@ export function ProgressTab() {
 
   return (
     <div className="space-y-6">
-      {/* Goal card */}
-      {goal && metrics && metricScores && (
-        <GoalCard
-          goal={goal}
-          currentMetrics={metrics}
-          metricScores={metricScores}
-          previousSnapshot={previousSnapshot}
-        />
-      )}
-
       {snapshots.length < 2 ? (
         <div className="card py-10 text-center space-y-3">
           {snapshots.length === 1 ? (

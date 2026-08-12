@@ -85,6 +85,32 @@ export interface Goal {
   set_month?: string;
 }
 
+export type MetricKey = "savings_rate" | "debt_to_income" | "emergency_fund_months" | "housing_ratio";
+
+export interface MetricGoal {
+  type: "metric";
+  id: string;
+  metric: MetricKey;
+  label: string;
+  target: number;
+  direction: "up" | "down";
+  baseline: number;
+  set_month: string;
+}
+
+export interface SavingsGoal {
+  type: "savings";
+  id: string;
+  name: string;
+  target_amount: number;
+  saved_so_far: number;
+  monthly_contribution: number;
+  target_date?: string;
+  set_month: string;
+}
+
+export type UserGoal = MetricGoal | SavingsGoal;
+
 export type StatusColor = "danger" | "warning" | "ok" | "good";
 
 export const STATUS_COLORS: Record<StatusColor, string> = {

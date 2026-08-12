@@ -1,126 +1,249 @@
 "use client";
 
-import * as Progress from "@radix-ui/react-progress";
+import { useState } from "react";
+import { X, TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
+import type { MetricGoal, SavingsGoal, UserGoal, Snapshot, MetricKey } from "@/lib/types";
 import { useStore } from "@/lib/store";
-import type { Goal, Metrics, MetricScores, Snapshot } from "@/lib/types";
 
-const METRIC_LABELS: Record<string, string> = {
-  savings_rate:          "Savings Rate",
-  debt_to_income:        "Debt-to-Income",
-  emergency_fund_months: "Emergency Fund",
-  housing_ratio:         "Housing Ratio",
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+function ProgressBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div className="h-1.5 w-full rounded-full bg-[var(--border)] overflow-hidden">
+      <div
+        className="h-full rounded-full transition-all duration-700"
+        style={{ width: `${Math.min(100, pct)}%`, background: color }}
+      />
+    </div>
+  );
+}
+
+function monthsToTarget(
+  snapshots: Snapshot[],
+  metric: MetricKey,
+  current: number,
+  target: number,
+  direction: "up" | "down",
+): number | null {
+  const sorted = [...snapshots].sort((a, b) => a.saved_at.localeCompare(b.saved_at));
+  if (sorted.length < 2) return null;
+  const deltas: number[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1].outputs.metrics?.[metric] as number | undefined;
+    const curr = sorted[i].outputs.metrics?.[metric] as number | undefined;
+    if (prev !== undefined && curr !== undefined) deltas.push(curr - prev);
+  }
+  if (!deltas.length) return null;
+  const avg = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+  const monthlyProgress = direction === "up" ? avg : -avg;
+  if (monthlyProgress <= 0) return null;
+  const remaining = direction === "up" ? target - current : current - target;
+  return remaining <= 0 ? 0 : Math.ceil(remaining / monthlyProgress);
+}
+
+// ── Metric goal card ──────────────────────────────────────────────────────────
+
+const METRIC_CONFIG: Record<MetricKey, { label: string; format: (v: number) => string; color: string }> = {
+  savings_rate:          { label: "Savings rate",    format: (v) => `${v}%`,   color: "#4f6ef7" },
+  debt_to_income:        { label: "Debt-to-income",  format: (v) => `${v}%`,   color: "#dc3535" },
+  emergency_fund_months: { label: "Emergency fund",  format: (v) => `${v} mo`, color: "#22c55e" },
+  housing_ratio:         { label: "Housing ratio",   format: (v) => `${v}%`,   color: "#f59e0b" },
 };
 
-const METRIC_FORMAT: Record<string, (v: number) => string> = {
-  savings_rate:          (v) => `${v}%`,
-  debt_to_income:        (v) => `${v}%`,
-  emergency_fund_months: (v) => `${v} mo`,
-  housing_ratio:         (v) => `${v}%`,
-};
-
-const BENCHMARKS: Record<string, { label: string; achieved: (v: number) => boolean }> = {
-  savings_rate:          { label: "Target: ≥ 20%",    achieved: (v) => v >= 20 },
-  debt_to_income:        { label: "Safe zone: < 20%", achieved: (v) => v <= 20 },
-  emergency_fund_months: { label: "Goal: 3–6 months", achieved: (v) => v >= 3 },
-  housing_ratio:         { label: "HUD limit: ≤ 30%", achieved: (v) => v <= 30 },
-};
-
-export function GoalCard({
-  goal,
-  currentMetrics,
-  metricScores,
-  previousSnapshot,
-}: {
-  goal: Goal;
-  currentMetrics: Metrics;
-  metricScores: MetricScores;
-  previousSnapshot: Snapshot | null;
+function MetricGoalCard({ goal, currentValue, snapshots, onRemove }: {
+  goal: MetricGoal;
+  currentValue: number;
+  snapshots: Snapshot[];
+  onRemove: () => void;
 }) {
-  const { setGoal, setGoalDismissed } = useStore();
-  const { metric, action, direction } = goal;
+  const cfg      = METRIC_CONFIG[goal.metric];
+  const achieved = goal.direction === "up"
+    ? currentValue >= goal.target
+    : currentValue <= goal.target;
 
-  const currentVal = currentMetrics[metric as keyof Metrics] as number;
-  const fmt        = METRIC_FORMAT[metric];
-  const label      = METRIC_LABELS[metric];
-  const benchmark  = BENCHMARKS[metric];
-  const achieved   = benchmark.achieved(currentVal);
+  const pct = achieved ? 100 : goal.direction === "up"
+    ? Math.min(100, (currentValue / goal.target) * 100)
+    : Math.min(100, ((goal.baseline - currentValue) / (goal.baseline - goal.target)) * 100);
 
-  // Progress: score 0–25 → 0–100%
-  const ms          = metricScores[metric as keyof MetricScores] as { score: number };
-  const progressPct = Math.min(100, ((ms?.score || 0) / 25) * 100);
+  const pace  = monthsToTarget(snapshots, goal.metric, currentValue, goal.target, goal.direction);
+  const going = goal.direction === "up"
+    ? currentValue > goal.baseline
+    : currentValue < goal.baseline;
 
-  // Timeline
-  let timelineText = "";
-  let deadlinePassed = false;
-  if (goal.set_month && goal.target_months) {
-    const [setYear, setMo] = goal.set_month.split("-").map(Number);
+  return (
+    <div className={`card border-t-2 relative ${achieved ? "border-green-400" : "border-[var(--brand)]"}`}>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-3 right-3 p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)] transition-colors"
+        aria-label="Remove goal"
+      >
+        <X size={13} />
+      </button>
+
+      <div className="flex items-center gap-1.5 mb-1 pr-6">
+        {going ? <TrendingUp size={13} className="text-green-500" /> : <TrendingDown size={13} className="text-[var(--text-muted)]" />}
+        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          {cfg.label}
+        </span>
+      </div>
+
+      <p className="text-sm font-medium text-[var(--text)] mb-3">{goal.label}</p>
+
+      <div className="flex items-baseline justify-between mb-1.5">
+        <span className="text-xl font-bold tabular-nums" style={{ color: cfg.color }}>
+          {cfg.format(currentValue)}
+        </span>
+        <span className="text-xs text-[var(--text-muted)]">
+          target {cfg.format(goal.target)}
+        </span>
+      </div>
+
+      <ProgressBar pct={pct} color={achieved ? "#22c55e" : cfg.color} />
+
+      <p className="text-xs text-[var(--text-muted)] mt-2">
+        {achieved
+          ? "✓ Goal reached"
+          : pace !== null
+            ? `~${pace} month${pace === 1 ? "" : "s"} at your current pace`
+            : "Check back next month to see your pace"}
+      </p>
+    </div>
+  );
+}
+
+// ── Savings goal card ─────────────────────────────────────────────────────────
+
+function SavingsGoalCard({ goal, onRemove, onUpdateSaved }: {
+  goal: SavingsGoal;
+  onRemove: () => void;
+  onUpdateSaved: (v: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState(goal.saved_so_far.toString());
+
+  const pct       = Math.min(100, (goal.saved_so_far / goal.target_amount) * 100);
+  const remaining = Math.max(0, goal.target_amount - goal.saved_so_far);
+  const achieved  = goal.saved_so_far >= goal.target_amount;
+
+  // Months remaining to target date
+  let targetMonthsLeft: number | null = null;
+  if (goal.target_date) {
+    const [ty, tm] = goal.target_date.split("-").map(Number);
     const now = new Date();
-    const elapsed = (now.getFullYear() - setYear) * 12 + (now.getMonth() + 1 - setMo);
-    const remaining = goal.target_months - elapsed;
-    if (remaining <= 0) {
-      deadlinePassed = true;
-      timelineText = `⏰ Deadline passed (${goal.target_months}-month goal)`;
-    } else {
-      timelineText = `${remaining} month${remaining === 1 ? "" : "s"} remaining of ${goal.target_months}`;
-    }
+    targetMonthsLeft = Math.max(0, (ty - now.getFullYear()) * 12 + (tm - now.getMonth() - 1));
   }
 
-  if (achieved) {
-    return (
-      <div className="card border-l-4 border-green-400 bg-green-50 dark:bg-green-950/30">
-        <p className="font-semibold text-green-700 dark:text-green-400">
-          ✅ Goal achieved! {label} is now {fmt(currentVal)}.
-        </p>
-        <p className="text-sm text-[var(--text-muted)] mt-1">Scroll down to set a new goal from this month's story.</p>
+  const monthsToGoal = goal.monthly_contribution > 0
+    ? Math.ceil(remaining / goal.monthly_contribution)
+    : null;
+
+  const onTrack = targetMonthsLeft !== null && monthsToGoal !== null
+    ? monthsToGoal <= targetMonthsLeft
+    : null;
+
+  function commitEdit() {
+    const val = parseFloat(draft);
+    if (!isNaN(val) && val >= 0) onUpdateSaved(val);
+    setEditing(false);
+  }
+
+  return (
+    <div className={`card border-t-2 relative ${achieved ? "border-green-400" : "border-[var(--brand)]"}`}>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-3 right-3 p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)] transition-colors"
+        aria-label="Remove goal"
+      >
+        <X size={13} />
+      </button>
+
+      <div className="flex items-center gap-1.5 mb-1 pr-6">
+        <PiggyBank size={13} className="text-[var(--brand)]" />
+        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          Savings goal
+        </span>
       </div>
+
+      <p className="text-sm font-medium text-[var(--text)] mb-3">{goal.name}</p>
+
+      <div className="flex items-baseline justify-between mb-1.5">
+        <span className="text-xl font-bold tabular-nums text-[var(--text)]">
+          ${goal.saved_so_far.toLocaleString()}
+        </span>
+        <span className="text-xs text-[var(--text-muted)]">
+          of ${goal.target_amount.toLocaleString()}
+        </span>
+      </div>
+
+      <ProgressBar pct={pct} color={achieved ? "#22c55e" : "#4f6ef7"} />
+
+      <p className="text-xs text-[var(--text-muted)] mt-2 mb-3">
+        {achieved
+          ? "✓ Goal reached"
+          : monthsToGoal !== null
+            ? onTrack !== null
+              ? onTrack
+                ? `On track · ${monthsToGoal} month${monthsToGoal === 1 ? "" : "s"} to goal`
+                : `Behind · need $${Math.ceil(remaining / (targetMonthsLeft || 1)).toLocaleString()}/mo to hit target`
+              : `${monthsToGoal} month${monthsToGoal === 1 ? "" : "s"} at $${goal.monthly_contribution.toLocaleString()}/mo`
+            : `$${goal.monthly_contribution.toLocaleString()}/mo`}
+      </p>
+
+      {/* Update saved amount */}
+      {!achieved && (
+        editing ? (
+          <div className="flex gap-2 items-center">
+            <span className="text-sm text-[var(--text-muted)]">$</span>
+            <input
+              type="number"
+              min={0}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="input py-1 text-sm w-28"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditing(false); }}
+            />
+            <button type="button" onClick={commitEdit} className="btn-primary py-1 px-3 text-sm">Save</button>
+            <button type="button" onClick={() => setEditing(false)} className="btn-secondary py-1 px-3 text-sm">Cancel</button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setDraft(goal.saved_so_far.toString()); setEditing(true); }}
+            className="text-xs text-[var(--brand)] hover:underline"
+          >
+            Update saved amount
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+// ── Public export — renders the right card variant ────────────────────────────
+
+export function GoalCard({ goal }: { goal: UserGoal }) {
+  const { metrics, snapshots, removeGoal, updateSavingsProgress } = useStore();
+
+  if (goal.type === "metric") {
+    const currentValue = (metrics?.[goal.metric] as number | undefined) ?? goal.baseline;
+    return (
+      <MetricGoalCard
+        goal={goal}
+        currentValue={currentValue}
+        snapshots={snapshots}
+        onRemove={() => removeGoal(goal.id)}
+      />
     );
   }
 
   return (
-    <div className={`card border-l-4 ${deadlinePassed ? "border-orange-400" : "border-[var(--brand)]"}`}>
-      <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">🎯 Your goal</div>
-      <p className="text-[var(--text)] mb-3">{action}</p>
-      <p className="text-sm text-[var(--text-muted)] mb-3">
-        Tracking: <strong>{label}</strong> · {benchmark.label}
-      </p>
-
-      {timelineText && (
-        <p className={`text-sm mb-3 ${deadlinePassed ? "text-orange-500 font-medium" : "text-[var(--text-muted)]"}`}>
-          {timelineText}
-        </p>
-      )}
-
-      <Progress.Root value={progressPct} className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--border)] mb-1">
-        <Progress.Indicator
-          className="h-full bg-[var(--brand)] transition-all duration-500"
-          style={{ transform: `translateX(-${100 - progressPct}%)` }}
-        />
-      </Progress.Root>
-      <p className="text-xs text-[var(--text-muted)] mb-4">{label}: {fmt(currentVal)}</p>
-
-      {/* Delta vs previous snapshot */}
-      {previousSnapshot && (() => {
-        const prevVal = previousSnapshot.outputs.metrics?.[metric as keyof typeof previousSnapshot.outputs.metrics] as number | undefined;
-        if (prevVal === undefined) return null;
-        const delta   = Math.round((currentVal - prevVal) * 10) / 10;
-        const isGood  = (direction === "up" && delta > 0) || (direction === "down" && delta < 0);
-        const sign    = delta > 0 ? "+" : "";
-        return (
-          <p className={`text-sm mb-4 ${isGood ? "text-green-500" : delta !== 0 ? "text-red-500" : "text-[var(--text-muted)]"}`}>
-            vs last snapshot: {fmt(prevVal)} → {fmt(currentVal)}
-            {delta !== 0 ? ` (${sign}${fmt(Math.abs(delta))})` : " — no change yet"}
-          </p>
-        );
-      })()}
-
-      <div className="flex gap-2">
-        <button type="button" onClick={() => setGoal(null)} className="btn-secondary text-sm">
-          Change goal
-        </button>
-        <button type="button" onClick={() => { setGoal(null); setGoalDismissed(true); }} className="btn-secondary text-sm">
-          Cancel tracking
-        </button>
-      </div>
-    </div>
+    <SavingsGoalCard
+      goal={goal}
+      onRemove={() => removeGoal(goal.id)}
+      onUpdateSaved={(v) => updateSavingsProgress(goal.id, v)}
+    />
   );
 }

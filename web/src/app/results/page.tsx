@@ -11,6 +11,7 @@ import { Narrative } from "@/components/Narrative";
 import { Simulator } from "@/components/Simulator";
 import { InlineChat } from "@/components/InlineChat";
 import { ExportMenu } from "@/components/ExportMenu";
+import { GoalSection } from "@/components/GoalSection";
 import type { Snapshot } from "@/lib/types";
 
 // Returns snapshots from months other than the current one
@@ -121,9 +122,12 @@ export default function ResultsPage() {
       />
 
       {/* Export */}
-      <div className="flex justify-end mt-4 mb-6">
+      <div className="flex justify-end mt-4">
         <ExportMenu />
       </div>
+
+      {/* Goals */}
+      <GoalSection />
 
       {/* Tabs */}
       <Tabs.Root value={activeTab} onValueChange={setActiveTab}>

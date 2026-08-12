@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { FormData, Metrics, MetricScores, Mirror, Message, Snapshot, Goal } from "./types";
+import type { FormData, Metrics, MetricScores, Mirror, Message, Snapshot, UserGoal } from "./types";
 
 const DEFAULT_FORM: FormData = {
   provider: "",
@@ -42,8 +42,7 @@ interface VitalsStore {
   chatHistory: Message[];
   chatSummary: string;
   snapshots: Snapshot[];
-  goal: Goal | null;
-  goalDismissed: boolean;
+  goals: UserGoal[];
   activeTab: string;
 
   setFormField: <K extends keyof FormData>(key: K, value: FormData[K]) => void;
@@ -57,8 +56,9 @@ interface VitalsStore {
   clearChat: () => void;
   addSnapshot: (snap: Snapshot) => void;
   setSnapshots: (snaps: Snapshot[]) => void;
-  setGoal: (goal: Goal | null) => void;
-  setGoalDismissed: (dismissed: boolean) => void;
+  addGoal: (goal: UserGoal) => void;
+  removeGoal: (id: string) => void;
+  updateSavingsProgress: (id: string, savedSoFar: number) => void;
   setActiveTab: (tab: string) => void;
   resetResults: () => void;
 }
@@ -76,8 +76,7 @@ export const useStore = create<VitalsStore>()(
       chatHistory: [],
       chatSummary: "",
       snapshots: [],
-      goal: null,
-      goalDismissed: false,
+      goals: [],
       activeTab: "story",
 
       setFormField: (key, value) =>
@@ -106,8 +105,19 @@ export const useStore = create<VitalsStore>()(
         }),
       setSnapshots: (snaps) => set({ snapshots: snaps }),
 
-      setGoal: (goal) => set({ goal }),
-      setGoalDismissed: (dismissed) => set({ goalDismissed: dismissed }),
+      addGoal: (goal) =>
+        set((s) => ({ goals: [...s.goals, goal] })),
+
+      removeGoal: (id) =>
+        set((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),
+
+      updateSavingsProgress: (id, savedSoFar) =>
+        set((s) => ({
+          goals: s.goals.map((g) =>
+            g.id === id && g.type === "savings" ? { ...g, saved_so_far: savedSoFar } : g
+          ),
+        })),
+
       setActiveTab: (tab) => set({ activeTab: tab }),
 
       resetResults: () =>
@@ -120,14 +130,11 @@ export const useStore = create<VitalsStore>()(
           narrativeLoading: false,
           chatHistory: [],
           chatSummary: "",
-          goal: null,
-          goalDismissed: false,
           activeTab: "story",
         }),
     }),
     {
       name: "vitals-store",
-      // Don't persist loading state
       partialize: (s) => ({ ...s, narrativeLoading: false }),
     }
   )
@@ -136,27 +143,27 @@ export const useStore = create<VitalsStore>()(
 /** Converts the Zustand formData to the snake_case dict the API expects */
 export function toApiFormData(fd: FormData): Record<string, unknown> {
   return {
-    income_main:            fd.incomeMain,
-    income_additional:      fd.incomeAdditional,
-    expenses_rent:          fd.expensesRent,
-    expenses_groceries:     fd.expensesGroceries,
-    expenses_transport:     fd.expensesTransport,
-    expenses_subscriptions: fd.expensesSubscriptions,
-    expenses_dining:        fd.expensesDining,
-    expenses_shopping:      fd.expensesShopping,
-    expenses_other:         fd.expensesOther,
+    income_main:             fd.incomeMain,
+    income_additional:       fd.incomeAdditional,
+    expenses_rent:           fd.expensesRent,
+    expenses_groceries:      fd.expensesGroceries,
+    expenses_transport:      fd.expensesTransport,
+    expenses_subscriptions:  fd.expensesSubscriptions,
+    expenses_dining:         fd.expensesDining,
+    expenses_shopping:       fd.expensesShopping,
+    expenses_other:          fd.expensesOther,
     expenses_total_estimate: fd.expensesTotalEstimate || (fd.expensesRent + fd.expensesGroceries + fd.expensesTransport + fd.expensesSubscriptions + fd.expensesDining + fd.expensesShopping + fd.expensesOther),
-    savings_total:          fd.savingsTotal,
-    investments_total:      fd.investmentsTotal,
-    debt_total:             fd.debtTotal,
-    debt_monthly:           fd.debtMonthly,
-    age:                    fd.age,
-    employment:             fd.employment,
-    has_health_insurance:   fd.hasHealthInsurance,
-    has_emergency_fund:     fd.hasEmergencyFund,
-    contributing_401k:      fd.contributing401k,
-    section2_visible:       fd.section2Open,
-    section3_visible:       fd.section3Open,
-    section4_visible:       fd.section4Open,
+    savings_total:           fd.savingsTotal,
+    investments_total:       fd.investmentsTotal,
+    debt_total:              fd.debtTotal,
+    debt_monthly:            fd.debtMonthly,
+    age:                     fd.age,
+    employment:              fd.employment,
+    has_health_insurance:    fd.hasHealthInsurance,
+    has_emergency_fund:      fd.hasEmergencyFund,
+    contributing_401k:       fd.contributing401k,
+    section2_visible:        fd.section2Open,
+    section3_visible:        fd.section3Open,
+    section4_visible:        fd.section4Open,
   };
 }

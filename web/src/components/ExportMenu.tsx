@@ -6,7 +6,7 @@ import { useStore, toApiFormData } from "@/lib/store";
 import { exportPdf, downloadBlob, downloadBase64, encodeSnapshot } from "@/lib/api";
 
 export function ExportMenu() {
-  const { formData, metrics, metricScores, overallScore, mirror, narrativeText, goal, addSnapshot } = useStore();
+  const { formData, metrics, metricScores, overallScore, mirror, narrativeText, addSnapshot } = useStore();
   const [open, setOpen]   = useState(false);
   const [loading, setLoading] = useState<"pdf" | "vit" | null>(null);
 
@@ -42,16 +42,14 @@ export function ExportMenu() {
         overall_score: overallScore!,
         mirror,
         narrative:     narrativeText,
-        goal:          goal ?? undefined,
       };
       const b64 = await encodeSnapshot(snap);
       downloadBase64(b64, "my_vitals.vit");
-      // Also add to local snapshots store for the Progress tab
       addSnapshot({
         saved_at: new Date().toISOString().slice(0, 7),
         version:  "1",
         inputs:   toApiFormData(formData),
-        outputs:  { overall_score: overallScore!, mirror_label: mirror!.label, metrics: metrics!, metric_scores: metricScores!, narrative: narrativeText, goal: goal ?? null },
+        outputs:  { overall_score: overallScore!, mirror_label: mirror!.label, metrics: metrics!, metric_scores: metricScores!, narrative: narrativeText, goal: null },
       });
     } catch {
       // silently fail
