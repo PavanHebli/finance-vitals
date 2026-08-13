@@ -290,15 +290,17 @@ const FORM_TO_SLIDER: Record<string, keyof FormData> = {
   savings_total:          "savingsTotal",
 };
 
-// ── Scenario chips ────────────────────────────────────────────────────────────
+// ── Scenario chips — built from the user's actual data ───────────────────────
 
-const CHIPS = [
-  "I'm getting a $500 raise",
-  "Moving to a cheaper apartment",
-  "Paying off my car loan",
-  "Starting a side hustle ($800/month)",
-  "Cut dining out in half",
-];
+function buildChips(fd: FormData): string[] {
+  const chips: string[] = ["I'm getting a $500 raise", "Starting a side hustle ($800/month)"];
+  if (fd.expensesRent > 0)          chips.push("Moving to a cheaper apartment");
+  if (fd.debtMonthly > 0 || fd.debtTotal > 0) chips.push("Paying off my debt");
+  if (fd.expensesDining > 0)        chips.push("Cut dining out in half");
+  if (fd.expensesSubscriptions > 0) chips.push("Cancel unused subscriptions");
+  if (fd.expensesTransport > 0)     chips.push("Switch to public transport");
+  return chips.slice(0, 5);
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -464,7 +466,7 @@ export function Simulator() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {CHIPS.map((chip) => (
+          {buildChips(formData).map((chip) => (
             <button
               key={chip}
               type="button"

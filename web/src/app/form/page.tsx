@@ -153,7 +153,7 @@ const K401_OPTIONS = [
 
 export default function FormPage() {
   const router = useRouter();
-  const { formData, setFormField, setFormData, setResults, resetResults } = useStore();
+  const { formData, setFormField, setFormData, setResults, resetResults, addSnapshot } = useStore();
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
@@ -169,6 +169,19 @@ export default function FormPage() {
     try {
       const result = await fetchScore(toApiFormData(formData));
       setResults(result.metrics, result.metric_scores, result.overall_score, result.mirror);
+      addSnapshot({
+        saved_at: new Date().toISOString().slice(0, 7),
+        version: "1",
+        inputs: toApiFormData(formData),
+        outputs: {
+          overall_score: result.overall_score,
+          mirror_label: result.mirror.label,
+          metrics: result.metrics,
+          metric_scores: result.metric_scores,
+          narrative: "",
+          goal: null,
+        },
+      });
       router.push("/results");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
