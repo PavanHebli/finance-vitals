@@ -1,0 +1,7 @@
+[build]
+builder = "RAILPACK"
+
+[deploy]
+startCommand = "npm run start -- -p $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 30

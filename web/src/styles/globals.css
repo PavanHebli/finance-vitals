@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg:          #ffffff;
+    --bg-2:        #f8f9fc;
+    --border:      #e2e6f0;
+    --text:        #1a1d2e;
+    --text-muted:  #6b7280;
+    --brand:       #4f6ef7;
+    --brand-hover: #3b5bdb;
+    --danger:      #dc3535;
+    --warning:     #dc6e00;
+    --ok:          #a08200;
+    --good:        #00a043;
+  }
+
+  .dark {
+    --bg:          #0f1117;
+    --bg-2:        #181c27;
+    --border:      #2a2f42;
+    --text:        #e8eaf2;
+    --text-muted:  #9099b0;
+    --brand:       #6b84f9;
+    --brand-hover: #839bfa;
+    --danger:      #f05252;
+    --warning:     #f08030;
+    --ok:          #c8a800;
+    --good:        #22c55e;
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border bg-[var(--bg-2)] border-[var(--border)] p-5;
+  }
+
+  .btn-primary {
+    @apply bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white font-medium px-5 py-2.5 rounded-lg transition-colors;
+  }
+
+  .btn-secondary {
+    @apply border border-[var(--border)] hover:bg-[var(--bg-2)] text-[var(--text)] font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .input {
+    @apply w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-[var(--text-muted)] mb-1;
+  }
+
+  .status-danger  { color: var(--danger); }
+  .status-warning { color: var(--warning); }
+  .status-ok      { color: var(--ok); }
+  .status-good    { color: var(--good); }
+
+  .badge-danger  { @apply bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full; }
+  .badge-warning { @apply bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-semibold px-2 py-0.5 rounded-full; }
+  .badge-ok      { @apply bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-semibold px-2 py-0.5 rounded-full; }
+  .badge-good    { @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2 py-0.5 rounded-full; }
+}
+
+/* Markdown prose */
+.prose-vitals p    { @apply mb-3 leading-relaxed; }
+.prose-vitals ul   { @apply list-disc pl-5 space-y-1 mb-3; }
+.prose-vitals ol   { @apply list-decimal pl-5 space-y-1 mb-3; }
+.prose-vitals strong { @apply font-semibold; }
+.prose-vitals code { @apply bg-[var(--bg-2)] px-1 rounded text-sm; }
