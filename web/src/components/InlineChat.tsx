@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { ArrowUp } from "lucide-react";
 import { useStore, toApiFormData } from "@/lib/store";
 import { streamChat } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import type { FormData, MetricScores } from "@/lib/types";
 
 function buildStarters(fd: FormData, scores: MetricScores | null): string[] {
@@ -64,6 +65,9 @@ export function InlineChat() {
     if (!text.trim() || streaming) return;
     if (!metrics || !metricScores || !overallScore || !mirror) return;
 
+    const turn = Math.floor(chatHistory.length / 2) + 1;
+    analytics.track("chat_sent", { turn });
+    analytics.updateSession({ chat_turns: turn });
     addChatMessage({ role: "user", content: text });
     setInput("");
     setStreaming(true);

@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, TrendingUp, Moon, Sun, Home, FileText } from "lucide-react";
+import { Menu, X, TrendingUp, Moon, Sun, Home, FileText, MessageSquare } from "lucide-react";
+import { analytics } from "@/lib/analytics";
 
 const NAV_ITEMS = [
-  { href: "/",         label: "Home",     icon: Home },
-  { href: "/form",     label: "Check my health", icon: FileText },
-  { href: "/progress", label: "Progress", icon: TrendingUp },
+  { href: "/",          label: "Home",             icon: Home },
+  { href: "/form",      label: "Check my health",  icon: FileText },
+  { href: "/progress",  label: "Progress",         icon: TrendingUp },
+  { href: "/feedback",  label: "Give feedback",    icon: MessageSquare },
 ];
 
 export function Header() {
@@ -41,7 +43,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => { setOpen(true); analytics.track("menu_opened"); }}
             className="p-2 rounded-lg hover:bg-[var(--bg-2)] text-[var(--text-muted)] transition-colors"
             aria-label="Open menu"
           >
@@ -98,6 +100,7 @@ export function Header() {
               <Link
                 key={href}
                 href={href}
+                onClick={() => analytics.track("nav_clicked", { item: label })}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   active
                     ? "bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] text-[var(--brand)] font-medium"

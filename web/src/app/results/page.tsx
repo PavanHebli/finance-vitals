@@ -6,6 +6,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { Sparkles, Zap } from "lucide-react";
 import { useStore, toApiFormData } from "@/lib/store";
 import { streamNarrative } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import { HealthScore } from "@/components/HealthScore";
 import { Narrative } from "@/components/Narrative";
 import { Simulator } from "@/components/Simulator";
@@ -59,6 +60,7 @@ export default function ResultsPage() {
 
   useEffect(() => {
     if (!overallScore) router.replace("/form");
+    else analytics.updateSession({ viewed_results: true });
   }, [overallScore, router]);
 
   useEffect(() => {
@@ -130,7 +132,13 @@ export default function ResultsPage() {
       <GoalSection />
 
       {/* Tabs */}
-      <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(tab) => {
+          analytics.track("tab_changed", { tab, previous: activeTab });
+          setActiveTab(tab);
+        }}
+      >
         <Tabs.List className="flex gap-1 border-b border-[var(--border)] mb-6">
           {TABS.map(({ id, label, Icon }) => (
             <Tabs.Trigger

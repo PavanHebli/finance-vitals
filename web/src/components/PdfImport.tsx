@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { importPdf, type Transaction } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import type { FormData } from "@/lib/types";
 import { Upload, X, Loader2 } from "lucide-react";
 
@@ -69,6 +70,8 @@ export function PdfImport({
     const batch = files.slice(0, 5);
     setLoading(true);
     setErrors([]);
+    analytics.track("pdf_import_started", { file_count: batch.length });
+    analytics.updateSession({ pdf_imported: true });
 
     const newTxs: EditableTx[] = [];
     const newErrors: string[]  = [];
@@ -88,6 +91,7 @@ export function PdfImport({
 
     setTxs((prev) => [...prev, ...newTxs]);
     setErrors(newErrors);
+    analytics.track("pdf_import_completed", { transaction_count: newTxs.length, error_count: newErrors.length });
     setLoading(false);
     setProgress("");
     if (inputRef.current) inputRef.current.value = "";
@@ -250,7 +254,7 @@ export function PdfImport({
 
           <button
             type="button"
-            onClick={() => onImported(buildFormData(txs))}
+            onClick={() => { analytics.track("pdf_import_applied", { transaction_count: txs.length }); onImported(buildFormData(txs)); }}
             className="btn-primary w-full text-sm"
           >
             Fill form with these numbers

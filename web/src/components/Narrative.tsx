@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Metrics, MetricScores } from "@/lib/types";
+import { analytics } from "@/lib/analytics";
 
 const EDUCATION: Record<string, Record<string, { title: string; body: string }>> = {
   savings_rate: {
@@ -39,6 +41,14 @@ export function Narrative({
   metrics: Metrics;
   metricScores: MetricScores;
 }) {
+  const didTrack = useRef(false);
+  useEffect(() => {
+    if (!loading && text && !didTrack.current) {
+      didTrack.current = true;
+      analytics.updateSession({ narrative_completed: true });
+    }
+  }, [loading, text]);
+
   const flagged = (["savings_rate", "debt_to_income", "emergency_fund_months", "housing_ratio"] as const)
     .map((key) => {
       const status = metricScores[key].status;

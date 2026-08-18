@@ -1,8 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import { ProgressTab } from "@/components/Progress";
+import { analytics } from "@/lib/analytics";
 
 export default function ProgressPage() {
+  useEffect(() => {
+    analytics.updateSession({ progress_viewed: true });
+  }, []);
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
       <div className="mb-8">

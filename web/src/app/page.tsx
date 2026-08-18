@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { analytics } from "@/lib/analytics";
 
 const METRICS = [
   {
@@ -52,7 +55,7 @@ export default function Landing() {
         <p className="text-xl text-[var(--text-muted)] max-w-2xl mx-auto mb-10 leading-relaxed">
           A brutally honest score from 0 to 100. No bank connection. No subscription. Just your numbers, a real benchmark, and an AI that tells you exactly what to do next.
         </p>
-        <Link href="/form" className="btn-primary text-base px-8 py-3 inline-block">
+        <Link href="/form" className="btn-primary text-base px-8 py-3 inline-block" onClick={() => analytics.track("cta_clicked", { cta: "hero" })}>
           Check my financial health
         </Link>
         <p className="text-sm text-[var(--text-muted)] mt-4">Free · Private · No account required</p>
@@ -102,7 +105,7 @@ export default function Landing() {
       <section className="py-16 border-t border-[var(--border)] text-center">
         <h2 className="text-3xl font-bold mb-4">Ready to see your score?</h2>
         <p className="text-[var(--text-muted)] mb-8">Takes 3 minutes. Your data stays on your device.</p>
-        <Link href="/form" className="btn-primary text-base px-8 py-3 inline-block">
+        <Link href="/form" className="btn-primary text-base px-8 py-3 inline-block" onClick={() => analytics.track("cta_clicked", { cta: "bottom" })}>
           Get started
         </Link>
       </section>

@@ -10,9 +10,10 @@ def submit_feedback(
     supabase_key: str,
 ) -> bool:
     if not supabase_url or not supabase_key:
-        return False
+        return True  # no backend configured — accept silently
     try:
         from supabase import create_client
+        print(supabase_url, "\n", supabase_key)
         client = create_client(supabase_url, supabase_key)
         client.table("feedback").insert({
             "found_via":             found_via,
@@ -24,5 +25,6 @@ def submit_feedback(
             "email":                 email or None,
         }, returning="minimal").execute()
         return True
-    except Exception:
+    except Exception as e:
+        print(f"[feedback_db] error: {e}")
         return False

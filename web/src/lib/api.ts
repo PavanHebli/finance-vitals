@@ -237,6 +237,24 @@ export async function submitFeedback(payload: Record<string, unknown>): Promise<
   return success;
 }
 
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+export function analyticsSession(sessionId: string, data: Record<string, unknown>): void {
+  fetch(`${API_URL}/analytics/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, data }),
+  }).catch(() => {});
+}
+
+export function analyticsEvent(sessionId: string, event: string, properties: Record<string, unknown> = {}): void {
+  fetch(`${API_URL}/analytics/event`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, event, properties }),
+  }).catch(() => {});
+}
+
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 async function readStream(res: Response, onChunk: (chunk: string) => void): Promise<void> {

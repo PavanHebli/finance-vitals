@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Header } from "@/components/Header";
+import { FeedbackButton } from "@/components/FeedbackButton";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import "@/styles/globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -19,8 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${sans.variable} font-sans min-h-screen`}>
+        <AnalyticsProvider />
         <Header />
         <main>{children}</main>
+        <FeedbackButton />
       </body>
     </html>
   );

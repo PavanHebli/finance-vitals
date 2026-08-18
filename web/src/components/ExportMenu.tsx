@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { useStore, toApiFormData } from "@/lib/store";
 import { exportPdf, downloadBlob, downloadBase64, encodeSnapshot } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 
 export function ExportMenu() {
   const { formData, metrics, metricScores, overallScore, mirror, narrativeText, addSnapshot } = useStore();
@@ -24,6 +25,8 @@ export function ExportMenu() {
         narrative:     narrativeText,
       });
       downloadBlob(blob, "vitals_report.pdf");
+      analytics.track("pdf_exported");
+      analytics.updateSession({ pdf_exported: true });
     } catch {
       // silently fail for now
     } finally {
@@ -45,6 +48,8 @@ export function ExportMenu() {
       };
       const b64 = await encodeSnapshot(snap);
       downloadBase64(b64, "my_vitals.vit");
+      analytics.track("snapshot_saved");
+      analytics.updateSession({ snapshot_saved: true });
       addSnapshot({
         saved_at: new Date().toISOString().slice(0, 7),
         version:  "1",

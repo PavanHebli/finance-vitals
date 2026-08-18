@@ -4,7 +4,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import score, narrative, chat, simulate, goal, importer, export, feedback, snapshot
+from routes import score, narrative, chat, simulate, goal, importer, export, feedback, snapshot, analytics
 
 app = FastAPI(title="Vitals API", version="1.0.0")
 
@@ -25,6 +25,7 @@ app.include_router(importer.router)
 app.include_router(export.router)
 app.include_router(feedback.router)
 app.include_router(snapshot.router)
+app.include_router(analytics.router)
 
 
 @app.get("/health")

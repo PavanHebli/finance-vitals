@@ -202,3 +202,16 @@ class FeedbackRequest(BaseModel):
 
 class FeedbackResponse(BaseModel):
     success: bool
+
+
+# ── /analytics ────────────────────────────────────────────────────────────────
+
+class SessionUpsert(BaseModel):
+    session_id: str
+    data: dict[str, Any] = {}
+
+
+class EventInsert(BaseModel):
+    session_id: str
+    event: str
+    properties: dict[str, Any] = {}

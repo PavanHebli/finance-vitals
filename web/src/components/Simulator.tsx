@@ -5,6 +5,7 @@ import * as Slider from "@radix-ui/react-slider";
 import { ArrowRight, ChevronDown, ChevronUp, Loader2, X } from "lucide-react";
 import { useStore, toApiFormData } from "@/lib/store";
 import { fetchSimulate, fetchSimulateInterpret } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import type { Metrics, MetricScores, FormData } from "@/lib/types";
 
 // ── Status ────────────────────────────────────────────────────────────────────
@@ -322,7 +323,8 @@ export function Simulator() {
   const [interpretLoading,  setInterpretLoading]  = useState(false);
   const [interpretError,    setInterpretError]    = useState<string | null>(null);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trackedOnce  = useRef(false);
 
   // Build a merged formData from slider values for formula display
   function buildSimFd(vals: Record<string, number>): FormData {
@@ -362,6 +364,11 @@ export function Simulator() {
     const next = { ...values, [key]: value };
     setValues(next);
     setActiveLabel(null);
+    if (!trackedOnce.current) {
+      trackedOnce.current = true;
+      analytics.track("simulator_used", { field: key });
+      analytics.updateSession({ simulator_used: true });
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => runSimulate(next), 400);
   }
@@ -370,6 +377,11 @@ export function Simulator() {
     if (!text.trim()) return;
     setInterpretError(null);
     setInterpretLoading(true);
+    if (!trackedOnce.current) {
+      trackedOnce.current = true;
+      analytics.track("simulator_used", { field: "ai_scenario" });
+      analytics.updateSession({ simulator_used: true });
+    }
     try {
       const result = await fetchSimulateInterpret({
         scenario:  text.trim(),

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useStore, toApiFormData } from "@/lib/store";
 import { fetchScore } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import { PdfImport } from "@/components/PdfImport";
 import { ChevronDown } from "lucide-react";
 
@@ -154,6 +155,10 @@ const K401_OPTIONS = [
 export default function FormPage() {
   const router = useRouter();
   const { formData, setFormField, setFormData, setResults, resetResults, addSnapshot } = useStore();
+
+  useEffect(() => {
+    analytics.updateSession({ visited_form: true });
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
@@ -169,6 +174,12 @@ export default function FormPage() {
     try {
       const result = await fetchScore(toApiFormData(formData));
       setResults(result.metrics, result.metric_scores, result.overall_score, result.mirror);
+      analytics.updateSession({
+        submitted_form: true,
+        score:          result.overall_score,
+        score_band:     ["0-20","21-40","41-60","61-80","81-100"][Math.min(Math.floor(result.overall_score / 20), 4)],
+        provider:       formData.provider,
+      });
       addSnapshot({
         saved_at: new Date().toISOString().slice(0, 7),
         version: "1",
