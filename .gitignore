@@ -18,6 +18,7 @@ ENV/
 node_modules/
 .next/
 out/
+*.tsbuildinfo
 
 # Streamlit — only secrets excluded; config.toml and custom.css are safe to commit
 .streamlit/secrets.toml
