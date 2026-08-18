@@ -20,12 +20,17 @@ def insert_event(session_id: str, event: str, properties: dict, supabase_url: st
         return True
     try:
         from supabase import create_client
+        props = dict(properties or {})
+        env   = props.pop("env", None)
         client = create_client(supabase_url, supabase_key)
-        client.table("events").insert({
+        row = {
             "session_id": session_id,
             "event":      event,
-            "properties": properties or {},
-        }).execute()
+            "properties": props,
+        }
+        if env:
+            row["env"] = env
+        client.table("events").insert(row).execute()
         return True
     except Exception as e:
         print(f"[analytics_db] insert_event error: {e}")

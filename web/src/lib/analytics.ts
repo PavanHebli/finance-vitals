@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL     = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const ENABLED     = process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === "true";
+const ENV         = process.env.NEXT_PUBLIC_ENV ?? "dev";
 const SESSION_KEY = "vitals-session-id";
 
 function getSessionId(): string {
@@ -19,13 +21,14 @@ function getDevice(): string {
 }
 
 function fire(path: string, body: object): void {
+  if (!ENABLED) return;
   const sessionId = getSessionId();
   if (!sessionId) return;
   fetch(`${API_URL}/analytics/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  }).catch(() => {});  // never throw — analytics must not crash the app
+  }).catch(() => {});
 }
 
 export const analytics = {
@@ -36,6 +39,7 @@ export const analytics = {
         device:       getDevice(),
         is_returning: isReturning,
         visited_home: true,
+        env:          ENV,
       },
     });
   },
@@ -43,7 +47,7 @@ export const analytics = {
   updateSession(data: Record<string, unknown>): void {
     fire("session", {
       session_id: getSessionId(),
-      data,
+      data: { ...data, env: ENV },
     });
   },
 
@@ -51,7 +55,7 @@ export const analytics = {
     fire("event", {
       session_id: getSessionId(),
       event,
-      properties,
+      properties: { ...properties, env: ENV },
     });
   },
 };
