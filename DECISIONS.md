@@ -158,21 +158,17 @@ Summarisation threshold: `(6 + 8) × 2 = 28 messages`. The grounding that makes 
 
 ## Analytics
 
-Vitals tracks one row per session in a Supabase `sessions` table — **no PII, no raw messages, no personal financial data**.
+The question I kept coming back to was: *what do I actually need to know?*
 
-What gets logged:
+Not everything. Most analytics setups track everything by default and then nobody looks at it. What I wanted was funnel visibility — how many people who land on the page actually fill out the form, how many who fill out the form read the narrative, how many who read the narrative save a snapshot and come back. Those four numbers tell me whether the product is working.
 
-- Whether the user reached the results page
-- Whether the narrative completed
-- Whether they opened the What-If tab
-- Whether they saved or loaded a snapshot (intent to return)
-- How many chat turns they had
-- Which topic categories came up in chat (e.g. `{"debt": 3, "scenario": 2}`)
-- Device type (mobile / tablet / desktop via User-Agent)
+That drove the structure. Two tables: `sessions` and `events`. Sessions holds one row per visitor, updated as they move through the app — device, score, which features they touched, whether they finished the narrative, how many chat turns they had. Events holds one row per action, in sequence — every page view, button click, feature interaction. Sessions answer "what kind of session was this overall?", events answer "what actually happened and in what order?"
 
-The goal is **funnel visibility**: how many visitors complete the form, how many engage with chat, how many save a snapshot. Chat categories aggregate across sessions to show what users actually care about — used to prioritise feature work, not to monitor individuals.
+Every analytics call is fire-and-forget. It never blocks, never awaits, never surfaces a failure to the user. If Supabase is down, the user notices nothing. Analytics cannot be a single point of failure for a product that is supposed to feel fast and reliable.
 
-`ENABLE_LOGGING = false` in secrets disables all Supabase writes. Use this locally so test sessions don't pollute production data.
+The dev/prod problem took a moment to think through. I didn't want test sessions polluting real data, but I also didn't want a separate Supabase project to maintain. Two env vars solved it: one controls whether anything fires at all (`NEXT_PUBLIC_ANALYTICS_ENABLED`), the other tags every row as `dev` or `prod` (`NEXT_PUBLIC_ENV`). They're separate because they do different things — the flag decides whether to fire, the tag decides how to label it. Flip the flag on locally to debug something, those rows land in Supabase tagged `dev` and you filter them out in any query.
+
+No PII, no financial numbers, no raw messages ever touch the analytics tables. The goal is understanding behaviour, not collecting data.
 
 ---
 

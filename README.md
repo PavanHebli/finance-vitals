@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs)](https://nextjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 
 </div>
 
@@ -105,10 +105,12 @@ cd web
 npm install
 ```
 
-Create `web/.env.local`:
+Create `web/.env.local` (copy from `web/.env.example`):
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_ANALYTICS_ENABLED=false   # keep false locally — prevents dev traffic polluting prod data
+NEXT_PUBLIC_ENV=dev
 ```
 
 ```bash
@@ -155,7 +157,8 @@ vitals/
 │   │   ├── export.py             # POST /export/pdf  (returns bytes)
 │   │   ├── goal.py               # POST /goal/extract
 │   │   ├── snapshot.py           # POST /snapshot/encode + /decode
-│   │   └── feedback.py           # POST /feedback
+│   │   ├── feedback.py           # POST /feedback
+│   │   └── analytics.py          # POST /analytics/session + /event
 │   └── core/                     # Business logic (provider-agnostic)
 │       ├── health.py             # Scoring math + financial context builder
 │       ├── narrative.py          # AI narrative generator
@@ -164,7 +167,8 @@ vitals/
 │       ├── storage.py            # Fernet encrypt/decrypt (.vit format)
 │       ├── export_pdf.py         # 2-page PDF report (fpdf2)
 │       ├── goal.py               # Goal extraction from narrative
-│       └── analytics.py          # Session funnel tracking → Supabase
+│       ├── analytics_db.py       # Analytics writes → Supabase (sessions + events)
+│       └── feedback_db.py        # Feedback submissions → Supabase
 │
 ├── web/                          # Next.js 14 frontend
 │   └── src/
@@ -172,7 +176,8 @@ vitals/
 │       │   ├── page.tsx          # Landing page
 │       │   ├── form/             # Data entry form
 │       │   ├── results/          # Score, narrative, chat, simulator
-│       │   └── progress/         # Score + metric trend charts
+│       │   ├── progress/         # Score + metric trend charts
+│       │   └── feedback/         # Feedback form
 │       ├── components/
 │       │   ├── Header.tsx        # Hamburger sidebar + dark mode toggle
 │       │   ├── HealthScore.tsx   # Score ring + metric cards
@@ -183,10 +188,12 @@ vitals/
 │       │   ├── PdfImport.tsx     # Multi-PDF upload + transaction review
 │       │   ├── ExpenseChart.tsx  # Horizontal expense bar chart
 │       │   ├── GoalCard.tsx      # Goal progress bar + actions
-│       │   └── ExportMenu.tsx    # PDF export + .vit save popover
+│       │   ├── ExportMenu.tsx    # PDF export + .vit save popover
+│       │   └── AnalyticsProvider.tsx  # Page view + session init tracking
 │       └── lib/
 │           ├── store.ts          # Zustand store (replaces session state)
 │           ├── api.ts            # Fetch wrappers for all FastAPI endpoints
+│           ├── analytics.ts      # Analytics singleton (fire-and-forget)
 │           └── types.ts          # TypeScript interfaces
 │
 ├── tests/
@@ -212,7 +219,7 @@ vitals/
 ![Recharts](https://img.shields.io/badge/Recharts-22C55E?style=flat-square)
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Python](https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python_3.13-3776AB?style=flat-square&logo=python&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-F55036?style=flat-square)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
