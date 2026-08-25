@@ -106,6 +106,7 @@ export async function streamChat(
     provider: string;
     api_key: string;
     summarised_history?: string;
+    budget_context?: string;
   },
   onChunk: (chunk: string) => void,
   onSummaryUpdate?: (summary: string) => void

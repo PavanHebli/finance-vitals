@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowUp } from "lucide-react";
-import { useStore, toApiFormData } from "@/lib/store";
+import { useStore, toApiFormData, formatBudgetContext } from "@/lib/store";
 import { streamChat } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
 import type { FormData, MetricScores } from "@/lib/types";
@@ -48,7 +48,7 @@ function buildStarters(fd: FormData, scores: MetricScores | null): string[] {
 export function InlineChat() {
   const {
     formData, metrics, metricScores, overallScore, mirror,
-    chatHistory, chatSummary,
+    chatHistory, chatSummary, budgetCards, distributionLog,
     addChatMessage, setChatSummary,
   } = useStore();
 
@@ -88,6 +88,7 @@ export function InlineChat() {
           provider:           formData.provider,
           api_key:            formData.apiKey,
           summarised_history: chatSummary,
+          budget_context:     formatBudgetContext(budgetCards, distributionLog),
         },
         (chunk) => {
           assistantText += chunk;

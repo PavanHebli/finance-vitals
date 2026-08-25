@@ -521,7 +521,7 @@ def _pick_lever(state: dict, provider: str, api_key: str) -> dict | None:
 
 # ── Message builder ───────────────────────────────────────────────────────────
 
-def build_messages(snapshot_context: str, chat_history: list, categories: list[str] | None = None, summarised_history: str = "") -> list:
+def build_messages(snapshot_context: str, chat_history: list, categories: list[str] | None = None, summarised_history: str = "", budget_context: str = "") -> list:
     category_content = ""
     for cat in (categories or []):
         block = _CATEGORY_BLOCKS.get(cat, "")
@@ -529,6 +529,8 @@ def build_messages(snapshot_context: str, chat_history: list, categories: list[s
             category_content += f"\n\n{block}"
 
     system_content = _BASE_SYSTEM_PROMPT + category_content + "\n\n" + snapshot_context
+    if budget_context:
+        system_content += f"\n\n{budget_context}"
     if summarised_history:
         system_content += f"\n\nEARLIER CONVERSATION SUMMARY:\n{summarised_history}"
 

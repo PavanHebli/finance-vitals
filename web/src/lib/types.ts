@@ -113,6 +113,34 @@ export type UserGoal = MetricGoal | SavingsGoal;
 
 export type StatusColor = "danger" | "warning" | "ok" | "good";
 
+export interface FinancialProfile {
+  debtTotal: number;
+  debtMonthly: number;
+  savingsTotal: number;
+  profileComplete: boolean;
+}
+
+export interface BudgetCard {
+  id: string;
+  label: string;
+  type: "income" | "cash" | "custom";
+  allocationMode: "percent" | "fixed" | "remainder";
+  allocationValue: number;
+  balance: number;
+  paused: boolean;
+  color: string;
+  createdAt: string;
+  purpose?: "expense" | "saving";
+  description?: string;
+}
+
+export interface DistributionLogEntry {
+  id: string;
+  timestamp: string;
+  incomeAmount: number;
+  allocations: { cardId: string; label: string; amount: number }[];
+}
+
 export const STATUS_COLORS: Record<StatusColor, string> = {
   danger:  "var(--danger)",
   warning: "var(--warning)",

@@ -75,6 +75,41 @@
   .badge-good    { @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2 py-0.5 rounded-full; }
 }
 
+/* Budget card hover animation */
+@keyframes card-jiggle {
+  0%   { transform: translateY(0)    rotate(0deg);     }
+  20%  { transform: translateY(-5px) rotate(-0.5deg);  }
+  40%  { transform: translateY(-4px) rotate(0.4deg);   }
+  60%  { transform: translateY(-5px) rotate(-0.25deg); }
+  80%  { transform: translateY(-4px) rotate(0.1deg);   }
+  100% { transform: translateY(-5px) rotate(0deg);     }
+}
+
+.budget-card {
+  transition: box-shadow 0.2s ease;
+}
+.budget-card:hover {
+  animation: card-jiggle 0.3s ease forwards;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+
+/* Narrative popup flip-in animation */
+@keyframes narrative-flip {
+  from {
+    transform: perspective(800px) rotateY(-90deg) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: perspective(800px) rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.narrative-popup-enter {
+  animation: narrative-flip 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: left center;
+}
+
 /* Markdown prose */
 .prose-vitals p    { @apply mb-3 leading-relaxed; }
 .prose-vitals ul   { @apply list-disc pl-5 space-y-1 mb-3; }

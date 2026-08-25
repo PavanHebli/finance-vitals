@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, TrendingUp, Moon, Sun, Home, FileText, MessageSquare } from "lucide-react";
+import { Menu, X, TrendingUp, Moon, Sun, Home, FileText, MessageSquare, Wallet } from "lucide-react";
 import { analytics } from "@/lib/analytics";
 
 const NAV_ITEMS = [
   { href: "/",          label: "Home",             icon: Home },
   { href: "/form",      label: "Check my health",  icon: FileText },
+  { href: "/budget",    label: "Budget Planner",   icon: Wallet },
   { href: "/progress",  label: "Progress",         icon: TrendingUp },
   { href: "/feedback",  label: "Give feedback",    icon: MessageSquare },
 ];

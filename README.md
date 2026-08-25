@@ -32,25 +32,12 @@ Vitals fixes that. Enter your rough monthly numbers. Get a real score, benchmark
 | 🤖 **AI Narrative** | Streaming plain-English story of your finances — what's working, what needs attention, one action this month |
 | 💬 **Inline Chat** | Ask follow-ups right below your story. No tab switch, no help-center feel — it flows like a conversation |
 | 🎛️ **What-If Simulator** | Move sliders to see how income/expense changes affect your score in real time |
+| 💼 **Budget Planner** | Envelope budgeting built into the score — create spending categories, split income, auto-classify savings vs expenses, watch your score update live as you adjust allocations |
 | 📄 **PDF Import** | Upload bank statements (up to 5 PDFs) — Vitals categorises transactions and fills your form automatically |
 | 📊 **Progress Tracking** | Score and metric trend charts across all saved months |
 | 💾 **Encrypted Snapshots** | Save your data as a `.vit` file (Fernet/AES-128). No server, no cloud — your file, your device |
 | 📤 **PDF Export** | Download a 2-page advisor-ready report: score + metrics on p1, narrative on p2 |
 | 🌙 **Dark Mode** | Full light/dark theme with separate logo variants |
-
----
-
-## Screenshots
-
-<div align="center">
-
-**Health score + metric breakdown**
-![Health Score](assets/health-score.png)
-
-**AI narrative + expense chart**
-![AI Narrative](assets/ai-narrative.png)
-
-</div>
 
 ---
 
@@ -173,9 +160,10 @@ vitals/
 ├── web/                          # Next.js 14 frontend
 │   └── src/
 │       ├── app/
-│       │   ├── page.tsx          # Landing page
+│       │   ├── page.tsx          # Landing page + returning user home
 │       │   ├── form/             # Data entry form
 │       │   ├── results/          # Score, narrative, chat, simulator
+│       │   ├── budget/           # Budget Planner — envelopes, live score, AI narrative popup
 │       │   ├── progress/         # Score + metric trend charts
 │       │   └── feedback/         # Feedback form
 │       ├── components/

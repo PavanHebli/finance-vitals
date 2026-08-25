@@ -158,6 +158,7 @@ class ChatRequest(BaseModel):
     provider: str
     api_key: str
     summarised_history: str = ""
+    budget_context: str = ""
 
 
 # ── /goal/extract ─────────────────────────────────────────────────────────────

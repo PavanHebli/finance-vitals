@@ -41,7 +41,7 @@ def stream_chat(req: ChatRequest):
 
     categories       = classify_question(req.message, provider, api_key)
     snapshot_context = build_snapshot_context(state, metrics, metric_scores, req.overall_score, req.mirror.model_dump())
-    messages         = build_messages(snapshot_context, history + [{"role": "user", "content": req.message}], categories, summary)
+    messages         = build_messages(snapshot_context, history + [{"role": "user", "content": req.message}], categories, summary, req.budget_context)
 
     def generate():
         for chunk in call_llm_chat(messages, provider, api_key, state=state, categories=categories):

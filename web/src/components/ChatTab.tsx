@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Send } from "lucide-react";
-import { useStore, toApiFormData } from "@/lib/store";
+import { useStore, toApiFormData, formatBudgetContext } from "@/lib/store";
 import { streamChat } from "@/lib/api";
 import type { Message } from "@/lib/types";
 
@@ -18,7 +18,7 @@ const STARTERS = [
 export function ChatTab() {
   const {
     formData, metrics, metricScores, overallScore, mirror,
-    chatHistory, chatSummary,
+    chatHistory, chatSummary, budgetCards, distributionLog,
     addChatMessage, setChatSummary,
   } = useStore();
 
@@ -56,6 +56,7 @@ export function ChatTab() {
           provider:          formData.provider,
           api_key:           formData.apiKey,
           summarised_history: chatSummary,
+          budget_context:     formatBudgetContext(budgetCards, distributionLog),
         },
         (chunk) => {
           assistantText += chunk;

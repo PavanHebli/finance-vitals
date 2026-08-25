@@ -15,6 +15,7 @@ This document captures how I think about Vitals: the product, the architecture, 
 - [Progressive Form](#progressive-form)
 - [PDF Bank Statement Import](#pdf-bank-statement-import)
 - [PDF Export](#pdf-export)
+- [Budget Planner](#budget-planner)
 - [What Vitals Isn't](#what-vitals-isnt)
 
 ---
@@ -217,6 +218,42 @@ The export lives at the bottom of the results page, not the top. You should have
 
 ---
 
+## Budget Planner
+
+### Why we reversed the "not a budget planner" decision
+
+The original rationale was that budgeting is commoditised — every spreadsheet app does it, and the What-If Simulator was supposed to cover the planning intent. That turned out to be wrong in practice.
+
+The simulator answers "what if my numbers were different?" It does not help a user actually get to different numbers. The budget planner does. More importantly, the differentiator is not the budget itself — it is that the budget *is the score input*. Every card a user creates feeds directly into the health score calculation. Add a rent card → housing ratio updates. Add a savings goal card → savings rate updates. The budget becomes the interface for improving the score, not a separate feature.
+
+This is only possible because Vitals already owns the scoring math. No other budgeting tool can show you a financial health score updating in real time as you move envelopes around — because they do not have the benchmarks, the weighting, or the narrative model. That is the moat.
+
+### Envelope budgeting, not a spreadsheet
+
+The model is envelope budgeting (the same principle behind YNAB): income arrives, you decide where it goes, and Cash in Hand absorbs whatever is left. No "you must allocate 100%" pressure. Cards support fixed dollar amounts or percentage of income — the remainder just flows to cash.
+
+This maps better to how people actually think about money than a row-by-row spreadsheet. "I want 20% to go to savings" is a more natural decision than "savings = $1,240 this month."
+
+### Card purpose classification
+
+A card labelled "buy a car" would be pattern-matched as transport (an expense) by naive string matching. That is wrong — it is a savings goal, and treating it as a recurring expense overstates the user's debt burden and understates their savings rate.
+
+The fix is a `purpose` field on each card, auto-classified from the card name and an optional short description the user can provide. A keyword scoring system runs against two signal lists — saving signals (fund, goal, buy, new home, wedding, retire…) and expense signals (rent, groceries, utilities, subscriptions…) — and picks the winner by count. Users can override with a single tap. The purpose determines whether the card's monthly allocation feeds into `savings_total` or `expenses_other` in the score calculation.
+
+### Live score on the budget page
+
+The score previously lived only on the results page. Moving it to the budget page — in the same row as Income and Cash in Hand, with the same animated ring — means users see the consequence of their budget decisions immediately. The score auto-recalculates (1.5-second debounce) on every card change, allocation edit, or financial profile update.
+
+The three-question financial profile (total debt, monthly debt payments, total savings) is the minimal data the score needs that the budget cards do not provide. It is asked once, inline, and users can edit any value at any time with the score updating automatically.
+
+### AI narrative on the budget page
+
+The narrative previously required navigating to the results page. That is the wrong home for it — the budget page is where users are making decisions, and the narrative should be available in that context without a page switch.
+
+The pattern: an info icon on the Health Score card glows (ring highlight) when the narrative is ready. Clicking it opens a centered popup with a card-flip animation. The narrative starts streaming automatically in the background after every score calculation, so it is ready before the user thinks to look for it.
+
+---
+
 ## What Vitals Isn't
 
 **Not a spending tracker.**
@@ -224,9 +261,6 @@ Vitals is a diagnostic. You come to it when you want to understand your situatio
 
 **Not connected to your bank.**
 Bank connections require OAuth, compliance work, and significant infrastructure. More importantly, they change the relationship — suddenly the app holds sensitive access to accounts. The current approach keeps the user in control and the product simple. No bank connection is also a feature: zero setup friction is what makes the 5-minute checkup model possible.
-
-**Not a budget planner.**
-Commoditised. Every spreadsheet app does it. The intent — help users plan where money goes — is better served by the What-If Simulator, which shows instantly how a spending change affects the score.
 
 **Not an investment advisor.**
 Vitals operates at financial health fundamentals. Investment strategy requires more context (risk tolerance, time horizon, portfolio) and carries regulatory considerations. Getting the fundamentals right comes first.
