@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Plus, Trash2, Pause, Play, ChevronDown, ArrowDownCircle, Info, X, Sparkles } from "lucide-react";
+import { Plus, Trash2, Pause, Play, ChevronDown, ArrowDownCircle, Info, X, Sparkles, FileUp, CheckCircle2 } from "lucide-react";
 import { useStore, budgetToFormData } from "@/lib/store";
 import { fetchScore, streamNarrative } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
-import type { BudgetCard, DistributionLogEntry, FinancialProfile, Metrics } from "@/lib/types";
+import type { BudgetCard, DistributionLogEntry, FinancialProfile, Metrics, MetricScores } from "@/lib/types";
+import { ImportPDFModal } from "@/components/ImportPDFModal";
 
 // ── Auto-classifier ───────────────────────────────────────────────────────────
 
@@ -36,6 +37,80 @@ function classifyCard(name: string, description = ""): "expense" | "saving" {
   const savingScore  = SAVING_SIGNALS.filter(p => p.test(text)).length;
   const expenseScore = EXPENSE_SIGNALS.filter(p => p.test(text)).length;
   return savingScore > 0 && savingScore >= expenseScore ? "saving" : "expense";
+}
+
+// ── Metric completeness ───────────────────────────────────────────────────────
+
+const HOUSING_PATTERNS = [/rent/i, /mortgage/i, /housing/i, /home\s*loan/i, /hoa/i];
+
+interface MetricStatus { complete: boolean; hint: string | null; }
+interface BudgetCompleteness {
+  savingsRate:   MetricStatus;
+  debtToIncome:  MetricStatus;
+  emergencyFund: MetricStatus;
+  housingRatio:  MetricStatus;
+}
+
+function checkCompleteness(
+  budgetCards: BudgetCard[],
+  distributionLog: DistributionLogEntry[],
+  profile: FinancialProfile,
+): BudgetCompleteness {
+  const income        = distributionLog[0]?.incomeAmount ?? budgetCards.find(c => c.type === "income")?.balance ?? 0;
+  const hasIncome     = income > 0;
+  const custom        = budgetCards.filter(c => c.type === "custom");
+  const expenseCards  = custom.filter(c => (c.purpose ?? "expense") === "expense");
+  const savingCards   = custom.filter(c => c.purpose === "saving");
+  const hasExpenses   = expenseCards.length > 0;
+  const hasSavings    = savingCards.length > 0 || (profile.profileComplete && profile.savingsTotal > 0);
+  const hasHousing    = expenseCards.some(c =>
+    HOUSING_PATTERNS.some(p => p.test(c.label + " " + (c.description ?? "")))
+  );
+
+  return {
+    savingsRate: {
+      complete: hasIncome && hasSavings,
+      hint: !hasSavings ? "Add a savings envelope or enter total savings in your profile" : null,
+    },
+    debtToIncome: {
+      complete: hasIncome && profile.profileComplete,
+      hint: !profile.profileComplete ? "Complete your financial profile to include debt payments" : null,
+    },
+    emergencyFund: {
+      complete: profile.profileComplete && hasExpenses,
+      hint: !profile.profileComplete
+        ? "Complete your financial profile to include total savings"
+        : !hasExpenses
+        ? "Add expense cards so we can estimate your monthly spending"
+        : null,
+    },
+    housingRatio: {
+      complete: hasIncome && hasHousing,
+      hint: !hasHousing ? "Add a Rent or Mortgage card" : null,
+    },
+  };
+}
+
+// ── Partial score ─────────────────────────────────────────────────────────────
+
+const COMPLETENESS_TO_METRIC: [keyof BudgetCompleteness, keyof MetricScores][] = [
+  ["savingsRate",   "savings_rate"],
+  ["debtToIncome",  "debt_to_income"],
+  ["emergencyFund", "emergency_fund_months"],
+  ["housingRatio",  "housing_ratio"],
+];
+
+function computePartialScore(
+  metricScores: MetricScores,
+  completeness: BudgetCompleteness,
+): { score: number; count: number } {
+  const complete = COMPLETENESS_TO_METRIC.filter(([ck]) => completeness[ck].complete);
+  if (complete.length === 0) return { score: 0, count: 0 };
+  const sum = complete.reduce((acc, [, mk]) => {
+    const ms = metricScores[mk];
+    return acc + (typeof ms === "object" && "score" in ms ? ms.score : 0);
+  }, 0);
+  return { score: Math.round(sum / complete.length), count: complete.length };
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -178,12 +253,17 @@ function CategoryCard({
   preview?: number;
   log: DistributionLogEntry[];
 }) {
-  const { updateBudgetCard, deleteBudgetCard, toggleBudgetPause } = useStore();
+  const { updateBudgetCard, deleteBudgetCard, toggleBudgetPause, updateBudgetSaved } = useStore();
   const [editingName,   setEditingName]   = useState(false);
   const [editingAlloc,  setEditingAlloc]  = useState(false);
+  const [editingSaved,  setEditingSaved]  = useState(false);
   const [nameVal,       setNameVal]       = useState(card.label);
   const [allocVal,      setAllocVal]      = useState(String(card.allocationValue));
+  const [savedVal,      setSavedVal]      = useState(String(card.savedSoFar ?? 0));
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const goalAchieved = card.purpose === "saving" && card.goalAmount && (card.savedSoFar ?? 0) >= card.goalAmount;
+  const goalPct      = card.goalAmount ? Math.min(100, ((card.savedSoFar ?? 0) / card.goalAmount) * 100) : 0;
 
   const { amount: lastAmount, percent: lastPercent } = getLastStats(card.id, log);
 
@@ -235,6 +315,11 @@ function CategoryCard({
             >
               {(card.purpose ?? "expense") === "saving" ? "Saving" : "Expense"}
             </button>
+            {goalAchieved && (
+              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-white/30 text-white px-2 py-0.5 rounded-full">
+                <CheckCircle2 size={9} /> Done
+              </span>
+            )}
             {card.paused && (
               <span className="text-[10px] font-bold uppercase tracking-wider bg-white/25 text-white px-2 py-0.5 rounded-full">
                 Paused
@@ -357,6 +442,66 @@ function CategoryCard({
             </p>
           )}
         </div>
+
+        {/* Goal progress — only for saving cards with a goal set */}
+        {card.purpose === "saving" && card.goalAmount && (
+          <div className="border-t border-[var(--border)] pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              {goalAchieved ? (
+                <div className="flex items-center gap-1.5 text-green-500">
+                  <CheckCircle2 size={13} />
+                  <span className="text-xs font-semibold">Goal reached</span>
+                </div>
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">
+                  {fmt(card.savedSoFar ?? 0)} of {fmt(card.goalAmount)}
+                </span>
+              )}
+              <span className="text-xs font-semibold tabular-nums" style={{ color: goalAchieved ? "#22c55e" : "var(--text-muted)" }}>
+                {goalPct.toFixed(0)}%
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${goalPct}%`, background: goalAchieved ? "#22c55e" : card.color }}
+              />
+            </div>
+
+            {/* Update saved amount */}
+            {editingSaved ? (
+              <div className="flex gap-2 items-center pt-0.5">
+                <span className="text-xs text-[var(--text-muted)]">Saved so far $</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={savedVal}
+                  onChange={e => setSavedVal(e.target.value)}
+                  className="input py-0.5 text-xs w-24"
+                  autoFocus
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      updateBudgetSaved(card.id, parseFloat(savedVal) || 0);
+                      setEditingSaved(false);
+                    }
+                    if (e.key === "Escape") setEditingSaved(false);
+                  }}
+                />
+                <button type="button" onClick={() => { updateBudgetSaved(card.id, parseFloat(savedVal) || 0); setEditingSaved(false); }} className="btn-primary py-0.5 px-2 text-xs">Save</button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setSavedVal(String(card.savedSoFar ?? 0)); setEditingSaved(true); }}
+                className="text-xs text-[var(--brand)] hover:underline"
+              >
+                Update saved amount
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -373,6 +518,7 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
   const [color,       setColor]       = useState(CARD_COLORS[2]);
   const [purpose,     setPurpose]     = useState<"expense" | "saving">("expense");
   const [autoLabeled, setAutoLabeled] = useState(false);
+  const [goalAmount,  setGoalAmount]  = useState("");
 
   // Re-classify whenever name or description changes, but only if user hasn't manually toggled
   useEffect(() => {
@@ -384,8 +530,9 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
 
   function handleSubmit() {
     if (!label.trim()) return;
-    addBudgetCard(label.trim(), mode, parseFloat(value) || 0, color, purpose, description.trim());
-    analytics.track("budget_card_added", { allocationMode: mode, purpose });
+    const goal = purpose === "saving" && goalAmount ? parseFloat(goalAmount) : undefined;
+    addBudgetCard(label.trim(), mode, parseFloat(value) || 0, color, purpose, description.trim(), goal);
+    analytics.track("budget_card_added", { allocationMode: mode, purpose, hasGoal: !!goal });
     onClose();
   }
 
@@ -505,6 +652,26 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
       <p className="text-xs text-[var(--text-muted)]">
         Leave allocation at 0 to set later — unallocated income flows to Cash in Hand.
       </p>
+
+      {/* Goal amount — saving cards only */}
+      {purpose === "saving" && (
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">
+            Goal amount <span className="text-[var(--text-muted)]/60">(optional — shows a progress bar on the card)</span>
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+            <input
+              type="number"
+              value={goalAmount}
+              onChange={e => setGoalAmount(e.target.value)}
+              placeholder="e.g. 15,000"
+              className="input pl-7 text-sm"
+              min={0}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button type="button" onClick={handleSubmit} disabled={!label.trim()} className="btn-primary text-sm disabled:opacity-40">
@@ -632,6 +799,60 @@ function NarrativePopup({
   );
 }
 
+// ── Metric Pills ──────────────────────────────────────────────────────────────
+
+const PILL_LABELS: Record<keyof BudgetCompleteness, string> = {
+  savingsRate:   "Savings",
+  debtToIncome:  "DTI",
+  emergencyFund: "Emergency",
+  housingRatio:  "Housing",
+};
+
+function MetricPills({ completeness }: { completeness: BudgetCompleteness }) {
+  const [open, setOpen] = useState<keyof BudgetCompleteness | null>(null);
+
+  const entries = Object.entries(completeness) as [keyof BudgetCompleteness, MetricStatus][];
+
+  function toggle(key: keyof BudgetCompleteness, status: MetricStatus) {
+    if (status.complete) return;
+    setOpen(prev => prev === key ? null : key);
+  }
+
+  const openHint = open ? completeness[open].hint : null;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-1.5 flex-wrap justify-center">
+        {entries.map(([key, status]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => toggle(key, status)}
+            disabled={status.complete}
+            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors ${
+              status.complete
+                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/60 text-green-700 dark:text-green-400 cursor-default"
+                : open === key
+                ? "bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300"
+                : "bg-orange-50 dark:bg-orange-900/15 border-orange-200 dark:border-orange-800/50 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/25 cursor-pointer"
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.complete ? "bg-green-500" : "bg-orange-500"}`} />
+            {PILL_LABELS[key]}{!status.complete && " ?"}
+          </button>
+        ))}
+      </div>
+
+      {openHint && (
+        <p className="text-[11px] leading-relaxed text-[var(--text)] bg-orange-50 dark:bg-orange-900/15 border border-orange-200 dark:border-orange-800/40 rounded-lg px-3 py-2">
+          <span className="font-semibold text-orange-600 dark:text-orange-400">{PILL_LABELS[open!]} not calculated. </span>
+          {openHint}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Score Ring + Card ─────────────────────────────────────────────────────────
 
 const RING_COLORS: Record<string, string> = {
@@ -715,7 +936,8 @@ function EmptyRing({ label }: { label: string }) {
 
 function ScoreCard({
   profileComplete, hasIncome, score, mirrorLabel, metrics, loading,
-  narrativeReady, narrativeStreaming,
+  narrativeReady, narrativeStreaming, completeness,
+  partialScore, partialCount,
   onOpenFlow, onRecalculate, onOpenNarrative,
 }: {
   profileComplete: boolean;
@@ -726,6 +948,9 @@ function ScoreCard({
   loading: boolean;
   narrativeReady: boolean;
   narrativeStreaming: boolean;
+  completeness: BudgetCompleteness | null;
+  partialScore: number | null;
+  partialCount: number;
   onOpenFlow: () => void;
   onRecalculate: () => void;
   onOpenNarrative: () => void;
@@ -768,6 +993,15 @@ function ScoreCard({
             <div className="w-7 h-7 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin" />
             <p className="text-xs text-[var(--text-muted)]">Calculating…</p>
           </div>
+        ) : partialScore !== null && mirrorLabel ? (
+          <div className="flex flex-col items-center gap-1.5">
+            <ScoreRing score={partialScore} mirrorLabel={mirrorLabel} />
+            {partialCount < 4 && (
+              <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg)] border border-[var(--border)] px-2 py-0.5 rounded-full">
+                {partialCount} of 4 metrics
+              </span>
+            )}
+          </div>
         ) : score !== null && mirrorLabel ? (
           <ScoreRing score={score} mirrorLabel={mirrorLabel} />
         ) : !profileComplete ? (
@@ -777,9 +1011,14 @@ function ScoreCard({
         )}
       </div>
 
+      {/* Metric pills — shown once user has income */}
+      {hasIncome && completeness && (
+        <MetricPills completeness={completeness} />
+      )}
+
       {/* Net flow — only when score available */}
       {score !== null && metrics && (
-        <p className="text-xs text-[var(--text-muted)] text-center -mt-2">
+        <p className="text-xs text-[var(--text-muted)] text-center -mt-1">
           Net flow:{" "}
           <span className={metrics.net_monthly_flow >= 0 ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
             ${metrics.net_monthly_flow.toLocaleString("en-US", { maximumFractionDigits: 0 })}/mo
@@ -1022,14 +1261,26 @@ export default function BudgetPage() {
   const [showQuestionFlow,  setShowQuestionFlow]  = useState(false);
   const [scoreLoading,      setScoreLoading]      = useState(false);
   const [showNarrative,     setShowNarrative]     = useState(false);
+  const [showImport,        setShowImport]        = useState(false);
 
   const incomeCard  = budgetCards.find(c => c.type === "income")!;
   const cashCard    = budgetCards.find(c => c.type === "cash")!;
   const customCards = budgetCards.filter(c => c.type === "custom");
   const preview     = computePreview(budgetCards);
 
-  const income    = distributionLog[0]?.incomeAmount ?? incomeCard.balance;
-  const hasIncome = income > 0;
+  const income       = distributionLog[0]?.incomeAmount ?? incomeCard.balance;
+  const hasIncome    = income > 0;
+  const completeness = hasIncome
+    ? checkCompleteness(budgetCards, distributionLog, financialProfile)
+    : null;
+
+  // Partial score: average only the metrics we have data for, reweighting equally
+  const { metricScores } = useStore();
+  const partial = (completeness && metricScores)
+    ? computePartialScore(metricScores, completeness)
+    : null;
+  const displayScore  = partial && partial.count > 0 ? partial.score : (overallScore !== null ? Math.round(overallScore) : null);
+  const partialCount  = partial?.count ?? 4;
 
   // ── Score calculation ───────────────────────────────────────────────────────
 
@@ -1114,15 +1365,25 @@ export default function BudgetPage() {
             Divide your income across envelopes. Split each month to track what builds up where.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleDistribute}
-          disabled={incomeCard.balance <= 0}
-          className="btn-primary flex items-center gap-2 shrink-0 disabled:opacity-40"
-        >
-          <ArrowDownCircle size={15} />
-          Split
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => { setShowImport(true); analytics.track("pdf_import_opened"); }}
+            className="btn-secondary flex items-center gap-2 text-sm"
+          >
+            <FileUp size={14} />
+            Import statement
+          </button>
+          <button
+            type="button"
+            onClick={handleDistribute}
+            disabled={incomeCard.balance <= 0}
+            className="btn-primary flex items-center gap-2 disabled:opacity-40"
+          >
+            <ArrowDownCircle size={15} />
+            Split
+          </button>
+        </div>
       </div>
 
       {/* Profile question flow — appears when user clicks "Complete profile" on score card */}
@@ -1186,6 +1447,9 @@ export default function BudgetPage() {
           loading={scoreLoading}
           narrativeReady={narrativeText.length > 0}
           narrativeStreaming={narrativeStreaming}
+          completeness={completeness}
+          partialScore={displayScore}
+          partialCount={partialCount}
           onOpenFlow={() => setShowQuestionFlow(true)}
           onRecalculate={() => calculateScoreWith(financialProfile)}
           onOpenNarrative={() => setShowNarrative(true)}
@@ -1228,6 +1492,9 @@ export default function BudgetPage() {
 
       {/* Split log */}
       <LogPanel log={distributionLog} />
+
+      {/* PDF Import Modal */}
+      {showImport && <ImportPDFModal onClose={() => setShowImport(false)} />}
 
     </div>
   );

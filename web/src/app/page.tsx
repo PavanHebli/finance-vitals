@@ -261,11 +261,11 @@ const METRICS = [
 ];
 
 const HOW = [
-  { step: "1", title: "Enter your numbers",   body: "Income, expenses, savings, and debt — takes about 3 minutes. No bank connection required." },
-  { step: "2", title: "Get your score",        body: "A 0-100 health score calculated from 4 key financial ratios with industry benchmarks." },
-  { step: "3", title: "Read your story",       body: "An AI gives you a plain-English breakdown of what's working and one thing to fix this month." },
-  { step: "4", title: "Track progress",        body: "Your score is saved automatically. Come back next month and see exactly how far you've moved." },
-  { step: "5", title: "Act on your results",   body: "Use the Budget Planner to build envelope budgets aligned to your real income — no guesswork, just your numbers split the way you choose." },
+  { step: "1", title: "Add your income",       body: "Tell Vitals how much you take home each month. That's all you need to start.", optional: false },
+  { step: "2", title: "Import or build",        body: "Upload a bank statement and Vitals categorises your spending automatically. Or build envelope cards yourself — your call.", optional: true, optionalLabel: "PDF import optional" },
+  { step: "3", title: "See your score live",   body: "Every card you create updates the health score in real time. Add a rent card, watch your housing ratio move.", optional: false },
+  { step: "4", title: "Read your AI narrative", body: "A plain-English breakdown of what's working, what needs attention, and one concrete action for this month.", optional: false },
+  { step: "5", title: "Track the trend",        body: "Your score snapshots automatically each session. Come back next month and see exactly how far you've moved.", optional: false },
 ];
 
 function NewUserLanding() {
@@ -274,17 +274,30 @@ function NewUserLanding() {
       {/* Hero */}
       <section className="py-20 text-center">
         <p className="text-[var(--brand)] font-semibold text-sm tracking-widest uppercase mb-4">
-          Financial Health Score
+          Budget Planner · Financial Health Score
         </p>
         <h1 className="text-5xl md:text-6xl font-bold text-[var(--text)] leading-tight mb-6">
-          Know where you actually stand
+          The budget that tells you<br className="hidden sm:block" /> if you&apos;re actually winning
         </h1>
         <p className="text-xl text-[var(--text-muted)] max-w-2xl mx-auto mb-10 leading-relaxed">
-          A brutally honest score from 0 to 100. No bank connection. No subscription. Just your numbers, a real benchmark, an AI that tells you exactly what to do next — and a Budget Planner to help you do it.
+          Build your envelope budget, get a real financial health score from 0 to 100, and hear exactly what to do next — all from one screen, in under 5 minutes.
         </p>
-        <Link href="/form" className="btn-primary text-base px-8 py-3 inline-block" onClick={() => analytics.track("cta_clicked", { cta: "hero" })}>
-          Check my financial health
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            href="/budget"
+            className="btn-primary text-base px-8 py-3 inline-flex items-center gap-2"
+            onClick={() => analytics.track("cta_clicked", { cta: "hero_budget" })}
+          >
+            Start my budget <ArrowRight size={16} />
+          </Link>
+          <Link
+            href="/form"
+            className="btn-secondary text-base px-8 py-3 inline-block"
+            onClick={() => analytics.track("cta_clicked", { cta: "hero_score" })}
+          >
+            Just check my score
+          </Link>
+        </div>
         <p className="text-sm text-[var(--text-muted)] mt-4">Free · Private · No account required</p>
       </section>
 
@@ -320,7 +333,14 @@ function NewUserLanding() {
                 {h.step}
               </div>
               <div>
-                <div className="font-semibold mb-1">{h.title}</div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold">{h.title}</span>
+                  {h.optional && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--bg-2)] text-[var(--text-muted)] border border-[var(--border)]">
+                      {h.optionalLabel}
+                    </span>
+                  )}
+                </div>
                 <div className="text-sm text-[var(--text-muted)]">{h.body}</div>
               </div>
             </div>
@@ -330,11 +350,24 @@ function NewUserLanding() {
 
       {/* CTA */}
       <section className="py-16 border-t border-[var(--border)] text-center">
-        <h2 className="text-3xl font-bold mb-4">Ready to see your score?</h2>
-        <p className="text-[var(--text-muted)] mb-8">Takes 3 minutes. Your data stays on your device.</p>
-        <Link href="/form" className="btn-primary text-base px-8 py-3 inline-block" onClick={() => analytics.track("cta_clicked", { cta: "bottom" })}>
-          Get started
-        </Link>
+        <h2 className="text-3xl font-bold mb-4">Ready to see where you stand?</h2>
+        <p className="text-[var(--text-muted)] mb-8">Takes under 5 minutes. Your data stays on your device.</p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            href="/budget"
+            className="btn-primary text-base px-8 py-3 inline-flex items-center gap-2"
+            onClick={() => analytics.track("cta_clicked", { cta: "bottom_budget" })}
+          >
+            Start my budget <ArrowRight size={16} />
+          </Link>
+          <Link
+            href="/form"
+            className="btn-secondary text-base px-8 py-3 inline-block"
+            onClick={() => analytics.track("cta_clicked", { cta: "bottom_score" })}
+          >
+            Just check my score
+          </Link>
+        </div>
       </section>
 
       <footer className="py-8 border-t border-[var(--border)] text-center text-sm text-[var(--text-muted)]">

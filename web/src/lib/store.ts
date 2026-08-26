@@ -67,8 +67,9 @@ interface VitalsStore {
   distributionLog: DistributionLogEntry[];
   financialProfile: FinancialProfile;
   addBudgetIncome: (amount: number) => void;
-  addBudgetCard: (label: string, allocationMode: "percent" | "fixed", allocationValue: number, color: string, purpose: "expense" | "saving", description: string) => void;
-  updateBudgetCard: (id: string, updates: Partial<Pick<BudgetCard, "label" | "allocationMode" | "allocationValue" | "color" | "purpose" | "description">>) => void;
+  addBudgetCard: (label: string, allocationMode: "percent" | "fixed", allocationValue: number, color: string, purpose: "expense" | "saving", description: string, goalAmount?: number) => void;
+  updateBudgetCard: (id: string, updates: Partial<Pick<BudgetCard, "label" | "allocationMode" | "allocationValue" | "color" | "purpose" | "description" | "goalAmount" | "savedSoFar">>) => void;
+  updateBudgetSaved: (id: string, savedSoFar: number) => void;
   deleteBudgetCard: (id: string) => void;
   toggleBudgetPause: (id: string) => void;
   distributeBudget: () => { success: true } | { success: false; error: string };
@@ -145,7 +146,7 @@ export const useStore = create<VitalsStore>()(
           ),
         })),
 
-      addBudgetCard: (label, allocationMode, allocationValue, color, purpose, description) =>
+      addBudgetCard: (label, allocationMode, allocationValue, color, purpose, description, goalAmount) =>
         set(s => ({
           budgetCards: [
             ...s.budgetCards.filter(c => c.type !== "cash"),
@@ -161,9 +162,15 @@ export const useStore = create<VitalsStore>()(
               purpose,
               description,
               createdAt: new Date().toISOString(),
+              ...(goalAmount && goalAmount > 0 ? { goalAmount, savedSoFar: 0 } : {}),
             },
             ...s.budgetCards.filter(c => c.type === "cash"),
           ],
+        })),
+
+      updateBudgetSaved: (id, savedSoFar) =>
+        set(s => ({
+          budgetCards: s.budgetCards.map(c => c.id === id ? { ...c, savedSoFar } : c),
         })),
 
       updateBudgetCard: (id, updates) =>

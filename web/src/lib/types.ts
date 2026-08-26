@@ -132,6 +132,8 @@ export interface BudgetCard {
   createdAt: string;
   purpose?: "expense" | "saving";
   description?: string;
+  goalAmount?: number;
+  savedSoFar?: number;
 }
 
 export interface DistributionLogEntry {

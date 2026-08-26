@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Header } from "@/components/Header";
-import { FeedbackButton } from "@/components/FeedbackButton";
+import { ChatFAB } from "@/components/ChatFAB";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import "@/styles/globals.css";
 
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AnalyticsProvider />
         <Header />
         <main>{children}</main>
-        <FeedbackButton />
+        <ChatFAB />
       </body>
     </html>
   );

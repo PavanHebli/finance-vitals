@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { Menu, X, TrendingUp, Moon, Sun, Home, FileText, MessageSquare, Wallet } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Menu, X, TrendingUp, Moon, Sun, Home, FileText, MessageSquare, Wallet, Trash2, ShieldCheck } from "lucide-react";
 import { analytics } from "@/lib/analytics";
 
 const NAV_ITEMS = [
@@ -15,10 +15,72 @@ const NAV_ITEMS = [
   { href: "/feedback",  label: "Give feedback",    icon: MessageSquare },
 ];
 
+function ClearDataModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)" }}
+      onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        className="w-full max-w-sm bg-[var(--bg)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-6 pt-6 pb-5 space-y-4">
+          {/* Icon */}
+          <div className="w-11 h-11 rounded-full bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] flex items-center justify-center">
+            <ShieldCheck size={20} className="text-[var(--brand)]" />
+          </div>
+
+          <div>
+            <p className="font-semibold text-[var(--text)] mb-2">Delete all your data?</p>
+            <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+              Your budget, score history, goals, and financial profile will be permanently deleted. This cannot be undone.
+            </p>
+            <p className="text-sm text-[var(--text-muted)] leading-relaxed mt-2">
+              <span className="text-[var(--text)] font-medium">You&apos;re always in control of your data.</span> You can delete everything at any time, no questions asked.
+            </p>
+          </div>
+        </div>
+
+        <div className="px-6 pb-6 flex gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-secondary flex-1 text-sm"
+          >
+            Keep my data
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 text-sm px-4 py-2.5 rounded-xl font-semibold text-white transition-colors"
+            style={{ background: "#dc2626" }}
+          >
+            Yes, delete everything
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Header() {
-  const [open, setOpen]   = useState(false);
-  const [dark, setDark]   = useState(false);
-  const pathname          = usePathname();
+  const [open,          setOpen]          = useState(false);
+  const [dark,          setDark]          = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const pathname = usePathname();
+  const router   = useRouter();
+
+  function clearAllData() {
+    const theme = localStorage.getItem("theme");
+    localStorage.clear();
+    if (theme) localStorage.setItem("theme", theme);
+    analytics.track("data_cleared");
+    setShowClearModal(false);
+    router.push("/");
+    router.refresh();
+  }
 
   // Initialise from localStorage on mount
   useEffect(() => {
@@ -128,8 +190,24 @@ export function Header() {
             {dark ? <Sun size={16} className="text-[var(--text-muted)]" /> : <Moon size={16} className="text-[var(--text-muted)]" />}
             {dark ? "Switch to light" : "Switch to dark"}
           </button>
+
+          <button
+            type="button"
+            onClick={() => setShowClearModal(true)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+          >
+            <Trash2 size={16} />
+            Clear all data
+          </button>
         </div>
       </aside>
+
+      {showClearModal && (
+        <ClearDataModal
+          onConfirm={clearAllData}
+          onCancel={() => setShowClearModal(false)}
+        />
+      )}
     </>
   );
 }
