@@ -6,6 +6,11 @@ import { Loader2, Moon, Sun, LogOut, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { analytics } from "@/lib/analytics";
 
+// Session-dependent — never statically prerender at build time (the Supabase
+// client is constructed at render time, before NEXT_PUBLIC_* env vars are
+// guaranteed available during a build).
+export const dynamic = "force-dynamic";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function DeleteAccountModal({ onConfirm, onCancel, deleting }: {
@@ -55,7 +60,6 @@ function DeleteAccountModal({ onConfirm, onCancel, deleting }: {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [checking, setChecking]   = useState(true);
   const [email, setEmail]         = useState("");
@@ -74,6 +78,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     (async () => {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.replace("/auth");
@@ -102,6 +107,7 @@ export default function SettingsPage() {
     }
     setPwError(null);
     setPwSaving(true);
+    const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setPwSaving(false);
 
@@ -117,6 +123,7 @@ export default function SettingsPage() {
   }
 
   async function handleSignOut() {
+    const supabase = createClient();
     await supabase.auth.signOut();
     analytics.track("auth_signed_out");
     router.push("/");
@@ -127,6 +134,7 @@ export default function SettingsPage() {
     setDeleting(true);
     setDeleteError(null);
 
+    const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.replace("/auth");
