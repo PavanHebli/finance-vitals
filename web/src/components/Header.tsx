@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, TrendingUp, Moon, Sun, Home, FileText, MessageSquare, Wallet, Trash2, ShieldCheck } from "lucide-react";
+import { Menu, X, TrendingUp, Moon, Sun, Home, FileText, MessageSquare, Wallet, Trash2, ShieldCheck, LogIn, LogOut, User, Settings as SettingsIcon, Loader2 } from "lucide-react";
 import { analytics } from "@/lib/analytics";
+import { createClient } from "@/lib/supabase/client";
+
+interface AccountInfo {
+  email: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  plan: "free" | "pro";
+}
 
 const NAV_ITEMS = [
   { href: "/",          label: "Home",             icon: Home },
@@ -15,12 +23,18 @@ const NAV_ITEMS = [
   { href: "/feedback",  label: "Give feedback",    icon: MessageSquare },
 ];
 
-function ClearDataModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+// Only ever rendered when logged in — Guest sessions have nothing to
+// clear (no persistence at all without an account).
+function ClearDataModal({ onConfirm, onCancel, clearing }: {
+  onConfirm: () => void;
+  onCancel: () => void;
+  clearing: boolean;
+}) {
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)" }}
-      onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+      onClick={e => { if (e.target === e.currentTarget && !clearing) onCancel(); }}
     >
       <div
         className="w-full max-w-sm bg-[var(--bg)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden"
@@ -33,12 +47,13 @@ function ClearDataModal({ onConfirm, onCancel }: { onConfirm: () => void; onCanc
           </div>
 
           <div>
-            <p className="font-semibold text-[var(--text)] mb-2">Delete all your data?</p>
+            <p className="font-semibold text-[var(--text)] mb-2">Clear all data?</p>
             <p className="text-sm text-[var(--text-muted)] leading-relaxed">
-              Your budget, score history, goals, and financial profile will be permanently deleted. This cannot be undone.
+              Your budget, score history, and goals will be permanently deleted from our servers. This cannot be undone.
             </p>
             <p className="text-sm text-[var(--text-muted)] leading-relaxed mt-2">
-              <span className="text-[var(--text)] font-medium">You&apos;re always in control of your data.</span> You can delete everything at any time, no questions asked.
+              Your account itself stays intact — to remove that too, use{" "}
+              <span className="text-[var(--text)] font-medium">Settings → Delete my account</span>.
             </p>
           </div>
         </div>
@@ -47,17 +62,19 @@ function ClearDataModal({ onConfirm, onCancel }: { onConfirm: () => void; onCanc
           <button
             type="button"
             onClick={onCancel}
-            className="btn-secondary flex-1 text-sm"
+            disabled={clearing}
+            className="btn-secondary flex-1 text-sm disabled:opacity-60"
           >
             Keep my data
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 text-sm px-4 py-2.5 rounded-xl font-semibold text-white transition-colors"
+            disabled={clearing}
+            className="flex-1 text-sm px-4 py-2.5 rounded-xl font-semibold text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             style={{ background: "#dc2626" }}
           >
-            Yes, delete everything
+            {clearing ? <Loader2 size={15} className="animate-spin" /> : "Yes, delete everything"}
           </button>
         </div>
       </div>
@@ -69,14 +86,86 @@ export function Header() {
   const [open,          setOpen]          = useState(false);
   const [dark,          setDark]          = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [clearing,       setClearing]       = useState(false);
+  const [account,        setAccount]        = useState<AccountInfo | null>(null);
+  const [menuOpen,       setMenuOpen]       = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router   = useRouter();
 
-  function clearAllData() {
-    const theme = localStorage.getItem("theme");
-    localStorage.clear();
-    if (theme) localStorage.setItem("theme", theme);
+  // Track auth state so the header can swap "Sign in" for the account menu.
+  // No redirects here — Guest users keep full access either way.
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function loadAccount(userId: string, email: string) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, avatar_url, plan")
+        .eq("id", userId)
+        .single();
+      setAccount({
+        email,
+        displayName: profile?.display_name ?? null,
+        avatarUrl: profile?.avatar_url ?? null,
+        plan: (profile?.plan as "free" | "pro") ?? "free",
+      });
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) loadAccount(session.user.id, session.user.email);
+      else setAccount(null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email) loadAccount(session.user.id, session.user.email);
+      else setAccount(null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Close the account dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    analytics.track("auth_signed_out");
+    setOpen(false);
+    setMenuOpen(false);
+    router.push("/");
+    router.refresh();
+  }
+
+  // Only reachable when logged in (button is gated on `account`) — wipes the
+  // cloud data rows, never the account itself. RLS (auth.uid() = user_id)
+  // already permits deleting only your own rows, no service-role key needed
+  // here, unlike account deletion. No localStorage involved at all — Guest
+  // sessions have nothing to clear, and there's nothing left to clear it from.
+  async function clearAllData() {
+    if (!account) return;
+    setClearing(true);
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await Promise.all([
+        supabase.from("snapshots").delete().eq("user_id", user.id),
+        supabase.from("budget_cards").delete().eq("user_id", user.id),
+        supabase.from("goals").delete().eq("user_id", user.id),
+        supabase.from("distribution_log").delete().eq("user_id", user.id),
+      ]);
+    }
+
     analytics.track("data_cleared");
+    setClearing(false);
     setShowClearModal(false);
     router.push("/");
     router.refresh();
@@ -120,14 +209,84 @@ export function Header() {
           </Link>
         </div>
 
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="p-2 rounded-lg hover:bg-[var(--bg-2)] text-[var(--text-muted)] transition-colors"
-          aria-label="Toggle theme"
-        >
-          {dark ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        <div className="flex items-center gap-2">
+          {account ? (
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((v) => !v)}
+                className="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden border border-[var(--border)] bg-[var(--bg-2)] text-[var(--text)] text-sm font-semibold hover:opacity-90 transition-opacity"
+                aria-label="Account menu"
+              >
+                {account.avatarUrl ? (
+                  <Image src={account.avatarUrl} alt="" width={32} height={32} className="object-cover w-full h-full" />
+                ) : (
+                  (account.displayName || account.email)[0]?.toUpperCase()
+                )}
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-[var(--bg)] border border-[var(--border)] rounded-xl shadow-xl overflow-hidden z-50">
+                  <div className="px-4 py-3 border-b border-[var(--border)]">
+                    {account.displayName && (
+                      <p className="text-sm font-medium text-[var(--text)] truncate">{account.displayName}</p>
+                    )}
+                    <p className="text-xs text-[var(--text-muted)] truncate">{account.email}</p>
+                  </div>
+
+                  <div className="py-1">
+                    <Link
+                      href="/profile"
+                      onClick={() => { setMenuOpen(false); analytics.track("nav_clicked", { item: "Profile" }); }}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--bg-2)] transition-colors"
+                    >
+                      <User size={15} className="text-[var(--text-muted)]" />
+                      Profile
+                    </Link>
+                    <Link
+                      href="/settings"
+                      onClick={() => { setMenuOpen(false); analytics.track("nav_clicked", { item: "Settings" }); }}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--bg-2)] transition-colors"
+                    >
+                      <SettingsIcon size={15} className="text-[var(--text-muted)]" />
+                      Settings
+                    </Link>
+                  </div>
+
+                  <div className="py-1 border-t border-[var(--border)]">
+                    <p className="px-4 py-1.5 text-xs text-[var(--text-muted)] capitalize">{account.plan} plan</p>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--bg-2)] transition-colors"
+                    >
+                      <LogOut size={15} className="text-[var(--text-muted)]" />
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/auth"
+              onClick={() => analytics.track("nav_clicked", { item: "Sign in (topbar)" })}
+              className="btn-secondary hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm"
+            >
+              <LogIn size={15} />
+              Sign in
+            </Link>
+          )}
+
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-[var(--bg-2)] text-[var(--text-muted)] transition-colors"
+            aria-label="Toggle theme"
+          >
+            {dark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
       </header>
 
       {/* Backdrop */}
@@ -182,6 +341,27 @@ export function Header() {
           <p className="px-3 py-1 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
             Settings
           </p>
+
+          {account ? (
+            <Link
+              href="/settings"
+              onClick={() => { setOpen(false); analytics.track("nav_clicked", { item: "Settings (sidebar)" }); }}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-[var(--text)] hover:bg-[var(--bg-2)] transition-colors"
+            >
+              <SettingsIcon size={16} className="text-[var(--text-muted)] shrink-0" />
+              <span className="truncate">Account settings</span>
+            </Link>
+          ) : (
+            <Link
+              href="/auth"
+              onClick={() => { setOpen(false); analytics.track("nav_clicked", { item: "Sign in" }); }}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-[var(--text)] hover:bg-[var(--bg-2)] transition-colors"
+            >
+              <LogIn size={16} className="text-[var(--text-muted)]" />
+              Sign in
+            </Link>
+          )}
+
           <button
             type="button"
             onClick={toggleTheme}
@@ -191,21 +371,24 @@ export function Header() {
             {dark ? "Switch to light" : "Switch to dark"}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setShowClearModal(true)}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors"
-          >
-            <Trash2 size={16} />
-            Clear all data
-          </button>
+          {account && (
+            <button
+              type="button"
+              onClick={() => setShowClearModal(true)}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+            >
+              <Trash2 size={16} />
+              Clear all data
+            </button>
+          )}
         </div>
       </aside>
 
-      {showClearModal && (
+      {showClearModal && account && (
         <ClearDataModal
           onConfirm={clearAllData}
           onCancel={() => setShowClearModal(false)}
+          clearing={clearing}
         />
       )}
     </>

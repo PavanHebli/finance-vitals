@@ -41,7 +41,7 @@ def log_session_start(session_id: str, user_agent: str, supabase_url: str, supab
 
 
 def log_score_calculated(session_id: str, overall_score: int, provider: str, supabase_url: str, supabase_key: str, debug: bool = False) -> None:
-    _upsert(session_id, {"score": overall_score, "provider": provider, "calculated": True}, supabase_url, supabase_key, debug)
+    _upsert(session_id, {"score": overall_score, "llm_provider": provider, "calculated": True}, supabase_url, supabase_key, debug)
 
 
 def log_narrative_generated(session_id: str, supabase_url: str, supabase_key: str, debug: bool = False) -> None:
