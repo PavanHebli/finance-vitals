@@ -8,11 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 import { COUNTRIES } from "@/lib/countries";
 import { analytics } from "@/lib/analytics";
 
-// Session-dependent — never statically prerender at build time (the Supabase
-// client is constructed at render time, before NEXT_PUBLIC_* env vars are
-// guaranteed available during a build).
-export const dynamic = "force-dynamic";
-
 type Gender = "male" | "female" | "other" | "prefer_not_to_say" | "";
 
 // Dual-purpose: first-time onboarding right after signup (with "Skip for
@@ -21,6 +16,7 @@ type Gender = "male" | "female" | "other" | "prefer_not_to_say" | "";
 // profile_completed, not a route param — same screen either way.
 export default function ProfilePage() {
   const router = useRouter();
+  const supabase = createClient();
 
   const [checking, setChecking]       = useState(true);
   const [isFirstTime, setIsFirstTime] = useState(false);
@@ -35,7 +31,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     (async () => {
-      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.replace("/auth");
@@ -69,7 +64,6 @@ export default function ProfilePage() {
     setError(null);
     setSaved(false);
 
-    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.replace("/auth");
