@@ -216,3 +216,9 @@ class EventInsert(BaseModel):
     session_id: str
     event: str
     properties: dict[str, Any] = {}
+
+
+# ── /account ─────────────────────────────────────────────────────────────────
+
+class AccountDeleteResponse(BaseModel):
+    success: bool

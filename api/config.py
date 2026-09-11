@@ -6,6 +6,10 @@ from pydantic import BaseModel
 class Config(BaseModel):
     supabase_url: str = ""
     supabase_key: str = ""
+    # Service-role key — full admin access, bypasses RLS. Server-side only,
+    # used exclusively for the account-deletion endpoint. Never expose this
+    # to the frontend or reuse it as SUPABASE_KEY.
+    supabase_service_role_key: str = ""
     hosted_api_key: str = ""
     hosted_provider: str = "groq"
     show_api_input: bool = True
@@ -18,6 +22,7 @@ def get_config() -> Config:
     return Config(
         supabase_url=os.getenv("SUPABASE_URL", ""),
         supabase_key=os.getenv("SUPABASE_KEY", ""),
+        supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
         hosted_api_key=os.getenv("HOSTED_API_KEY", ""),
         hosted_provider=os.getenv("HOSTED_PROVIDER", "groq"),
         show_api_input=os.getenv("SHOW_API_INPUT", "true").lower() != "false",

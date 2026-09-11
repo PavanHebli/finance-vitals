@@ -52,6 +52,7 @@ tests/logs/
 .cache/
 SUMMARY.md
 TESTING.md
+BACKEND_PLAN.md
 
 # Streamlit agent skills (environment-specific symlinks)
 .agents/skills/developing-with-streamlit

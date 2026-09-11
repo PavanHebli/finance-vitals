@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { FormData, Metrics, MetricScores, Mirror, Message, Snapshot, UserGoal, BudgetCard, DistributionLogEntry, FinancialProfile } from "./types";
 
 const DEFAULT_FORM: FormData = {
@@ -76,9 +75,12 @@ interface VitalsStore {
   setFinancialProfile: (updates: Partial<FinancialProfile>) => void;
 }
 
+// In-memory only, on purpose — no persistence for Guest sessions. State
+// resets on every page reload/tab close, exactly like the app's
+// zero-persistence-without-an-account model requires. Free/Pro accounts
+// persist via Supabase instead, hydrated into this same store on login.
 export const useStore = create<VitalsStore>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       formData: DEFAULT_FORM,
       metrics: null,
       metricScores: null,
@@ -261,12 +263,7 @@ export const useStore = create<VitalsStore>()(
           chatSummary: "",
           activeTab: "story",
         }),
-    }),
-    {
-      name: "vitals-store",
-      partialize: (s) => ({ ...s, narrativeLoading: false }),
-    }
-  )
+    })
 );
 
 /** Serialises the budget planner state into a string for chat context injection */
