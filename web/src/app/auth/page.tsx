@@ -8,11 +8,6 @@ import { Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { analytics } from "@/lib/analytics";
 
-// Session-dependent — never statically prerender at build time (the Supabase
-// client is constructed at render time, before NEXT_PUBLIC_* env vars are
-// guaranteed available during a build).
-export const dynamic = "force-dynamic";
-
 type EmailMode = "signin" | "signup";
 
 function GoogleIcon() {
@@ -28,6 +23,7 @@ function GoogleIcon() {
 
 export default function AuthPage() {
   const router = useRouter();
+  const supabase = createClient();
 
   const [emailMode, setEmailMode]         = useState<EmailMode>("signin");
   const [email, setEmail]                 = useState("");
@@ -48,7 +44,6 @@ export default function AuthPage() {
     setLoading("google");
     analytics.track("auth_google_clicked");
 
-    const supabase = createClient();
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -74,7 +69,6 @@ export default function AuthPage() {
     setLoading("email");
     analytics.track("auth_email_submit", { mode: emailMode });
 
-    const supabase = createClient();
     const { data, error: authError } =
       emailMode === "signin"
         ? await supabase.auth.signInWithPassword({ email, password })
