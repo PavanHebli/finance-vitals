@@ -148,8 +148,13 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="py-8 border-t border-[var(--border)] text-center text-sm text-[var(--text-muted)]">
-        For informational purposes only — not financial advice.
+      <footer className="py-8 border-t border-[var(--border)] text-center text-sm text-[var(--text-muted)] space-y-2">
+        <p>For informational purposes only — not financial advice.</p>
+        <p>
+          <Link href="/terms" className="hover:underline">Terms</Link>
+          {" · "}
+          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+        </p>
       </footer>
     </div>
   );
