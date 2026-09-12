@@ -247,8 +247,8 @@ export default function AuthPage() {
 
         <p className="text-xs text-[var(--text-muted)] text-center mt-4">
           By continuing you agree to our{" "}
-          <Link href="/" className="hover:underline">Terms</Link> and{" "}
-          <Link href="/" className="hover:underline">Privacy Policy</Link>.
+          <Link href="/terms" className="hover:underline">Terms</Link> and{" "}
+          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>.
         </p>
       </div>
     </div>
