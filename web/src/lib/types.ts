@@ -118,6 +118,11 @@ export interface FinancialProfile {
   debtMonthly: number;
   savingsTotal: number;
   profileComplete: boolean;
+  // Manual fallbacks, only used when no matching budget card exists yet —
+  // a card, once created, always takes priority over these. undefined means
+  // "never answered" (distinct from 0, a real "I pay nothing" answer).
+  housingMonthly?: number;
+  expensesMonthly?: number;
 }
 
 export interface BudgetCard {

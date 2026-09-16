@@ -54,6 +54,9 @@ SUMMARY.md
 TESTING.md
 BACKEND_PLAN.md
 
+# Database schema — not tracked; run manually against Supabase's SQL editor
+supabase/
+
 # Streamlit agent skills (environment-specific symlinks)
 .agents/skills/developing-with-streamlit
 .claude/skills/developing-with-streamlit

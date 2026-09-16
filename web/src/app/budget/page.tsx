@@ -61,11 +61,15 @@ function checkCompleteness(
   const custom        = budgetCards.filter(c => c.type === "custom");
   const expenseCards  = custom.filter(c => (c.purpose ?? "expense") === "expense");
   const savingCards   = custom.filter(c => c.purpose === "saving");
-  const hasExpenses   = expenseCards.length > 0;
   const hasSavings    = savingCards.length > 0 || (profile.profileComplete && profile.savingsTotal > 0);
-  const hasHousing    = expenseCards.some(c =>
+  const hasHousingCard = expenseCards.some(c =>
     HOUSING_PATTERNS.some(p => p.test(c.label + " " + (c.description ?? "")))
   );
+  // A card always counts as "answered" when it exists; the profile's manual
+  // fallback (housingMonthly/expensesMonthly) only fills the gap when no
+  // card exists yet — undefined means "never answered," 0 is a real answer.
+  const hasHousing  = hasHousingCard || (profile.profileComplete && profile.housingMonthly !== undefined);
+  const hasExpenses = expenseCards.length > 0 || (profile.profileComplete && profile.expensesMonthly !== undefined);
 
   return {
     savingsRate: {
@@ -81,12 +85,12 @@ function checkCompleteness(
       hint: !profile.profileComplete
         ? "Complete your financial profile to include total savings"
         : !hasExpenses
-        ? "Add expense cards so we can estimate your monthly spending"
+        ? "Add expense cards, or enter your monthly expenses in your profile"
         : null,
     },
     housingRatio: {
       complete: hasIncome && hasHousing,
-      hint: !hasHousing ? "Add a Rent or Mortgage card" : null,
+      hint: !hasHousing ? "Add a Rent or Mortgage card, or enter it in your profile" : null,
     },
   };
 }
@@ -100,6 +104,11 @@ const COMPLETENESS_TO_METRIC: [keyof BudgetCompleteness, keyof MetricScores][] =
   ["housingRatio",  "housing_ratio"],
 ];
 
+// Each metric's `score` is 0-25 (four metrics sum to the 0-100 overall
+// score — see api/core/health.py's calculate_overall_score). Averaging raw
+// 0-25 scores directly would produce a number on the wrong scale (e.g. two
+// strong metrics at 25 and 18 would show "22" instead of "86"), so this
+// scales the achieved points up to the same 0-100 basis as the full score.
 function computePartialScore(
   metricScores: MetricScores,
   completeness: BudgetCompleteness,
@@ -110,7 +119,8 @@ function computePartialScore(
     const ms = metricScores[mk];
     return acc + (typeof ms === "object" && "score" in ms ? ms.score : 0);
   }, 0);
-  return { score: Math.round(sum / complete.length), count: complete.length };
+  const maxPossible = complete.length * 25;
+  return { score: Math.round((sum / maxPossible) * 100), count: complete.length };
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -163,9 +173,22 @@ function getLastStats(cardId: string, log: DistributionLogEntry[]) {
 
 // ── Income Card — plain, functional ──────────────────────────────────────────
 
-function IncomeCard({ card }: { card: BudgetCard }) {
-  const { addBudgetIncome } = useStore();
-  const [input, setInput]   = useState("");
+function IncomeCard({ card, onSplit }: { card: BudgetCard; onSplit: () => void }) {
+  const { addBudgetIncome, setBudgetCardBalance } = useStore();
+  const [input, setInput]         = useState("");
+  const [editing, setEditing]     = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const [glow, setGlow]           = useState(false);
+  const glowTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Briefly draws the eye to the Split button after any change to the
+  // balance — the confirmation that "something happened" a plain state
+  // update alone doesn't give you.
+  function pulseGlow() {
+    setGlow(true);
+    if (glowTimeout.current) clearTimeout(glowTimeout.current);
+    glowTimeout.current = setTimeout(() => setGlow(false), 2000);
+  }
 
   function handleAdd() {
     const amount = parseFloat(input.replace(/[^0-9.]/g, ""));
@@ -173,6 +196,23 @@ function IncomeCard({ card }: { card: BudgetCard }) {
     addBudgetIncome(amount);
     setInput("");
     analytics.track("budget_income_added", { amount });
+    pulseGlow();
+  }
+
+  function startEdit() {
+    setEditValue(card.balance > 0 ? String(card.balance) : "");
+    setEditing(true);
+  }
+
+  // Direct correction — set the exact right number instead of forcing the
+  // user to work out and add/subtract a delta to fix a typo like 50k vs 5k.
+  function commitEdit() {
+    const amount = parseFloat(editValue.replace(/[^0-9.]/g, ""));
+    setEditing(false);
+    if (Number.isNaN(amount) || amount < 0 || amount === card.balance) return;
+    setBudgetCardBalance(card.id, amount);
+    analytics.track("budget_income_corrected", { amount });
+    pulseGlow();
   }
 
   return (
@@ -186,17 +226,40 @@ function IncomeCard({ card }: { card: BudgetCard }) {
 
       <div>
         <p className="text-xs text-[var(--text-muted)] mb-1">Available to split</p>
-        <p className="text-5xl font-bold tabular-nums text-[var(--text)] leading-none">{fmt(card.balance)}</p>
+        {editing ? (
+          <input
+            type="number"
+            autoFocus
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={e => {
+              if (e.key === "Enter") commitEdit();
+              if (e.key === "Escape") setEditing(false);
+            }}
+            className="text-5xl font-bold tabular-nums text-[var(--text)] leading-none bg-transparent border-b-2 border-[var(--brand)] outline-none w-full"
+            min={0}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={startEdit}
+            title="Click to correct this amount"
+            className="text-5xl font-bold tabular-nums text-[var(--text)] leading-none text-left hover:opacity-70 transition-opacity"
+          >
+            {fmt(card.balance)}
+          </button>
+        )}
       </div>
 
-      <div className="flex gap-2 mt-auto">
+      <div className="mt-auto flex gap-2">
         <input
           type="number"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") handleAdd(); }}
           placeholder="Add income…"
-          className="input flex-1 text-sm"
+          className="input flex-1 text-sm min-w-0"
           min={0}
         />
         <button
@@ -206,6 +269,19 @@ function IncomeCard({ card }: { card: BudgetCard }) {
           className="btn-primary text-sm disabled:opacity-40 shrink-0"
         >
           Add
+        </button>
+        <button
+          type="button"
+          onClick={onSplit}
+          disabled={card.balance <= 0}
+          title={card.balance > 0 ? "Split this income into your envelopes" : "Add income before splitting"}
+          className={`flex items-center gap-1.5 text-sm font-semibold text-white px-3 py-2 rounded-lg shrink-0 transition-shadow disabled:opacity-30 ${
+            glow ? "ring-4 ring-[var(--brand)]/40 animate-pulse" : ""
+          }`}
+          style={{ background: "var(--brand)" }}
+        >
+          <ArrowDownCircle size={15} />
+          Split
         </button>
       </div>
     </div>
@@ -248,12 +324,14 @@ function CategoryCard({
   card,
   preview,
   log,
+  cashBalance,
 }: {
   card: BudgetCard;
   preview?: number;
   log: DistributionLogEntry[];
+  cashBalance: number;
 }) {
-  const { updateBudgetCard, deleteBudgetCard, toggleBudgetPause, updateBudgetSaved } = useStore();
+  const { updateBudgetCard, deleteBudgetCard, toggleBudgetPause, updateBudgetSaved, transferFromCash, setBudgetCardBalance } = useStore();
   const [editingName,   setEditingName]   = useState(false);
   const [editingAlloc,  setEditingAlloc]  = useState(false);
   const [editingSaved,  setEditingSaved]  = useState(false);
@@ -261,6 +339,33 @@ function CategoryCard({
   const [allocVal,      setAllocVal]      = useState(String(card.allocationValue));
   const [savedVal,      setSavedVal]      = useState(String(card.savedSoFar ?? 0));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editingTransfer, setEditingTransfer] = useState(false);
+  const [transferVal,     setTransferVal]     = useState("");
+  const [transferError,   setTransferError]   = useState<string | null>(null);
+  const [editingBalance, setEditingBalance] = useState(false);
+  const [balanceVal,     setBalanceVal]     = useState(String(card.balance));
+
+  function saveBalance() {
+    const amount = parseFloat(balanceVal);
+    setEditingBalance(false);
+    if (isNaN(amount) || amount < 0 || amount === card.balance) return;
+    setBudgetCardBalance(card.id, amount);
+    analytics.track("budget_card_balance_corrected", { card_id: card.id, amount });
+  }
+
+  function saveTransfer() {
+    const amount = parseFloat(transferVal);
+    if (isNaN(amount) || amount <= 0) { setEditingTransfer(false); return; }
+    const result = transferFromCash(card.id, amount);
+    if (!result.success) {
+      setTransferError(result.error);
+      return;
+    }
+    setTransferVal("");
+    setTransferError(null);
+    setEditingTransfer(false);
+    analytics.track("budget_transfer_from_cash", { amount, card_id: card.id });
+  }
 
   const goalAchieved = card.purpose === "saving" && card.goalAmount && (card.savedSoFar ?? 0) >= card.goalAmount;
   const goalPct      = card.goalAmount ? Math.min(100, ((card.savedSoFar ?? 0) / card.goalAmount) * 100) : 0;
@@ -391,11 +496,68 @@ function CategoryCard({
 
       {/* ── White bottom section ── */}
       <div className="bg-[var(--bg-2)] px-4 py-4 flex flex-col gap-3">
-        {/* Accumulated balance */}
+        {/* Accumulated balance — click to correct directly, e.g. after
+            spending some of what's saved here. */}
         <div>
           <p className="text-[11px] text-[var(--text-muted)] mb-0.5">Accumulated</p>
-          <p className="text-2xl font-bold tabular-nums text-[var(--text)] leading-none">{fmt(card.balance)}</p>
+          {editingBalance ? (
+            <input
+              autoFocus
+              type="number"
+              min={0}
+              value={balanceVal}
+              onChange={e => setBalanceVal(e.target.value)}
+              onBlur={saveBalance}
+              onKeyDown={e => {
+                if (e.key === "Enter") saveBalance();
+                if (e.key === "Escape") setEditingBalance(false);
+              }}
+              className="text-2xl font-bold tabular-nums text-[var(--text)] leading-none bg-transparent border-b-2 border-[var(--brand)] outline-none w-full"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setBalanceVal(String(card.balance)); setEditingBalance(true); }}
+              title="Click to correct this amount"
+              className="text-2xl font-bold tabular-nums text-[var(--text)] leading-none text-left hover:opacity-70 transition-opacity"
+            >
+              {fmt(card.balance)}
+            </button>
+          )}
         </div>
+
+        {/* Move already-split money in from Cash in Hand — the only way to
+            fund a card that was created after the last split. */}
+        {cashBalance > 0 && (
+          editingTransfer ? (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                type="number"
+                min={0}
+                max={cashBalance}
+                value={transferVal}
+                onChange={e => { setTransferVal(e.target.value); setTransferError(null); }}
+                onKeyDown={e => {
+                  if (e.key === "Enter") saveTransfer();
+                  if (e.key === "Escape") { setEditingTransfer(false); setTransferError(null); }
+                }}
+                placeholder={`Up to ${fmt(cashBalance)}`}
+                className="input flex-1 text-xs py-1"
+              />
+              <button type="button" onClick={saveTransfer} className="btn-primary py-1 px-2 text-xs shrink-0">Move</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingTransfer(true)}
+              className="text-xs text-[var(--brand)] hover:underline text-left"
+            >
+              + Move from Cash in Hand ({fmt(cashBalance)} available)
+            </button>
+          )
+        )}
+        {transferError && <p className="text-xs text-[var(--danger)]">{transferError}</p>}
 
         {/* Allocation + stats */}
         <div className="border-t border-[var(--border)] pt-3 space-y-1">
@@ -808,17 +970,35 @@ const PILL_LABELS: Record<keyof BudgetCompleteness, string> = {
   housingRatio:  "Housing",
 };
 
-function MetricPills({ completeness }: { completeness: BudgetCompleteness }) {
+function formatMetricValue(key: keyof MetricScores, metrics: Metrics): string {
+  switch (key) {
+    case "savings_rate":          return `${metrics.savings_rate}% of income saved`;
+    case "debt_to_income":        return `${metrics.debt_to_income}% of income to debt`;
+    case "emergency_fund_months": return `${metrics.emergency_fund_months} months of expenses covered`;
+    case "housing_ratio":         return `${metrics.housing_ratio}% of income to housing`;
+    default:                      return "";
+  }
+}
+
+function MetricPills({
+  completeness, metrics, metricScores, sources,
+}: {
+  completeness: BudgetCompleteness;
+  metrics: Metrics | null;
+  metricScores: MetricScores | null;
+  sources: Record<keyof BudgetCompleteness, string>;
+}) {
   const [open, setOpen] = useState<keyof BudgetCompleteness | null>(null);
 
   const entries = Object.entries(completeness) as [keyof BudgetCompleteness, MetricStatus][];
 
-  function toggle(key: keyof BudgetCompleteness, status: MetricStatus) {
-    if (status.complete) return;
+  function toggle(key: keyof BudgetCompleteness) {
     setOpen(prev => prev === key ? null : key);
   }
 
-  const openHint = open ? completeness[open].hint : null;
+  const openStatus    = open ? completeness[open] : null;
+  const openMetricKey = open ? COMPLETENESS_TO_METRIC.find(([ck]) => ck === open)?.[1] ?? null : null;
+  const openScore     = open && openMetricKey && metricScores ? metricScores[openMetricKey] : null;
 
   return (
     <div className="space-y-2">
@@ -827,14 +1007,16 @@ function MetricPills({ completeness }: { completeness: BudgetCompleteness }) {
           <button
             key={key}
             type="button"
-            onClick={() => toggle(key, status)}
-            disabled={status.complete}
-            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors ${
+            onClick={() => toggle(key)}
+            title="Click to see what this is based on"
+            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
               status.complete
-                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/60 text-green-700 dark:text-green-400 cursor-default"
+                ? open === key
+                  ? "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400"
+                  : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/60 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 : open === key
                 ? "bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300"
-                : "bg-orange-50 dark:bg-orange-900/15 border-orange-200 dark:border-orange-800/50 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/25 cursor-pointer"
+                : "bg-orange-50 dark:bg-orange-900/15 border-orange-200 dark:border-orange-800/50 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/25"
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.complete ? "bg-green-500" : "bg-orange-500"}`} />
@@ -843,11 +1025,21 @@ function MetricPills({ completeness }: { completeness: BudgetCompleteness }) {
         ))}
       </div>
 
-      {openHint && (
-        <p className="text-[11px] leading-relaxed text-[var(--text)] bg-orange-50 dark:bg-orange-900/15 border border-orange-200 dark:border-orange-800/40 rounded-lg px-3 py-2">
-          <span className="font-semibold text-orange-600 dark:text-orange-400">{PILL_LABELS[open!]} not calculated. </span>
-          {openHint}
-        </p>
+      {open && openStatus && (
+        openStatus.complete && openMetricKey && metrics && openScore && "score" in openScore ? (
+          <div className="text-[11px] leading-relaxed bg-green-50 dark:bg-green-900/15 border border-green-200 dark:border-green-800/40 rounded-lg px-3 py-2 space-y-0.5">
+            <p className="text-[var(--text)]">
+              <span className="font-semibold text-green-700 dark:text-green-400">{PILL_LABELS[open]}: </span>
+              {formatMetricValue(openMetricKey, metrics)} → {openScore.score}/25 ({openScore.status})
+            </p>
+            <p className="text-[var(--text-muted)]">Based on: {sources[open]}</p>
+          </div>
+        ) : openStatus.hint ? (
+          <p className="text-[11px] leading-relaxed text-[var(--text)] bg-orange-50 dark:bg-orange-900/15 border border-orange-200 dark:border-orange-800/40 rounded-lg px-3 py-2">
+            <span className="font-semibold text-orange-600 dark:text-orange-400">{PILL_LABELS[open]} not calculated. </span>
+            {openStatus.hint}
+          </p>
+        ) : null
       )}
     </div>
   );
@@ -935,8 +1127,8 @@ function EmptyRing({ label }: { label: string }) {
 }
 
 function ScoreCard({
-  profileComplete, hasIncome, score, mirrorLabel, metrics, loading,
-  narrativeReady, narrativeStreaming, completeness,
+  profileComplete, hasIncome, score, mirrorLabel, metrics, metricScores, loading, error,
+  narrativeReady, narrativeStreaming, completeness, metricSources,
   partialScore, partialCount,
   onOpenFlow, onRecalculate, onOpenNarrative,
 }: {
@@ -945,10 +1137,13 @@ function ScoreCard({
   score: number | null;
   mirrorLabel: string | null;
   metrics: Metrics | null;
+  metricScores: MetricScores | null;
   loading: boolean;
+  error: string | null;
   narrativeReady: boolean;
   narrativeStreaming: boolean;
   completeness: BudgetCompleteness | null;
+  metricSources: Record<keyof BudgetCompleteness, string>;
   partialScore: number | null;
   partialCount: number;
   onOpenFlow: () => void;
@@ -1013,7 +1208,7 @@ function ScoreCard({
 
       {/* Metric pills — shown once user has income */}
       {hasIncome && completeness && (
-        <MetricPills completeness={completeness} />
+        <MetricPills completeness={completeness} metrics={metrics} metricScores={metricScores} sources={metricSources} />
       )}
 
       {/* Net flow — only when score available */}
@@ -1024,6 +1219,14 @@ function ScoreCard({
             ${metrics.net_monthly_flow.toLocaleString("en-US", { maximumFractionDigits: 0 })}/mo
           </span>
         </p>
+      )}
+
+      {/* Error — previously swallowed silently, leaving no way to tell a
+          failed calculation apart from "nothing happened yet" */}
+      {error && (
+        <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-3 py-2.5 text-xs text-[var(--danger)]">
+          <span className="font-semibold">Couldn&apos;t calculate score.</span> {error}
+        </div>
       )}
 
       {/* CTA */}
@@ -1209,14 +1412,94 @@ function ProfileField({
   );
 }
 
+// A field that starts genuinely unanswered (undefined), not defaulted to 0 —
+// used for the score's optional manual fallbacks. Unlike ProfileField,
+// clicking away cancels instead of silently saving: those fields already
+// have a confirmed real value from onboarding, so blur-to-save is safe
+// there, but a field that's never been touched must not be answerable by
+// accident just by tapping in and out of it.
+function FallbackProfileField({
+  label,
+  value,
+  onSave,
+}: {
+  label: string;
+  value: number | undefined;
+  onSave: (v: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  function commit() {
+    const n = parseFloat(draft);
+    if (!isNaN(n) && n >= 0) onSave(n);
+    setEditing(false);
+  }
+
+  return (
+    <div className="flex items-center justify-between text-sm gap-4 py-2.5">
+      <span className="text-[var(--text-muted)]">{label}</span>
+      {editing ? (
+        <div className="flex items-center gap-1.5">
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-xs select-none">$</span>
+            <input
+              autoFocus
+              type="number"
+              min={0}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onBlur={() => setEditing(false)}
+              onKeyDown={e => {
+                if (e.key === "Enter") commit();
+                if (e.key === "Escape") setEditing(false);
+              }}
+              placeholder="0"
+              className="input text-sm py-1 pl-6 pr-2 w-24 text-right"
+            />
+          </div>
+          <button type="button" onMouseDown={commit} className="btn-primary text-xs py-1 px-2 shrink-0">Save</button>
+        </div>
+      ) : value !== undefined ? (
+        <button
+          type="button"
+          onClick={() => { setDraft(String(value)); setEditing(true); }}
+          className="font-semibold tabular-nums text-[var(--text)] hover:text-[var(--brand)] transition-colors"
+          title="Click to edit"
+        >
+          {fmt(value)}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setDraft(""); setEditing(true); }}
+          className="text-[var(--text-muted)] italic hover:text-[var(--brand)] transition-colors"
+          title="Click to answer"
+        >
+          Not set — tap to add
+        </button>
+      )}
+    </div>
+  );
+}
+
 function FinancialProfileCard({
   profile,
   onUpdate,
+  budgetCards,
 }: {
   profile: FinancialProfile;
   onUpdate: (updates: Partial<FinancialProfile>) => void;
+  budgetCards: BudgetCard[];
 }) {
   if (!profile.profileComplete) return null;
+
+  // A card always wins once it exists — these two fields are purely a
+  // fallback for whatever isn't represented by a card yet, so they get out
+  // of the way (become a read-only note) the moment a real card shows up.
+  const expenseCards = budgetCards.filter(c => c.type === "custom" && (c.purpose ?? "expense") === "expense");
+  const housingCard  = expenseCards.find(c => HOUSING_PATTERNS.some(p => p.test(c.label + " " + (c.description ?? ""))));
+  const hasExpenseCard = expenseCards.length > 0;
 
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-2)] p-5">
@@ -1238,6 +1521,32 @@ function FinancialProfileCard({
           value={profile.savingsTotal}
           onSave={v => onUpdate({ savingsTotal: v })}
         />
+
+        {housingCard ? (
+          <div className="flex items-center justify-between text-sm gap-4 py-2.5">
+            <span className="text-[var(--text-muted)]">Monthly rent/mortgage</span>
+            <span className="text-xs text-[var(--text-muted)] italic">Using &quot;{housingCard.label}&quot; card</span>
+          </div>
+        ) : (
+          <FallbackProfileField
+            label="Monthly rent/mortgage"
+            value={profile.housingMonthly}
+            onSave={v => onUpdate({ housingMonthly: v })}
+          />
+        )}
+
+        {hasExpenseCard ? (
+          <div className="flex items-center justify-between text-sm gap-4 py-2.5">
+            <span className="text-[var(--text-muted)]">Monthly expenses</span>
+            <span className="text-xs text-[var(--text-muted)] italic">Using your expense cards</span>
+          </div>
+        ) : (
+          <FallbackProfileField
+            label="Monthly expenses"
+            value={profile.expensesMonthly}
+            onSave={v => onUpdate({ expensesMonthly: v })}
+          />
+        )}
       </div>
     </div>
   );
@@ -1260,6 +1569,7 @@ export default function BudgetPage() {
   const [distributeSuccess, setDistributeSuccess] = useState(false);
   const [showQuestionFlow,  setShowQuestionFlow]  = useState(false);
   const [scoreLoading,      setScoreLoading]      = useState(false);
+  const [scoreError,        setScoreError]        = useState<string | null>(null);
   const [showNarrative,     setShowNarrative]     = useState(false);
   const [showImport,        setShowImport]        = useState(false);
 
@@ -1274,6 +1584,27 @@ export default function BudgetPage() {
     ? checkCompleteness(budgetCards, distributionLog, financialProfile)
     : null;
 
+  // Where each metric's input actually came from — surfaced in the pill
+  // breakdown so a "complete" metric is never just a bare number with no
+  // explanation of what produced it.
+  const expenseCardsForSource = customCards.filter(c => (c.purpose ?? "expense") === "expense");
+  const savingCardsForSource  = customCards.filter(c => c.purpose === "saving");
+  const housingCardForSource  = expenseCardsForSource.find(c =>
+    HOUSING_PATTERNS.some(p => p.test(c.label + " " + (c.description ?? "")))
+  );
+  const metricSources: Record<keyof BudgetCompleteness, string> = {
+    savingsRate: savingCardsForSource.length > 0
+      ? `${savingCardsForSource.length} saving card${savingCardsForSource.length > 1 ? "s" : ""}${financialProfile.profileComplete ? " + your profile's total savings" : ""}`
+      : financialProfile.profileComplete ? "Your profile's total savings only — no saving cards yet" : "Not answered yet",
+    debtToIncome: financialProfile.profileComplete ? "Your profile's debt fields" : "Not answered yet",
+    emergencyFund: expenseCardsForSource.length > 0
+      ? `${expenseCardsForSource.length} expense card${expenseCardsForSource.length > 1 ? "s" : ""}`
+      : financialProfile.expensesMonthly !== undefined ? "Your profile's monthly expenses" : "Not answered yet",
+    housingRatio: housingCardForSource
+      ? `Your "${housingCardForSource.label}" card`
+      : financialProfile.housingMonthly !== undefined ? "Your profile's monthly rent/mortgage" : "Not answered yet",
+  };
+
   // Partial score: average only the metrics we have data for, reweighting equally
   const { metricScores } = useStore();
   const partial = (completeness && metricScores)
@@ -1287,6 +1618,7 @@ export default function BudgetPage() {
   async function calculateScoreWith(profile: FinancialProfile) {
     if (!hasIncome) return;
     setScoreLoading(true);
+    setScoreError(null);
     setNarrativeText("");
     try {
       const form = budgetToFormData(budgetCards, distributionLog, profile);
@@ -1307,8 +1639,11 @@ export default function BudgetPage() {
         },
         (chunk) => appendNarrative(chunk),
       ).catch(() => {}).finally(() => setNarrativeLoading(false));
-    } catch {
-      // silent — user can retry via Recalculate button
+    } catch (err) {
+      // Previously swallowed entirely — a failed call left the UI stuck on
+      // "Ready to calculate" forever with zero indication anything had gone
+      // wrong, indistinguishable from editing a field silently doing nothing.
+      setScoreError(err instanceof Error ? err.message : "Couldn't calculate your score. Check your connection and try again.");
     } finally {
       setScoreLoading(false);
     }
@@ -1318,7 +1653,11 @@ export default function BudgetPage() {
     const updated: FinancialProfile = { ...data, profileComplete: true };
     setFinancialProfile(updated);
     setShowQuestionFlow(false);
-    calculateScoreWith(updated);
+    // Calling calculateScoreWith directly here as well as leaving it to the
+    // debounced auto-recalculate effect below fired the score API (and a
+    // real narrative/LLM call) twice for the same data — the effect already
+    // picks this up on its own since debtTotal/debtMonthly/savingsTotal just
+    // changed, so this is the single source of truth for the calculation.
   }
 
   // Auto-recalculate (debounced 1.5 s) whenever budget cards or profile values change
@@ -1436,7 +1775,7 @@ export default function BudgetPage() {
 
       {/* Top row: Income · Cash in Hand · Health Score — same visual weight */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <IncomeCard card={incomeCard} />
+        <IncomeCard card={incomeCard} onSplit={handleDistribute} />
         <CashInHandCard card={cashCard} preview={preview?.get(cashCard.id)} />
         <ScoreCard
           profileComplete={financialProfile.profileComplete}
@@ -1444,10 +1783,13 @@ export default function BudgetPage() {
           score={overallScore !== null ? Math.round(overallScore) : null}
           mirrorLabel={mirror?.label ?? null}
           metrics={metrics}
+          metricScores={metricScores}
           loading={scoreLoading}
+          error={scoreError}
           narrativeReady={narrativeText.length > 0}
           narrativeStreaming={narrativeStreaming}
           completeness={completeness}
+          metricSources={metricSources}
           partialScore={displayScore}
           partialCount={partialCount}
           onOpenFlow={() => setShowQuestionFlow(true)}
@@ -1465,6 +1807,7 @@ export default function BudgetPage() {
               card={card}
               preview={preview?.get(card.id)}
               log={distributionLog}
+              cashBalance={cashCard.balance}
             />
           ))}
         </div>
@@ -1488,6 +1831,7 @@ export default function BudgetPage() {
       <FinancialProfileCard
         profile={financialProfile}
         onUpdate={updates => setFinancialProfile(updates)}
+        budgetCards={budgetCards}
       />
 
       {/* Split log */}

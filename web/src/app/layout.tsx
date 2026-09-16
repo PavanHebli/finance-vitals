@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { Header } from "@/components/Header";
 import { ChatFAB } from "@/components/ChatFAB";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
+import { AccountHydrator } from "@/components/AccountHydrator";
 import "@/styles/globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={`${sans.variable} font-sans min-h-screen`}>
         <AnalyticsProvider />
+        <AccountHydrator />
         <Header />
         <main>{children}</main>
         <ChatFAB />
