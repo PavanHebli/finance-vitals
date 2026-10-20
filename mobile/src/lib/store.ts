@@ -5,9 +5,11 @@ import type {
   BudgetCard,
   DistributionLogEntry,
   FinancialProfile,
+  FormData,
   Metrics,
   MetricScores,
   Mirror,
+  Snapshot,
   UserGoal,
 } from "@vitals/shared";
 import { supabase } from "@/lib/supabase";
@@ -33,6 +35,19 @@ function defaultBudgetCards(): BudgetCard[] {
   ];
 }
 
+// Starting values for the "Check your score" form.
+const DEFAULT_FORM: FormData = {
+  provider: "", apiKey: "",
+  incomeMain: 0, incomeAdditional: 0,
+  section2Open: true,
+  expensesRent: 0, expensesGroceries: 0, expensesTransport: 0, expensesSubscriptions: 0,
+  expensesDining: 0, expensesShopping: 0, expensesOther: 0, expensesTotalEstimate: 0,
+  section3Open: true,
+  savingsTotal: 0, investmentsTotal: 0, debtTotal: 0, debtMonthly: 0,
+  section4Open: false,
+  age: null, employment: null, hasHealthInsurance: false, hasEmergencyFund: null, contributing401k: null,
+};
+
 function defaultFinancialProfile(): FinancialProfile {
   return { debtTotal: 0, debtMonthly: 0, savingsTotal: 0, profileComplete: false };
 }
@@ -51,6 +66,9 @@ interface MobileStore {
   mirror: Mirror | null;
   narrativeText: string;
   narrativeLoading: boolean;
+  // The "Check your score" form, and score check-ins saved this session.
+  formData: FormData;
+  snapshots: Snapshot[];
   // Signed-in user id. null means guest.
   userId: string | null;
 
@@ -68,6 +86,8 @@ interface MobileStore {
   removeGoal: (id: string) => void;
   updateSavingsProgress: (id: string, savedSoFar: number) => void;
 
+  setFormField: <K extends keyof FormData>(key: K, value: FormData[K]) => void;
+  addSnapshot: (snapshot: Snapshot) => void;
   setResults: (metrics: Metrics, metricScores: MetricScores, overallScore: number, mirror: Mirror) => void;
   setNarrativeText: (text: string) => void;
   appendNarrative: (chunk: string) => void;
@@ -91,6 +111,8 @@ export const useStore = create<MobileStore>()((set, get) => ({
   mirror: null,
   narrativeText: "",
   narrativeLoading: false,
+  formData: DEFAULT_FORM,
+  snapshots: [],
   userId: null,
 
   addBudgetIncome: (amount) => {
@@ -331,6 +353,14 @@ export const useStore = create<MobileStore>()((set, get) => ({
     }
   },
 
+  setFormField: (key, value) => set((s) => ({ formData: { ...s.formData, [key]: value } })),
+
+  // One check-in per month: saving again in the same month replaces it.
+  addSnapshot: (snapshot) =>
+    set((s) => ({
+      snapshots: [...s.snapshots.filter((x) => x.saved_at !== snapshot.saved_at), snapshot],
+    })),
+
   setResults: (metrics, metricScores, overallScore, mirror) =>
     set({ metrics, metricScores, overallScore, mirror }),
   setNarrativeText: (text) => set({ narrativeText: text }),
@@ -354,5 +384,7 @@ export const useStore = create<MobileStore>()((set, get) => ({
       overallScore: null,
       mirror: null,
       narrativeText: "",
+      formData: DEFAULT_FORM,
+      snapshots: [],
     }),
 }));

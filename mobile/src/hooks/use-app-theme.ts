@@ -1,12 +1,20 @@
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { SCHEMES, type SchemeName, type ThemeTokens } from "@/constants/schemes";
+import { SCHEMES, type ThemeTokens } from "@/constants/schemes";
+import { usePrefs } from "@/lib/prefs";
 
-// Scheme is fixed to "vitals" for now. When the Me screen adds the theme
-// picker, this is the one place that will read the saved choice.
-const CURRENT_SCHEME: SchemeName = "vitals";
+// True when the app should currently show its dark colors: the user's own
+// choice if they made one, otherwise whatever the phone is set to.
+export function useIsDark(): boolean {
+  const systemIsDark = useColorScheme() === "dark";
+  const mode = usePrefs((s) => s.mode);
+  if (mode === "dark") return true;
+  if (mode === "light") return false;
+  return systemIsDark;
+}
 
+// The colors for the chosen theme, in light or dark.
 export function useAppTheme(): ThemeTokens {
-  const systemMode = useColorScheme();
-  const mode = systemMode === "dark" ? "dark" : "light";
-  return SCHEMES[CURRENT_SCHEME][mode];
+  const scheme = usePrefs((s) => s.scheme);
+  const isDark = useIsDark();
+  return SCHEMES[scheme][isDark ? "dark" : "light"];
 }

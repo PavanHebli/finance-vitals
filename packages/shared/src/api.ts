@@ -8,6 +8,14 @@ export function setApiBaseUrl(url: string | undefined): void {
   if (url) API_URL = url;
 }
 
+// Every call below goes through this. Web uses the normal fetch. The mobile
+// app swaps in Expo's fetch, because the normal React Native fetch cannot
+// read a streaming response (needed for the AI narrative and chat).
+let httpFetch: typeof fetch = (input, init) => fetch(input, init);
+export function setApiFetch(customFetch: typeof fetch): void {
+  httpFetch = customFetch;
+}
+
 // ── Score ─────────────────────────────────────────────────────────────────────
 
 export async function fetchScore(formData: Record<string, unknown>): Promise<{
@@ -16,7 +24,7 @@ export async function fetchScore(formData: Record<string, unknown>): Promise<{
   overall_score: number;
   mirror: Mirror;
 }> {
-  const res = await fetch(`${API_URL}/score`, {
+  const res = await httpFetch(`${API_URL}/score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ form_data: formData }),
@@ -39,7 +47,7 @@ export async function streamNarrative(
   },
   onChunk: (chunk: string) => void
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/narrative`, {
+  const res = await httpFetch(`${API_URL}/narrative`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -58,7 +66,7 @@ export async function fetchSimulate(
   sim_metrics: Metrics;
   sim_metric_scores: MetricScores;
 }> {
-  const res = await fetch(`${API_URL}/simulate`, {
+  const res = await httpFetch(`${API_URL}/simulate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ form_data: formData, sim_overrides: simOverrides }),
@@ -89,7 +97,7 @@ export async function fetchSimulateInterpret(payload: {
   };
   scenario_label: string;
 }> {
-  const res = await fetch(`${API_URL}/simulate/interpret`, {
+  const res = await httpFetch(`${API_URL}/simulate/interpret`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -117,7 +125,7 @@ export async function streamChat(
   onChunk: (chunk: string) => void,
   onSummaryUpdate?: (summary: string) => void
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/chat`, {
+  const res = await httpFetch(`${API_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -147,7 +155,7 @@ export async function streamChat(
 }
 
 export async function fetchChatStarters(): Promise<string[]> {
-  const res = await fetch(`${API_URL}/chat/starters`);
+  const res = await httpFetch(`${API_URL}/chat/starters`);
   const { questions } = await res.json();
   return questions;
 }
@@ -160,7 +168,7 @@ export async function fetchGoalExtract(payload: {
   provider: string;
   api_key: string;
 }): Promise<Goal | null> {
-  const res = await fetch(`${API_URL}/goal/extract`, {
+  const res = await httpFetch(`${API_URL}/goal/extract`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -181,7 +189,7 @@ export async function importPdf(
   form.append("provider", provider);
   form.append("api_key", apiKey);
 
-  const res = await fetch(`${API_URL}/import/pdf`, { method: "POST", body: form });
+  const res = await httpFetch(`${API_URL}/import/pdf`, { method: "POST", body: form });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Import failed" }));
     return { transactions: [], error: err.detail };
@@ -200,7 +208,7 @@ export interface Transaction {
 // ── PDF export ────────────────────────────────────────────────────────────────
 
 export async function exportPdf(payload: Record<string, unknown>): Promise<Blob> {
-  const res = await fetch(`${API_URL}/export/pdf`, {
+  const res = await httpFetch(`${API_URL}/export/pdf`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -212,7 +220,7 @@ export async function exportPdf(payload: Record<string, unknown>): Promise<Blob>
 // ── Snapshot encode ───────────────────────────────────────────────────────────
 
 export async function encodeSnapshot(payload: Record<string, unknown>): Promise<string> {
-  const res = await fetch(`${API_URL}/snapshot/encode`, {
+  const res = await httpFetch(`${API_URL}/snapshot/encode`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -225,7 +233,7 @@ export async function encodeSnapshot(payload: Record<string, unknown>): Promise<
 export async function decodeSnapshot(file: File): Promise<unknown[]> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API_URL}/snapshot/decode`, { method: "POST", body: form });
+  const res = await httpFetch(`${API_URL}/snapshot/decode`, { method: "POST", body: form });
   if (!res.ok) throw new Error("Could not read .vit file");
   const { snapshots } = await res.json();
   return snapshots;
@@ -234,7 +242,7 @@ export async function decodeSnapshot(file: File): Promise<unknown[]> {
 // ── Feedback ──────────────────────────────────────────────────────────────────
 
 export async function submitFeedback(payload: Record<string, unknown>): Promise<boolean> {
-  const res = await fetch(`${API_URL}/feedback`, {
+  const res = await httpFetch(`${API_URL}/feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -247,7 +255,7 @@ export async function submitFeedback(payload: Record<string, unknown>): Promise<
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
 export function analyticsSession(sessionId: string, data: Record<string, unknown>): void {
-  fetch(`${API_URL}/analytics/session`, {
+  httpFetch(`${API_URL}/analytics/session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ session_id: sessionId, data }),
@@ -255,7 +263,7 @@ export function analyticsSession(sessionId: string, data: Record<string, unknown
 }
 
 export function analyticsEvent(sessionId: string, event: string, properties: Record<string, unknown> = {}): void {
-  fetch(`${API_URL}/analytics/event`, {
+  httpFetch(`${API_URL}/analytics/event`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ session_id: sessionId, event, properties }),

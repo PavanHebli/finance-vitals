@@ -20,58 +20,58 @@ Status: `[x]` done, `[ ]` not started.
 ## B. Auth
 
 - [x] **B1. Sign-in screen UI** — Logo, email + password fields, sign in / sign up switch, "Continue without account" link, trust line ("your data is private and never sold").
-- [ ] **B2. Email sign-in and sign-up logic** — Wire B1 to Supabase.
-- [ ] **B3. Google sign-in** — Native Google button and flow.
-- [ ] **B4. Apple sign-in** — Required by the App Store once Google sign-in exists. Needs the Apple Developer account.
-- [ ] **B5. Profile setup screen** — First login only: name, date of birth, gender, country (all skippable). Same fields as web's `/profile`.
-- [ ] **B6. Auth routing** — Decide which screen opens at launch: guests go straight to Budget, signed-out first launch sees sign-in, signed-in users go to Budget. Never block guests.
+- [x] **B2. Email sign-in and sign-up logic** — Wire B1 to Supabase.
+- [x] **B3. Google sign-in** — Native Google button and flow.
+- [x] **B4. Apple sign-in** — Required by the App Store once Google sign-in exists. Needs the Apple Developer account.
+- [x] **B5. Profile setup screen** — First login only: name, date of birth, gender, country (all skippable). Same fields as web's `/profile`.
+- [x] **B6. Auth routing** — Decide which screen opens at launch: guests go straight to Budget, signed-out first launch sees sign-in, signed-in users go to Budget. Never block guests.
 
 ## C. Budget tab (the main screen — design: "Budget")
 
 Build in this order, each piece visible on its own with sample data first, then wired to the store.
 
-- [ ] **C1. Screen header** — Title "Budget", two icon buttons: score form (opens E6) and Split.
-- [ ] **C2. Score card front** — Big score number, label ("Good"), "3 of 4 metrics covered". Shows the live partial score.
-- [ ] **C3. Metric pills** — 2x2 grid: Savings, Debt, Housing, Emergency. Green when answered, amber with "?" when not. Tap one to expand (C4).
-- [ ] **C4. Metric expand panel** — Opens under the card: a slider to try different values and see the score change; shows the real value and where it came from ("Based on: your Rent card"). Needs a slider library.
-- [ ] **C5. Score card flip (back = AI narrative)** — Info button flips the card in 3D to show the AI narrative; flip back with the same button.
-- [ ] **C6. AI insight strip** — One-line summary under the score card; tapping it jumps to the Score tab.
-- [ ] **C7. Income card** — System card: balance to split, amount input + Add button, tap the balance to correct it.
-- [ ] **C8. Float card** — System card (the design calls it "Float"; web calls it "Cash in Hand"): unallocated cash, "Next split: +$X".
-- [ ] **C9. Category card** — Colored header with Expense/Saving chip and pause button, name, amount, "% of income", and a progress bar for saving cards with a goal. Paused cards are faded.
-- [ ] **C10. Card grid** — 2-column list of C7 + C8 + C9 cards.
-- [ ] **C11. Add card button** — Dashed "+ Add card" button; opens the card sheet (C12) in "new" mode.
-- [ ] **C12. Card detail sheet** — Bottom sheet: editable name in the colored header, Expense/Saving toggle, Pause and Delete (delete asks to confirm), allocation field with $ / % toggle, goal amount (saving only), read-only stats (balance, last split, next split), goal progress bar, Save button. Also needs "move from Float" and balance correction, which web has.
-- [ ] **C13. Split action** — The Split button spreads the income across cards (same logic as web's `distributeBudget`), with the glow cue after income changes.
-- [ ] **C14. Live score calculation** — When cards or profile change, wait ~1.5s then call the score API and refresh C2/C3. Show a real error if it fails (web hides nothing now).
-- [ ] **C15. Financial profile prompts** — The three questions (total debt, monthly debt payments, total savings) plus the rent/mortgage and monthly-expenses fallbacks. Fallbacks start as "Not set" and only save on explicit confirm.
+- [x] **C1. Screen header** — Title "Budget", two icon buttons: score form (opens E6) and Split.
+- [x] **C2. Score card front** — Big score number, label ("Good"), "3 of 4 metrics covered". Shows the live partial score.
+- [x] **C3. Metric pills** — 2x2 grid: Savings, Debt, Housing, Emergency. Green when answered, amber with "?" when not. Tap one to expand (C4).
+- [x] **C4. Metric expand panel** — Opens under the card: a slider to try different values and see the score change; shows the real value and where it came from ("Based on: your Rent card"). Needs a slider library.
+- [x] **C5. Score card flip (back = AI narrative)** — Info button flips the card in 3D to show the AI narrative; flip back with the same button.
+- [x] **C6. AI insight strip** — One-line summary under the score card; tapping it jumps to the Score tab.
+- [x] **C7. Income card** — System card: balance to split, amount input + Add button, tap the balance to correct it.
+- [x] **C8. Float card** — System card (the design calls it "Float"; web calls it "Cash in Hand"): unallocated cash, "Next split: +$X".
+- [x] **C9. Category card** — Colored header with Expense/Saving chip and pause button, name, amount, "% of income", and a progress bar for saving cards with a goal. Paused cards are faded.
+- [x] **C10. Card grid** — 2-column list of C7 + C8 + C9 cards.
+- [x] **C11. Add card button** — Dashed "+ Add card" button; opens the card sheet (C12) in "new" mode.
+- [x] **C12. Card detail sheet** — Bottom sheet: editable name in the colored header, Expense/Saving toggle, Pause and Delete (delete asks to confirm), allocation field with $ / % toggle, goal amount (saving only), read-only stats (balance, last split, next split), goal progress bar, Save button. Also needs "move from Float" and balance correction, which web has.
+- [x] **C13. Split action** — The Split button spreads the income across cards (same logic as web's `distributeBudget`), with the glow cue after income changes.
+- [x] **C14. Live score calculation** — When cards or profile change, wait ~1.5s then call the score API and refresh C2/C3. Show a real error if it fails (web hides nothing now).
+- [x] **C15. Financial profile prompts** — The three questions (total debt, monthly debt payments, total savings) plus the rent/mortgage and monthly-expenses fallbacks. Fallbacks start as "Not set" and only save on explicit confirm.
 
 ## D. Score tab (design: "Score")
 
-- [ ] **D1. Score ring** — Circular SVG ring that fills to the score, big number in the middle.
+- [x] **D1. Score ring** — Circular SVG ring that fills to the score, big number in the middle.
 - [ ] **D2. Label and change** — "Good", and "+3 from last check-in".
-- [ ] **D3. Story / What If sub-tabs** — Two-tab switch under the ring.
-- [ ] **D4. Your Story tab** — Streamed AI narrative card, plus the 4 metric mini-tiles (value + status).
-- [ ] **D5. What If tab** — 4 tappable tiles; each expands into a slider and the resulting score.
+- [x] **D3. Story / What If sub-tabs** — Two-tab switch under the ring.
+- [x] **D4. Your Story tab** — Streamed AI narrative card, plus the 4 metric mini-tiles (value + status).
+- [x] **D5. What If tab** — 4 tappable tiles; each expands into a slider and the resulting score.
 - [ ] **D6. Score form sheet** — 4-step bottom sheet (Income, Expenses, Position, Profile) matching web's form fields. Ends with "Calculate score".
 
 ## E. Progress tab (design: "Progress")
 
-- [ ] **E1. Score trend chart** — Bar/line chart of the score month by month.
-- [ ] **E2. Started / Trend / Now row** — Three numbers under the chart.
-- [ ] **E3. Metric change rows** — Per-metric "12% → 18%" lines with colored arrows.
-- [ ] **E4. Streak note** — "4-month streak" line.
+- [x] **E1. Score trend chart** — Bar/line chart of the score month by month.
+- [x] **E2. Started / Trend / Now row** — Three numbers under the chart.
+- [x] **E3. Metric change rows** — Per-metric "12% → 18%" lines with colored arrows.
+- [x] **E4. Streak note** — "4-month streak" line.
 - Needs snapshots saved to Supabase first (see G4), otherwise guests only see the current session.
 
 ## F. Me tab (design: "Me")
 
-- [ ] **F1. Profile header** — Avatar, name, score badge.
-- [ ] **F2. Dark mode switch** — Follows the system by default.
-- [ ] **F3. Theme picker** — Choose one of the 5 schemes; saved so it persists (`user_settings.color_scheme` for signed-in users). Makes A1's fixed "vitals" scheme selectable.
+- [x] **F1. Profile header** — Avatar, name, score badge.
+- [x] **F2. Dark mode switch** — Follows the system by default.
+- [x] **F3. Theme picker** — Choose one of the 5 schemes; saved so it persists (`user_settings.color_scheme` for signed-in users). Makes A1's fixed "vitals" scheme selectable.
 - [ ] **F4. Notification toggles** — Weekly check-in and goal milestones. Needs G2 first.
 - [ ] **F5. Export data** — PDF share sheet.
-- [ ] **F6. Clear all data** — Deletes the signed-in user's budget/goals/history but keeps the account.
-- [ ] **F7. Delete account** — Calls the backend `DELETE /account`.
+- [x] **F6. Clear all data** — Deletes the signed-in user's budget/goals/history but keeps the account.
+- [x] **F7. Delete account** — Calls the backend `DELETE /account`.
 - [ ] **F8. Footer** — Disclaimer, version, feedback link. **Fix the wording**: the design says "Data stays on your device", which is wrong now that signed-in data is stored in Supabase.
 
 ## G. After V1 (deliberately later)
