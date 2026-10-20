@@ -10,6 +10,7 @@ This document captures how I think about Vitals: the product, the architecture, 
 - [The Score](#the-score)
 - [Language Over Charts](#language-over-charts)
 - [Your Data](#your-data)
+- [Accounts & Persistence](#accounts--persistence)
 - [Vitals Chat](#vitals-chat)
 - [Analytics](#analytics)
 - [Progressive Form](#progressive-form)
@@ -87,6 +88,24 @@ One file holds all months. Same-month saves overwrite. Re-downloading replaces t
 ### The live "unsaved" point on progress charts
 
 Progress charts include the current unsaved session as a live point — hollow marker, dotted line. This is deliberate. If a user just updated their income or cut a budget item, they should immediately see where that puts them on the trend line without needing to save first. The hollow marker signals it is a preview, not a confirmed entry.
+
+---
+
+## Accounts & Persistence
+
+### Three tiers, not just "logged in or not"
+
+Guest, Free, and Pro exist as separate tiers because they answer two genuinely different questions. Guest answers "can I try this with zero friction?" — no account, no setup, the 5-minute-checkup promise stays intact. Free and Pro answer a completely different question — "do I want this remembered?" — which by definition requires an account, because there is no other honest way to remember something across sessions without a bank connection or local file management.
+
+Free vs Pro is a separate axis again: single-device vs multi-device sync. That split is a decision about the hosted product at myfinancevitals.app specifically — it is how the free trial funds the AI provider costs behind narrative and chat for everyone, not a technical requirement of the codebase itself. Anyone self-hosting this project owns their own Supabase project already and has no reason to gate themselves behind a "Pro" tier of their own data.
+
+### Zero persistence for Guests, not "local storage by default"
+
+Guests get genuinely nothing saved — not even a localStorage cache. Earlier in the project this leaned on `localStorage`/Zustand's `persist` middleware to survive a reload without an account. That created a confusing middle state: not quite ephemeral, not quite durable, and it quietly broke the moment a user expected it to follow them to another device or survive a cleared browser. Removing it entirely makes the value proposition of creating an account unambiguous — sign in and it is really saved; do not, and it is really not. No hybrid state to explain.
+
+### Why no device fingerprinting
+
+Free's "single device" limit is enforced with a server-side `active_sessions` table and a session cap, not a MAC address or a generated device ID. iOS has blocked real MAC access since iOS 7, and browsers deliberately expose no stable hardware identifier — building around fingerprinting would mean building on a foundation that keeps closing under us. A session the server itself issued and can revoke is the only version of "which device is this" that stays reliable over time.
 
 ---
 
@@ -251,6 +270,20 @@ The three-question financial profile (total debt, monthly debt payments, total s
 The narrative previously required navigating to the results page. That is the wrong home for it — the budget page is where users are making decisions, and the narrative should be available in that context without a page switch.
 
 The pattern: an info icon on the Health Score card glows (ring highlight) when the narrative is ready. Clicking it opens a centered popup with a card-flip animation. The narrative starts streaming automatically in the background after every score calculation, so it is ready before the user thinks to look for it.
+
+### Card data always wins over a manual answer
+
+Housing Ratio and Emergency Fund originally required a specifically-labeled budget card to exist (a card matched against a rent/mortgage/housing regex, or any expense card at all) before either metric would compute a live number. That was too rigid — a user with no interest in building out a full envelope budget had no way to just answer "what's your rent" directly, and the requirement itself was invisible: nothing told them a card's *label* was the thing standing between them and a real score.
+
+The fix adds direct manual fields for both — Monthly rent/mortgage, Monthly expenses — but a matching card, the moment one exists, always wins over the manual value. The rule is one-directional and automatic: cards are ground truth when present, the manual field is purely a fallback for the gap before one exists. This means a user is never maintaining two numbers that are supposed to agree — the instant a real "Rent" card gets created, the manually-typed value is silently superseded on the next calculation, with no prompt to "sync" or "confirm" anything.
+
+The same trip revealed a sharper problem: `0` cannot be allowed to mean two different things. A field that starts unanswered and displays as "$0" is indistinguishable from a field someone genuinely set to zero — and it turned out to matter in practice, when simply tapping into a field and clicking away (no real edit) silently committed an unintended `$0` answer, which the scoring math then treated as a real, excellent housing/debt number. The fix: these fallback fields now start in a visibly distinct "Not set" state, and only an explicit Enter or Save commits a value — clicking away cancels instead of saving. `undefined` and `0` are different facts and the UI has to say so, not just the data model.
+
+### Every metric must be inspectable, not just the incomplete ones
+
+The live score's metric pills (Savings / DTI / Emergency / Housing) were only ever clickable when incomplete — a green "complete" pill had no way to show what produced it. That is backwards. A metric that is silently wrong while displaying "Good" is more dangerous than one that is honestly marked unanswered, because nothing about a green pill prompts a second look. The debt/rent-default bug above is exactly this failure mode: two metrics went green from unintentional zeros, produced a 100/100 live score, and there was no way to click in and see why.
+
+Every pill is now clickable, complete or not. A complete one expands to show the real computed value, its point contribution, and — critically — its source ("Based on: your 'Rent' card" vs. "Based on: your profile's monthly rent/mortgage"), so a confident-looking number is never just a bare digit with no way to audit what fed it.
 
 ---
 

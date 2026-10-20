@@ -4,7 +4,7 @@
 
 # Vitals
 
-**Your financial health score in 5 minutes. No bank connection. No account. No nonsense.**
+**Your financial health score in 5 minutes. No bank connection. Free to start — sign in only if you want it saved.**
 
 [![Live App](https://img.shields.io/badge/Live%20App-myfinancevitals.app-4F46E5?style=for-the-badge)](https://myfinancevitals.app/)
 [![License](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
@@ -20,7 +20,7 @@
 
 Most people have no idea how their finances actually stack up. Not because they don't care — but because the tools are either too complex, require handing over bank credentials, or give vague advice that doesn't apply to their situation.
 
-Vitals fixes that. Enter your rough monthly numbers. Get a real score, benchmarked against published financial standards. Read a plain-English story of your financial picture. Ask follow-up questions. Track your progress month over month — all without an account or a bank connection.
+Vitals fixes that. Enter your rough monthly numbers. Get a real score, benchmarked against published financial standards. Read a plain-English story of your financial picture. Ask follow-up questions. Track your progress month over month — no bank connection, and no account needed to try it. Sign in only when you want your budget and progress saved across devices.
 
 ---
 
@@ -28,6 +28,7 @@ Vitals fixes that. Enter your rough monthly numbers. Get a real score, benchmark
 
 | | |
 |---|---|
+| 🔐 **Accounts (optional)** | Try everything with zero setup, nothing saved. Sign in with Google or email if you want your budget, goals, and progress persisted and available on other devices |
 | 🩺 **Health Score** | Scored 0–100 across 4 metrics, each benchmarked against CFPB, HUD, and Fidelity standards |
 | 🤖 **AI Narrative** | Streaming plain-English story of your finances — what's working, what needs attention, one action this month |
 | 💬 **Inline Chat** | Ask follow-ups right below your story. No tab switch, no help-center feel — it flows like a conversation |
@@ -65,25 +66,32 @@ Each metric is scored independently against a published benchmark, then weighted
 
 ### 1. Backend (FastAPI)
 
+Use a dedicated virtual environment for this project — **do not** run `uvicorn` from your system/base Python (Anaconda's base env, etc.). Mixing environments is a real, easy-to-hit failure mode: an unrelated old Pydantic v1 install in a base env will silently break request parsing (`model_dump()` only exists in Pydantic v2) with an error that gives no hint the environment is the problem.
+
 ```bash
 cd api
+python3 -m venv .venv          # if a .venv doesn't already exist here
+source .venv/bin/activate      # (.venv) should now show in your prompt
 pip install -r requirements.txt
 ```
 
 Create `api/.env`:
 
 ```env
-HOSTED_API_KEY    = "your-openai-or-groq-key"
-HOSTED_PROVIDER   = "openai"          # openai | groq | anthropic | gemini
-SHOW_API_INPUT    = false             # false = hosted key, true = user brings their own
-SUPABASE_URL      = ""                # optional — for analytics + feedback
-SUPABASE_KEY      = ""                # optional
-ENABLE_LOGGING    = false             # false = skip Supabase writes locally
+HOSTED_API_KEY             = "your-openai-or-groq-key"
+HOSTED_PROVIDER            = "openai"          # openai | groq | anthropic | gemini
+SHOW_API_INPUT             = false             # false = hosted key, true = user brings their own
+SUPABASE_URL               = ""                # required for auth-backed features (account deletion, analytics, feedback)
+SUPABASE_KEY               = ""                # anon key
+SUPABASE_SERVICE_ROLE_KEY  = ""                # required only for account deletion (DELETE /account) — server-side only, never expose to the client
+ENABLE_LOGGING             = false             # false = skip Supabase writes locally
 ```
 
 ```bash
 uvicorn main:app --reload --port 8000
 ```
+
+If you ever see `AttributeError: 'FormData' object has no attribute 'model_dump'`, it means uvicorn is running under the wrong Python environment — re-activate `.venv` and restart.
 
 ### 2. Frontend (Next.js)
 
@@ -96,9 +104,13 @@ Create `web/.env.local` (copy from `web/.env.example`):
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_ANALYTICS_ENABLED=false   # keep false locally — prevents dev traffic polluting prod data
+NEXT_PUBLIC_ANALYTICS_ENABLED=false          # keep false locally — prevents dev traffic polluting prod data
 NEXT_PUBLIC_ENV=dev
+NEXT_PUBLIC_SUPABASE_URL=""                  # required for auth/sign-in to work at all — from your Supabase project's API settings
+NEXT_PUBLIC_SUPABASE_ANON_KEY=""             # required alongside the URL above
 ```
+
+Without the two Supabase vars, Guest mode still works fully — auth-dependent pages (`/auth`, `/profile`, `/settings`) are the only thing that needs them.
 
 ```bash
 npm run dev
@@ -106,11 +118,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### 3. Database schema (Supabase)
+
+The Postgres schema (accounts, budget cards, goals, financial profile, etc.) lives in `supabase/migrations/` locally but is **not tracked in git** (see `.gitignore`) — run the `.sql` files manually against your own Supabase project's SQL editor, in order, once per project.
+
 ---
 
 ## Snapshot format
 
-Data is saved locally as an encrypted `.vit` file — one file holds all months. Same-month saves overwrite. Fernet encryption (AES-128-CBC + HMAC-SHA256) prevents accidental exposure if the file ends up on a shared computer or cloud sync folder.
+`.vit` remains the local, account-free way to save and reload a score snapshot — one encrypted file holds all months, Fernet-encrypted (AES-128-CBC + HMAC-SHA256) so it's safe if the file ends up on a shared computer or cloud sync folder. This is separate from cloud persistence: without an account, `.vit` is how you save and reload a snapshot; sign in and your budget, goals, and progress sync to Supabase automatically instead, no file management required.
 
 Inspect a snapshot from the command line:
 
@@ -145,7 +161,8 @@ vitals/
 │   │   ├── goal.py               # POST /goal/extract
 │   │   ├── snapshot.py           # POST /snapshot/encode + /decode
 │   │   ├── feedback.py           # POST /feedback
-│   │   └── analytics.py          # POST /analytics/session + /event
+│   │   ├── analytics.py          # POST /analytics/session + /event
+│   │   └── account.py            # DELETE /account  (Supabase admin API, service-role key)
 │   └── core/                     # Business logic (provider-agnostic)
 │       ├── health.py             # Scoring math + financial context builder
 │       ├── narrative.py          # AI narrative generator
@@ -155,19 +172,27 @@ vitals/
 │       ├── export_pdf.py         # 2-page PDF report (fpdf2)
 │       ├── goal.py               # Goal extraction from narrative
 │       ├── analytics_db.py       # Analytics writes → Supabase (sessions + events)
-│       └── feedback_db.py        # Feedback submissions → Supabase
+│       ├── feedback_db.py        # Feedback submissions → Supabase
+│       └── account.py            # Account deletion via Supabase admin API
 │
 ├── web/                          # Next.js 14 frontend
+│   ├── middleware.ts             # Refreshes the Supabase auth session cookie on every request — never gates access
 │   └── src/
 │       ├── app/
 │       │   ├── page.tsx          # Landing page + returning user home
+│       │   ├── auth/             # Sign in / sign up (Google OAuth + email), callback route
+│       │   ├── profile/          # First-time onboarding + editable profile (name, DOB, country, avatar)
+│       │   ├── settings/         # Dark mode, change password, sign out, delete account
+│       │   ├── terms/            # Terms of Service
+│       │   ├── privacy/          # Privacy Policy
 │       │   ├── form/             # Data entry form
 │       │   ├── results/          # Score, narrative, chat, simulator
 │       │   ├── budget/           # Budget Planner — envelopes, live score, AI narrative popup
 │       │   ├── progress/         # Score + metric trend charts
 │       │   └── feedback/         # Feedback form
 │       ├── components/
-│       │   ├── Header.tsx        # Hamburger sidebar + dark mode toggle
+│       │   ├── Header.tsx        # Hamburger sidebar, account dropdown, dark mode toggle
+│       │   ├── AccountHydrator.tsx    # Mount-once: pulls a signed-in user's data from Supabase into the store on login, resets to Guest defaults on logout
 │       │   ├── HealthScore.tsx   # Score ring + metric cards
 │       │   ├── Narrative.tsx     # Streaming narrative + education blocks
 │       │   ├── InlineChat.tsx    # Conversational chat below narrative
@@ -179,10 +204,14 @@ vitals/
 │       │   ├── ExportMenu.tsx    # PDF export + .vit save popover
 │       │   └── AnalyticsProvider.tsx  # Page view + session init tracking
 │       └── lib/
-│           ├── store.ts          # Zustand store (replaces session state)
+│           ├── store.ts          # Zustand store — in-memory for Guests, Supabase-synced for signed-in users
+│           ├── supabase/         # client.ts (browser), server.ts (Server Components), middleware.ts (session refresh)
 │           ├── api.ts            # Fetch wrappers for all FastAPI endpoints
 │           ├── analytics.ts      # Analytics singleton (fire-and-forget)
 │           └── types.ts          # TypeScript interfaces
+│
+├── supabase/
+│   └── migrations/                # Postgres schema (.sql) — not tracked in git, run manually per project
 │
 ├── tests/
 │   ├── decrypt_finfd.py          # CLI: decrypt + inspect .vit files

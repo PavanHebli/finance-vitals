@@ -53,9 +53,16 @@ tests/logs/
 SUMMARY.md
 TESTING.md
 BACKEND_PLAN.md
+MOBILE_PLAN.md
 
 # Database schema — not tracked; run manually against Supabase's SQL editor
 supabase/
+
+# Dirmap — shelved for now (unreliable in practice), kept local-only, not committed
+DIRMAP.md
+.dirmap/
+AGENTS.md
+CLAUDE.md
 
 # Streamlit agent skills (environment-specific symlinks)
 .agents/skills/developing-with-streamlit
