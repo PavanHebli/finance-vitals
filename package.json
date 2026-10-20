@@ -1,0 +1,9 @@
+{
+  "name": "vitals",
+  "private": true,
+  "workspaces": [
+    "web",
+    "mobile",
+    "packages/*"
+  ]
+}
