@@ -76,7 +76,7 @@ Build in this order, each piece visible on its own with sample data first, then 
 
 ## G. After V1 (deliberately later)
 
-- [ ] **G1. Chat** — Floating chat button and chat bottom sheet with starter questions (design shows it on Budget). Needs the streaming test on React Native first.
+- [x] **G1. Chat** — Floating chat button and chat bottom sheet with starter questions (design shows it on Budget). Needs the streaming test on React Native first.
 - [ ] **G2. Push notifications** — `expo-notifications` setup.
 - [ ] **G3. PDF bank statement import** — File picker, upload, review screen.
 - [ ] **G4. Snapshots sync** — Save score check-ins to Supabase so Progress works across sessions and devices (also still missing on web).

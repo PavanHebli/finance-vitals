@@ -1,4 +1,6 @@
 import { Tabs } from "expo-router";
+import { View } from "react-native";
+import { ChatFab } from "@/components/chat-fab";
 import { useAppTheme } from "@/hooks/use-app-theme";
 
 // Tab structure matches the "Vitals iOS v5" design artifact exactly:
@@ -7,6 +9,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 export default function TabsLayout() {
   const theme = useAppTheme();
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -20,5 +23,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="progress" options={{ title: "Progress" }} />
       <Tabs.Screen name="me" options={{ title: "Me" }} />
     </Tabs>
+    <ChatFab />
+    </View>
   );
 }
