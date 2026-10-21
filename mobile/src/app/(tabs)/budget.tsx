@@ -6,6 +6,7 @@ import { budgetToFormData } from "@vitals/shared";
 import type { BudgetCard } from "@vitals/shared";
 import { CategoryCard, FloatCard, IncomeCard } from "@/components/budget-cards";
 import { CardSheet } from "@/components/card-sheet";
+import { ImportSheet } from "@/components/import-sheet";
 import { MetricPanel } from "@/components/metric-panel";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { ScoreCard } from "@/components/score-card";
@@ -44,6 +45,7 @@ export default function Budget() {
   const [cardSheetOpen, setCardSheetOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [splitMessage, setSplitMessage] = useState("");
 
   const incomeCard = cards.find((c) => c.type === "income");
@@ -120,6 +122,9 @@ export default function Budget() {
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.text }]}>Budget</Text>
         <View style={styles.headerButtons}>
+          <Pressable onPress={() => setImportOpen(true)} style={[styles.iconButton, { backgroundColor: theme.surface2 }]}>
+            <Text style={{ color: theme.text }}>📄</Text>
+          </Pressable>
           <Pressable onPress={() => setFormOpen(true)} style={[styles.iconButton, { backgroundColor: theme.surface2 }]}>
             <Text style={{ color: theme.text }}>📝</Text>
           </Pressable>
@@ -187,6 +192,7 @@ export default function Budget() {
 
       <CardSheet visible={cardSheetOpen} onClose={() => setCardSheetOpen(false)} card={editingCard} />
       <ProfileSheet visible={profileOpen} onClose={() => setProfileOpen(false)} />
+      <ImportSheet visible={importOpen} onClose={() => setImportOpen(false)} />
       <ScoreFormSheet visible={formOpen} onClose={() => setFormOpen(false)} />
     </SafeAreaView>
   );

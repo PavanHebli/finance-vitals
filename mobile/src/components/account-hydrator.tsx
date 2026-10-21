@@ -9,11 +9,12 @@ import { useStore } from "@/lib/store";
 export function AccountHydrator() {
   useEffect(() => {
     async function loadUserData(userId: string) {
-      const [cardsRes, goalsRes, logRes, profileRes] = await Promise.all([
+      const [cardsRes, goalsRes, logRes, profileRes, snapsRes] = await Promise.all([
         supabase.from("budget_cards").select("*").eq("user_id", userId).order("sort_order"),
         supabase.from("goals").select("*").eq("user_id", userId),
         supabase.from("distribution_log").select("*").eq("user_id", userId).order("timestamp", { ascending: false }),
         supabase.from("profiles").select("financial_profile").eq("id", userId).single(),
+        supabase.from("snapshots").select("*").eq("user_id", userId).order("saved_at"),
       ]);
 
       const store = useStore.getState();
@@ -31,6 +32,14 @@ export function AccountHydrator() {
         store.setBudgetCards(savedCards.map(rowToBudgetCard));
       }
 
+      store.setSnapshots(
+        (snapsRes.data ?? []).map((row) => ({
+          saved_at: String(row.saved_at).slice(0, 7),
+          version: row.version ?? "1",
+          inputs: row.inputs,
+          outputs: row.outputs,
+        }))
+      );
       store.setGoals((goalsRes.data ?? []).map(rowToGoal));
       store.setDistributionLog((logRes.data ?? []).map(rowToDistributionEntry));
       // Set last: once the user id is set, every change starts saving to the

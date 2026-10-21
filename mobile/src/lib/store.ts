@@ -88,6 +88,7 @@ interface MobileStore {
 
   setFormField: <K extends keyof FormData>(key: K, value: FormData[K]) => void;
   addSnapshot: (snapshot: Snapshot) => void;
+  setSnapshots: (snapshots: Snapshot[]) => void;
   setResults: (metrics: Metrics, metricScores: MetricScores, overallScore: number, mirror: Mirror) => void;
   setNarrativeText: (text: string) => void;
   appendNarrative: (chunk: string) => void;
@@ -356,10 +357,33 @@ export const useStore = create<MobileStore>()((set, get) => ({
   setFormField: (key, value) => set((s) => ({ formData: { ...s.formData, [key]: value } })),
 
   // One check-in per month: saving again in the same month replaces it.
-  addSnapshot: (snapshot) =>
+  addSnapshot: (snapshot) => {
     set((s) => ({
       snapshots: [...s.snapshots.filter((x) => x.saved_at !== snapshot.saved_at), snapshot],
-    })),
+    }));
+    const { userId } = get();
+    if (!userId) return;
+    // saved_at is "YYYY-MM"; the database column is a date, so store the 1st of the month.
+    const savedAt = `${snapshot.saved_at}-01`;
+    supabase
+      .from("snapshots")
+      .delete()
+      .eq("user_id", userId)
+      .eq("saved_at", savedAt)
+      .then(() =>
+        saveInBackground(
+          supabase.from("snapshots").insert({
+            user_id: userId,
+            version: snapshot.version,
+            score: snapshot.outputs.overall_score,
+            inputs: snapshot.inputs,
+            outputs: snapshot.outputs,
+            saved_at: savedAt,
+          })
+        )
+      );
+  },
+  setSnapshots: (snapshots) => set({ snapshots }),
 
   setResults: (metrics, metricScores, overallScore, mirror) =>
     set({ metrics, metricScores, overallScore, mirror }),

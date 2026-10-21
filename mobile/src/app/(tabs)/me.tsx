@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { SCHEMES, type SchemeName } from "@/constants/schemes";
 import { useAppTheme, useIsDark } from "@/hooks/use-app-theme";
 import { API_URL } from "@/lib/api-config";
 import { signOut } from "@/lib/auth";
 import { usePrefs } from "@/lib/prefs";
+import { setWeeklyReminder } from "@/lib/reminders";
 import { useStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 
@@ -26,6 +28,15 @@ export default function Me() {
     router.replace("/sign-in");
   }
 
+  async function toggleWeekly(on: boolean) {
+    prefs.setWeeklyCheckin(on);
+    const ok = await setWeeklyReminder(on);
+    if (!ok) {
+      prefs.setWeeklyCheckin(false);
+      setMessage("Allow notifications in Settings to get reminders.");
+    }
+  }
+
   function confirmClear() {
     Alert.alert("Clear all data?", "This removes your cards, goals and history. Your account stays.", [
       { text: "Cancel", style: "cancel" },
@@ -38,6 +49,7 @@ export default function Me() {
       await supabase.from("budget_cards").delete().eq("user_id", userId);
       await supabase.from("goals").delete().eq("user_id", userId);
       await supabase.from("distribution_log").delete().eq("user_id", userId);
+      await supabase.from("snapshots").delete().eq("user_id", userId);
       await supabase.from("profiles").update({ financial_profile: null }).eq("id", userId);
     }
     resetToGuestState();
@@ -103,7 +115,7 @@ export default function Me() {
         <View style={card}>
           <View style={styles.row}>
             <Text style={{ color: theme.text, fontSize: 14 }}>Weekly check-in</Text>
-            <Switch value={prefs.weeklyCheckin} onValueChange={prefs.setWeeklyCheckin} trackColor={{ true: theme.brand }} />
+            <Switch value={prefs.weeklyCheckin} onValueChange={toggleWeekly} trackColor={{ true: theme.brand }} />
           </View>
           <View style={styles.row}>
             <Text style={{ color: theme.text, fontSize: 14 }}>Goal milestones</Text>
@@ -137,6 +149,9 @@ export default function Me() {
 
         <Text style={[styles.footer, { color: theme.textMuted }]}>
           {userId ? "Your data is saved to your account." : "As a guest, your data is lost when you close the app."}
+        </Text>
+        <Text style={[styles.footer, { color: theme.textMuted }]}>
+          Vitals is for information only and is not financial advice. Version {Constants.expoConfig?.version ?? "1.0.0"}
         </Text>
       </ScrollView>
     </SafeAreaView>

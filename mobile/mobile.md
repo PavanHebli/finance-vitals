@@ -49,7 +49,7 @@ Build in this order, each piece visible on its own with sample data first, then 
 ## D. Score tab (design: "Score")
 
 - [x] **D1. Score ring** — Circular SVG ring that fills to the score, big number in the middle.
-- [ ] **D2. Label and change** — "Good", and "+3 from last check-in".
+- [x] **D2. Label and change** — "Good", and "+3 from last check-in".
 - [x] **D3. Story / What If sub-tabs** — Two-tab switch under the ring.
 - [x] **D4. Your Story tab** — Streamed AI narrative card, plus the 4 metric mini-tiles (value + status).
 - [x] **D5. What If tab** — 4 tappable tiles; each expands into a slider and the resulting score.
@@ -77,9 +77,9 @@ Build in this order, each piece visible on its own with sample data first, then 
 ## G. After V1 (deliberately later)
 
 - [x] **G1. Chat** — Floating chat button and chat bottom sheet with starter questions (design shows it on Budget). Needs the streaming test on React Native first.
-- [ ] **G2. Push notifications** — `expo-notifications` setup.
-- [ ] **G3. PDF bank statement import** — File picker, upload, review screen.
-- [ ] **G4. Snapshots sync** — Save score check-ins to Supabase so Progress works across sessions and devices (also still missing on web).
+- [x] **G2. Push notifications** — `expo-notifications` setup.
+- [x] **G3. PDF bank statement import** — File picker, upload, review screen.
+- [x] **G4. Snapshots sync** — Save score check-ins to Supabase so Progress works across sessions and devices (also still missing on web).
 - [ ] **G5. Free-tier one-device limit** — Register the session on login and enforce the limit (the table exists, nothing uses it yet, on web or mobile).
 - [ ] **G6. TestFlight build** — Needs the Apple Developer account ($99/year).
 - [ ] **G7. App Store submission** — Icons, screenshots, privacy details.

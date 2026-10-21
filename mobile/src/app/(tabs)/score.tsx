@@ -35,6 +35,7 @@ export default function ScoreTab() {
   const cards = useStore((s) => s.budgetCards);
   const log = useStore((s) => s.distributionLog);
   const profile = useStore((s) => s.financialProfile);
+  const snapshots = useStore((s) => s.snapshots);
 
   const [tab, setTab] = useState<"story" | "whatif">("story");
   const [openTile, setOpenTile] = useState<MetricName | null>(null);
@@ -71,6 +72,14 @@ export default function ScoreTab() {
     );
   }
 
+  // Change since the check-in before the latest one.
+  const sortedSnaps = [...snapshots].sort((a, b) => a.saved_at.localeCompare(b.saved_at));
+  let changeText = "";
+  if (sortedSnaps.length >= 2) {
+    const diff = sortedSnaps[sortedSnaps.length - 1].outputs.overall_score - sortedSnaps[sortedSnaps.length - 2].outputs.overall_score;
+    changeText = `${diff >= 0 ? "+" : ""}${diff} from last check-in`;
+  }
+
   const filled = CIRCUMFERENCE * (1 - overall / 100);
 
   return (
@@ -98,6 +107,8 @@ export default function ScoreTab() {
             <Text style={[styles.ringLabel, { color: labelColor(mirror.label) }]}>{mirror.label}</Text>
           </View>
         </View>
+
+        {changeText !== "" && <Text style={[styles.change, { color: theme.textMuted }]}>{changeText}</Text>}
 
         <View style={[styles.tabs, { backgroundColor: theme.surface2 }]}>
           {(["story", "whatif"] as const).map((t) => (
@@ -198,6 +209,7 @@ const styles = StyleSheet.create({
   ringWrap: { alignSelf: "center", width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" },
   ringCenter: { position: "absolute", alignItems: "center" },
   ringScore: { fontSize: 42, fontWeight: "900" },
+  change: { textAlign: "center", fontSize: 12, marginTop: -6 },
   ringLabel: { fontSize: 13, fontWeight: "700" },
   tabs: { flexDirection: "row", marginHorizontal: 16, borderRadius: 12, padding: 3 },
   tab: { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 },
