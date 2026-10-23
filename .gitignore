@@ -54,6 +54,7 @@ SUMMARY.md
 TESTING.md
 BACKEND_PLAN.md
 MOBILE_PLAN.md
+MOBILE_TEST_PLAN.md
 
 # Database schema — not tracked; run manually against Supabase's SQL editor
 supabase/
