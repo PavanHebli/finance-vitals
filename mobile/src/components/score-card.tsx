@@ -48,12 +48,17 @@ export function ScoreCard(props: ScoreCardProps) {
               <ActivityIndicator color={theme.brand} />
               <Text style={[styles.small, { color: theme.textMuted }]}>Calculating…</Text>
             </View>
-          ) : (
+          ) : props.completeness ? (
             <View style={styles.frontTop}>
               <Text style={[styles.bigScore, { color: theme.text }]}>{props.score ?? "—"}</Text>
               {props.label && <Text style={[styles.label, { color: labelColor(props.label) }]}>{props.label}</Text>}
-              <Text style={[styles.small, { color: theme.textMuted }]}>
-                {props.completeness ? `${props.answeredCount} of 4 metrics covered` : "Add income to get started"}
+              <Text style={[styles.small, { color: theme.textMuted }]}>{props.answeredCount} of 4 metrics covered</Text>
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>Your Vitals score</Text>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>
+                Add your income below, then a few cards, and your score appears here.
               </Text>
             </View>
           )}
@@ -101,7 +106,7 @@ export function ScoreCard(props: ScoreCardProps) {
         </Animated.View>
 
         <Pressable onPress={toggleFlip} style={[styles.infoButton, { backgroundColor: theme.surface2 }]}>
-          <Text style={{ color: theme.textMuted, fontWeight: "800", fontSize: 12 }}>{flipped ? "✕" : "ℹ"}</Text>
+          <Text style={{ color: theme.textMuted, fontWeight: "800", fontSize: 12 }}>{flipped ? "✕" : "i"}</Text>
         </Pressable>
       </View>
 
@@ -118,12 +123,15 @@ export function ScoreCard(props: ScoreCardProps) {
 
 const styles = StyleSheet.create({
   wrap: { marginHorizontal: 12, gap: 8 },
-  cardArea: { height: 200 },
+  cardArea: { height: 172 },
   face: { ...StyleSheet.absoluteFill, borderRadius: 16, borderWidth: 1, backfaceVisibility: "hidden", overflow: "hidden" },
   back: { padding: 14 },
   center: { alignItems: "center", paddingTop: 30, gap: 8 },
+  empty: { alignItems: "center", justifyContent: "center", flex: 1, paddingHorizontal: 36, gap: 6 },
+  emptyTitle: { fontSize: 15, fontWeight: "800" },
+  emptyText: { fontSize: 12, lineHeight: 18, textAlign: "center" },
   frontTop: { alignItems: "center", paddingTop: 14 },
-  bigScore: { fontSize: 44, fontWeight: "900" },
+  bigScore: { fontSize: 42, lineHeight: 46, fontWeight: "900" },
   label: { fontSize: 14, fontWeight: "700" },
   small: { fontSize: 11 },
   pillGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, paddingHorizontal: 10, paddingTop: 10 },
