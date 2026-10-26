@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { budgetToFormData } from "@vitals/shared";
 import type { BudgetCard } from "@vitals/shared";
+import { Icon } from "@/components/icons";
 import { CategoryCard, FloatCard, IncomeCard } from "@/components/budget-cards";
 import { CardSheet } from "@/components/card-sheet";
 import { ImportSheet } from "@/components/import-sheet";
@@ -123,13 +124,13 @@ export default function Budget() {
         <Text style={[styles.title, { color: theme.text }]}>Budget</Text>
         <View style={styles.headerButtons}>
           <Pressable onPress={() => setImportOpen(true)} style={[styles.iconButton, { backgroundColor: theme.surface2 }]}>
-            <Text style={{ color: theme.text }}>📄</Text>
+            <Icon name="import" color={theme.textMuted} size={16} />
           </Pressable>
           <Pressable onPress={() => setFormOpen(true)} style={[styles.iconButton, { backgroundColor: theme.surface2 }]}>
-            <Text style={{ color: theme.text }}>📝</Text>
+            <Icon name="form" color={theme.textMuted} size={16} />
           </Pressable>
-          <Pressable onPress={split} style={[styles.splitButton, { backgroundColor: theme.brand }]}>
-            <Text style={styles.splitText}>Split</Text>
+          <Pressable onPress={split} style={[styles.iconButton, { backgroundColor: theme.brand }]}>
+            <Icon name="split" color="#ffffff" size={16} />
           </Pressable>
         </View>
       </View>
@@ -167,27 +168,32 @@ export default function Budget() {
             onPress={() => router.navigate("/(tabs)/score")}
             style={[styles.insight, { backgroundColor: theme.brandSoft, borderColor: theme.border }]}
           >
-            <Text style={[styles.insightText, { color: theme.text }]} numberOfLines={2}>
-              ✦ {narrative}
-            </Text>
+            <View style={[styles.insightIcon, { backgroundColor: theme.brand }]}>
+              <Icon name="spark" color="#ffffff" size={12} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.insightTitle, { color: theme.text }]}>AI Insight</Text>
+              <Text style={[styles.insightText, { color: theme.textMuted }]} numberOfLines={2}>
+                {narrative}
+              </Text>
+              <Text style={[styles.insightCta, { color: theme.brand }]}>View full story →</Text>
+            </View>
           </Pressable>
         )}
 
         {splitMessage !== "" && <Text style={[styles.splitNote, { color: theme.brand }]}>{splitMessage}</Text>}
 
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>CARDS</Text>
         <View style={styles.grid}>
           {incomeCard && <IncomeCard card={incomeCard} />}
           {floatCard && <FloatCard card={floatCard} nextSplit={nextSplit.get(floatCard.id) ?? 0} />}
           {customCards.map((card) => (
             <CategoryCard key={card.id} card={card} onPress={() => openCard(card)} />
           ))}
-          <Pressable
-            onPress={() => openCard(null)}
-            style={[styles.addCard, { borderColor: theme.border }]}
-          >
-            <Text style={{ color: theme.textMuted, fontWeight: "700" }}>＋ Add card</Text>
-          </Pressable>
         </View>
+        <Pressable onPress={() => openCard(null)} style={[styles.addCard, { borderColor: theme.brand }]}>
+          <Text style={{ color: theme.brand, fontSize: 13, fontWeight: "700" }}>+ Add card</Text>
+        </Pressable>
       </ScrollView>
 
       <CardSheet visible={cardSheetOpen} onClose={() => setCardSheetOpen(false)} card={editingCard} />
@@ -203,13 +209,15 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10 },
   title: { fontSize: 24, fontWeight: "900" },
   headerButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
-  iconButton: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  splitButton: { borderRadius: 18, paddingHorizontal: 16, height: 36, justifyContent: "center" },
-  splitText: { color: "#ffffff", fontWeight: "700" },
+  iconButton: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   content: { paddingBottom: 40, gap: 12 },
-  insight: { marginHorizontal: 12, borderWidth: 1, borderRadius: 12, padding: 10 },
-  insightText: { fontSize: 12, lineHeight: 17 },
+  insight: { marginHorizontal: 12, borderWidth: 1, borderRadius: 12, padding: 10, flexDirection: "row", gap: 8 },
+  insightIcon: { width: 22, height: 22, borderRadius: 6, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  insightTitle: { fontSize: 11, fontWeight: "700" },
+  insightText: { fontSize: 10, lineHeight: 15, marginTop: 2 },
+  insightCta: { fontSize: 10, fontWeight: "700", marginTop: 4 },
+  sectionLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.7, paddingHorizontal: 14, marginBottom: -6 },
   splitNote: { textAlign: "center", fontSize: 12, fontWeight: "600" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 12 },
-  addCard: { width: "48.5%", minHeight: 90, borderWidth: 1.5, borderStyle: "dashed", borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  addCard: { marginHorizontal: 12, paddingVertical: 11, borderWidth: 1.5, borderStyle: "dashed", borderRadius: 14, alignItems: "center" },
 });

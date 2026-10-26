@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { BudgetCard } from "@vitals/shared";
+import { Icon } from "@/components/icons";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { money } from "@/lib/format";
 import { useStore } from "@/lib/store";
@@ -113,7 +114,7 @@ export function CategoryCard({ card, onPress }: { card: BudgetCard; onPress: () 
         <View style={styles.catTop}>
           <Text style={styles.chip}>{card.paused ? "PAUSED" : isSaving ? "SAVING" : "EXPENSE"}</Text>
           <Pressable onPress={() => togglePause(card.id)} hitSlop={8} style={styles.pauseButton}>
-            <Text style={styles.pauseText}>{card.paused ? "▶" : "❚❚"}</Text>
+            <Icon name={card.paused ? "play" : "pause"} color="#ffffff" size={11} />
           </Pressable>
         </View>
         <Text style={styles.catName} numberOfLines={1}>
@@ -154,7 +155,6 @@ const styles = StyleSheet.create({
   catTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   chip: { fontSize: 9, fontWeight: "700", color: "#ffffff", backgroundColor: "rgba(255,255,255,0.22)", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, overflow: "hidden" },
   pauseButton: { width: 22, height: 22, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
-  pauseText: { color: "#ffffff", fontSize: 8 },
   catName: { fontSize: 14, fontWeight: "800", color: "#ffffff" },
   catBody: { padding: 10, gap: 2 },
   catAmount: { fontSize: 17, fontWeight: "800" },
