@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import { File as LocalFile } from "expo-file-system";
 import { importPdf } from "@vitals/shared";
 import type { Transaction } from "@vitals/shared";
 import { Sheet } from "@/components/sheet";
@@ -73,8 +74,8 @@ export function ImportSheet({ visible, onClose }: ImportSheetProps) {
     const asset = picked.assets[0];
 
     setBusy(true);
-    // React Native uploads a file from its address instead of a File object.
-    const file = { uri: asset.uri, name: asset.name, type: "application/pdf" } as unknown as File;
+    // expo-file-system's File can be uploaded in a form like a browser File.
+    const file = new LocalFile(asset.uri) as unknown as File;
     const result = await importPdf(file, "", "");
     setBusy(false);
 
