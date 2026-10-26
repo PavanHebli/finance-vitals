@@ -1,176 +1,210 @@
-# Vitals — Feature Backlog
+# Vitals — Roadmap & Backlog
 
-Each entry: what + why | files touched | priority | done
+The plan behind this file is in `DECISIONS.md` (see "Where Vitals Is Headed" and "Analytics and the Gates").
 
----
+**How this file works**
+- Work goes in **phases**. Each phase ends at a **gate**: a number that decides whether to keep going, change direction, or stop.
+- Every item is sized to be **one small PR** (a branch off `main`, reviewed, merged). Bigger items are split into lettered steps.
+- Old backlog numbers are kept in brackets, e.g. `[was #27]`, so history still makes sense.
+- Status: ⬜ not started · 🔄 in progress · ✅ done
 
-## Priority Tiers
-
-- **P0** — No new infrastructure. Ship now.
-- **P1** — Some engineering. Ship after P0.
-- **P2** — Needs infrastructure (storage, file parsing). Ship after P1.
-- **P3** — Polish / big bets. Low urgency.
-- **Dropped** — Deprioritised with rationale.
+**North-star metric:** payday check-ins completed per month.
 
 ---
 
-## P0 — Ship Now
+## Now — Finish What Is In Flight
 
-| # | Feature | What + Why | Files | Done |
-|---|---------|------------|-------|------|
-| 18 | **Calendar Reminder Button** | 2 hours of work. Directly addresses zero return-visit problem. After results page: "Want a reminder to check your Vitals next month?" Opens a pre-filled `.ics` file or Google Calendar link. No account, no email, no server. | `panel_results.py` | ⬜ |
-| 19 | **Score Delta Prominence** | Already built — just make it more visible. When someone loads a previous snapshot, the score change should be impossible to miss. Current delta is there but easy to overlook. | `panel_results.py` | ⬜ |
-| 0 | **Landing Page** | No value proposition shown before the form — users land cold with zero context. Fatal trust gap for a finance app. Single page: what Vitals does, why it's safe, one CTA. Must ship before any other outreach. | new `landing.py`, `main.py` | ✅ |
-| 1 | **Form Framing Change** | Estimate-friendly labels and captions. Unblocks users who don't track spending precisely. | `snapshot.py`, `panel_form.py` | ✅ |
-| 2 | **What-If Simulator** | 5 sliders — see how income/expense changes affect score live. Pure math, no AI. | `simulator.py`, `panel_results.py`, `health.py` | ✅ |
-| 3 | **Snapshot Save / Load** | Save encrypted `.vit` file, re-upload next month to pre-fill form. Enables all history features. | `storage.py`, `panel_form.py`, `panel_results.py` | ✅ |
-| 4 | **Progress Charts** | Score + 4 metric trend lines + cash flow across all saved snapshots. Merges saved history with current session live. | `progress.py`, `panel_results.py` | ✅ |
-| 5 | **Vitals Chat** | Finance-only chat (hard guardrails). Scope: scenario planning, progress coaching, insurance type guidance (no company/product names). Context: current + previous snapshot, both narratives, conversation history. Built in phases — see below. | `chat.py`, `panel_results.py` | ✅ |
-
-**Vitals Chat — Build Phases**
-
-| Phase | What | Files | Done |
-|-------|------|-------|------|
-| 5a | **Base prompt + guardrails + chat UI** | `chat.py`, `panel_results.py` | ✅ |
-| 5b | **LLM classifier** — fast call, NO base system prompt (saves ~800 tokens). Returns 1–2 categories: `debt`, `savings`, `housing`, `insurance`, `score`, `scenario`, `app`, `emotional`, `general`. Pydantic-validated structured output per provider. | `chat.py` | ✅ |
-| 5c | **Category-specific prompts** — 9 prompt blocks injected on top of base prompt. `emotional` is both a standalone category and a modifier. `app` block contains full Vitals feature knowledge. `scenario` block has scoring thresholds inlined for accurate what-if reasoning. | `chat.py` | ✅ |
-| 5d | **Conversation summarisation** — rolling summary after 8 turns. Snapshot context always injected, never dropped. | `chat.py` | ✅ |
-| 5e | **Tool calls — What-If from chat** — chat detects scenario questions, calls `calculate_metrics()` + `score_metrics()` with modified inputs, returns real calculated score delta. Replaces LLM estimation with actual math. | `chat.py`, `health.py` | ✅ |
-| 5f | **Cognitive offload handling** — when user says "you decide" / "you pick" / "give me your best guess", model uses snapshot anchors + standard financial rules of thumb (28% housing rule, 80% income for freelance estimate etc.) to fill in missing variables, then calls tool. Reasoning and tool call are one step — reasoning decides the estimate, tool validates with real math. | `chat.py` | ✅ |
+| ID | Item | Status |
+|----|------|--------|
+| N1 | **Merge the Expo SDK 58 PR** (`expo-sdk-58`): SDK upgrade, mobile gets its own install, root layout route fix, PDF import upload fix, design icons, Budget page layout. Watch the Railway web build after merge. | 🔄 |
+| N2 | **Merge `ignore-test-plan`** (one `.gitignore` line). | ⬜ |
+| N3 | **Finish the mobile test pass** in `MOBILE_TEST_PLAN.md` (local) — send screenshots of anything broken; fix each as its own small PR. | 🔄 |
+| N4 | **Delete stale branches**: `nextjs-fastapi-prod`, `mobile-monorepo`, `shared-package` (Railway now deploys from `main`). | ⬜ |
+| N5 | **GitHub settings**: require a PR to merge into `main`; auto-delete merged branches. | ⬜ |
+| N6 | **Test sign-in on the live site** (email and Google). The production database has never had a user; confirm Google is enabled in Supabase and the redirect URLs are set. | ⬜ |
 
 ---
 
-## P1 — Medium Term
+## Phase 0 — Validate the Payday Problem (6 weeks)
 
-| # | Feature | What + Why | Files | Done |
-|---|---------|------------|-------|------|
-| 23 | **Multi-Statement Import** | Allow up to 10 PDF bank statements to be uploaded at once. Transactions from all statements are merged, deduplicated, and shown in a single per-transaction review UI before filling the form. Useful when income and expenses span multiple accounts (e.g. checking + credit card). Extension of #7. | `importer.py`, `panel_form.py` | ✅ |
-| 20 | **Month Streak Counter** | Half a day of work. Uses snapshot data already saved. Shows consecutive months with saved snapshots. Small but motivating — gives users a reason to come back even when score hasn't moved much. | `panel_results.py`, `progress.py` | ⬜ |
-| 6 | **Goal Tracker** | User sets ONE goal tied to narrative Q4 action. Progress bar shown when snapshot loaded. Needs storage (already done). | new `goals.py`, `panel_results.py` | ⬜ |
-| 7 | **PDF Bank Statement Import** | Upload a PDF bank statement → Vitals extracts transactions, LLM categorises them, user reviews and edits before numbers fill the form. Solves "I don't know my numbers". Multi-statement (up to 10 PDFs) tracked as #23. | `importer.py`, `panel_form.py` | ✅ |
-| 8 | **Metric Citations** | Show benchmark source (CFPB, HUD, Fidelity/Vanguard, 50/30/20) next to each metric. Builds trust. | `panel_results.py` | ✅ |
-| 11b | **Trust Signals on Form Page** | "No account, no server storage, your data stays local" bar above the form fields. Directly addresses user concern about financial data security. | `panel_form.py` | ✅ |
-| 25 | **Returning User Home Screen** | Detect existing localStorage snapshot on home page. If found, show a completely different landing state: last score + date, a "What are you deciding today?" quick-input field, and an "Update my numbers" CTA. No form re-fill required. Makes Vitals feel like a companion, not a one-time tool. | `web/src/app/page.tsx`, `web/src/lib/store.ts` | ✅ |
-| 26 | **Quick Decision Flow** | From the returning home screen, user types a financial decision ("Should I finance a $15k car?"). Sends directly to `/chat` with their full snapshot pre-loaded as context. Answer renders inline on the home page — no navigation to results. 30-second interaction, no form. | `web/src/app/page.tsx`, `web/src/lib/api.ts` | ✅ |
-| 27 | **Monthly Number Update Flow** | Lightweight "anything changed?" re-entry: 3–4 sliders for the most likely things to shift (income, rent, savings). Takes 30 seconds, patches existing localStorage state, recalculates score, shows delta ("64 → 68"). Entry point on both returning home screen and results page. | `web/src/app/update/page.tsx`, `web/src/lib/store.ts` | ⬜ |
-| 28 | **Calendar Reminder (.ics)** | After results: "Want a reminder to check in next month?" Generates a pre-filled `.ics` file user adds to their own calendar. Zero backend — no email, no account. Deeplink in the event opens Vitals with a "You set a reminder" banner that leads straight to the monthly update flow (#27). | `web/src/components/ExportMenu.tsx` | ⬜ |
-| 24 | **Charts in Chat** | When a user asks a data question ("show me my spending breakdown") OR when the AI determines a chart would clarify its explanation, render an inline Recharts chart inside the chat response. Two modes: (1) user-explicit — user asks for a chart/graph, AI returns structured JSON alongside text and frontend renders it; (2) AI-initiated — AI decides a bar/pie chart would help and includes chart data in its response. Requires a structured response format from the chat endpoint (e.g. `{ text, chart?: { type, data, labels } }`) instead of raw stream. | `InlineChat.tsx`, `api/routes/chat.py`, `api/core/chat.py` | ⬜ |
-| 29 | **Budget page — AI Chat drawer** | Floating sparkle button (bottom-right, always visible on budget page) → right-side drawer (35% width desktop, bottom sheet mobile). Sections: AI narrative (auto-generated after score calc, already streaming to store), Chat (same `streamChat` call, budget context injected), Simulator (allocation sliders showing score impact). Replaces the need for tabs on the results page. | `web/src/app/budget/page.tsx`, `web/src/components/BudgetDrawer.tsx` | ⬜ |
-| 30 | **Budget Simulator in drawer** | Inside the Budget AI drawer (#29): replace the form-field simulator with budget card allocation sliders. Adjust rent envelope from 30% → 25% and score preview updates live. Calls `/simulate` with modified budget-derived form data. More intuitive than abstract sliders — the budget IS the model. | `web/src/components/BudgetDrawer.tsx`, `web/src/lib/api.ts` | ⬜ |
-| 9 | **AI Personas** | Narrative tone selector: Honest Friend (default), Finance Professional, Tough Love. System prompt variation. | `narrative.py`, `panel_form.py` | ⬜ |
-| 10 | **Form Assistant Chat** | User types "my rent is $1,200 and I earn $4,500" → form auto-fills. Requires intent parsing + session state mutation from chat. | new `form_chat.py`, `panel_form.py` | ⬜ |
-| 11 | **Hosted API Key (remove BYOK friction)** | Vitals absorbs AI cost for basic use — user gets free tier without needing an API key. Controlled via `SHOW_API_INPUT` + `HOSTED_API_KEY` in secrets. No code change needed to toggle. | `snapshot.py` | ✅ |
+**Goal:** prove people want the "safe to spend until payday" answer before building the full plan.
+**Gate:** ≥ 300 completed check-ups across two launches; ≥ 10% set a reminder; 5+ of 10–15 interviewees describe the payday/surprise problem unprompted. **Below 100 completions after two launches → change the problem or the audience.**
+
+### Product (web)
+
+| ID | Item | What + why | Where | Status |
+|----|------|-----------|-------|--------|
+| 0.1 | **Re-source the 43% DTI line** | It cites the CFPB qualified-mortgage cap, which the CFPB replaced in 2020. Say "common lender guideline". | `web/src/components/Narrative.tsx`, `api/core/export_pdf.py`, metric citations | ⬜ |
+| 0.2 | **Plain-language metric labels** | "How much of your pay you keep", "Could you handle a surprise?" etc. (table in `DECISIONS.md`). Labels only, no logic change. | `web/src/components/MetricCards.tsx`, `HealthScore.tsx`, mobile `completeness.ts` | ⬜ |
+| 0.3 | **No-signup "Payday check-up"** — the core of Phase 0. Split into: | | | |
+| 0.3a | Check-up form | Take-home pay, pay schedule (weekly/biweekly/monthly), rent, a checklist of monthly bills, once-in-a-while costs, current savings. Reuses guest mode and the progressive form. | `web/src/app/form` (or new `web/src/app/check-up`) | ⬜ |
+| 0.3b | Check-up result | Headline: **safe to spend per week until payday**. Then "Could you handle a surprise?" (buffer vs $1,000 / one month of essentials), the four plain answers, and one next step. Reuses the score engine and partial scoring. | `web/src/app/results`, `api/core/health.py` | ⬜ |
+| 0.3c | Check-up math in shared code | `safeToSpendPerWeek()`, `setAsidePerPaycheck()`, `bufferTarget()` as pure functions with unit tests, so web and mobile use the same numbers. | `packages/shared/src/` | ⬜ |
+| 0.4 | **Reminder opt-in** `[was #18, #28]` | After the result: "Remind me on my next payday." Generates a `.ics` calendar event (no backend) that opens Vitals. | `web/src/components/ExportMenu.tsx` | ⬜ |
+| 0.5 | **Email opt-in (optional)** `[part of #21]` | "Email me on payday" — store the email in a Supabase table with consent. Update the privacy policy first. Sending comes in Phase 1. | new table, `web/src/app/privacy` | ⬜ |
+| 0.6 | **Gate analytics events** | `checkup_started`, `checkup_completed`, `reminder_set`, `email_optin`. No financial numbers. | `web/src/lib/analytics`, `api/core/analytics.py` | ⬜ |
+| 0.7 | **Landing page rewrite** | New promise: "Know what's safe to spend until payday — in one minute, without linking your bank." CTA goes to the check-up. Keep the trust bar and founder card. | `web/src/app/page.tsx` | ⬜ |
+| 0.8 | **CSV export** | Plain CSV next to `.vit` and PDF. Spreadsheet users will ask for it first. | `ExportMenu.tsx`, `packages/shared` | ⬜ |
+| 0.9 | **Shareable check-up card** `[was #22]` | "I can safely spend $X/week" or the score, as an image with a link. Distribution, not vanity. | new route (server image, e.g. `@vercel/og`-style or Pillow) | ⬜ |
+
+### Research (no code)
+
+| ID | Item | Status |
+|----|------|--------|
+| 0.10 | **10–15 user interviews** with 22–35 renters on a paycheck. Ask about the last surprise expense and how it was paid; do not pitch. Write notes per interview. | ⬜ |
+| 0.11 | **Reddit by hand** (the research tools were blocked): r/personalfinance, r/povertyfinance, r/ynab, r/budget, r/MintUpdates — search "gave up budgeting", "sinking funds", "safe to spend", "budget keeps failing". Save 30+ permalinks with quotes. | ⬜ |
+
+### Launches (see Growth Track)
+
+| ID | Item | Status |
+|----|------|--------|
+| 0.12 | Launch 1: **Show HN** + GitHub README refresh. | ⬜ |
+| 0.13 | Launch 2: one of Product Hunt / Indie Hackers / a relevant subreddit's self-promotion thread (read each sub's rules first). | ⬜ |
+| 0.14 | **Gate review**: write down the numbers and decide. | ⬜ |
+
+---
+
+## Phase 1 — Payday Plan MVP (2–3 months)
+
+**Goal:** turn the one-time check-up into a payday habit.
+**Gate:** ≥ 25% of planners do a second payday check-in; ≥ 15% active at day 60. **Below 10% second check-in → stop feature work.**
+
+| ID | Item | What + why | Status |
+|----|------|-----------|--------|
+| 1.1 | **Card types** | Bills / Once-in-a-while / Goals / Spending money, layered on the existing percent/fixed cards. Rename Float → Spending money. Data model change in `packages/shared` types + Supabase column; migrate existing cards (expense → Bills, saving → Goals). | ⬜ |
+| 1.2 | **"Add card" asks one question** | "Is this a bill, a once-in-a-while cost, or something you're saving for?" `classifyCard` only pre-selects. | ⬜ |
+| 1.3 | **Guided onboarding** | Take-home + pay schedule → monthly bills checklist → once-in-a-while checklist → buffer created automatically → goals → Spending money per week. Pre-fill bills from PDF import where possible. | ⬜ |
+| 1.4 | **Pay schedule** | Periods follow paydays, not calendar months. Next payday date drives safe-to-spend and reminders. | ⬜ |
+| 1.5 | **Safe to spend on the home screen** | Spending money ÷ weeks until payday. Never counts pots. Plain negative when over-committed. Optional "type your checking balance" for a live mid-cycle figure. | ⬜ |
+| 1.6 | **60-second payday check-in** `[was #27]` | Plan carries forward; confirm or tweak; "Anything unexpected since last payday?"; score delta shown `[was #12, #19]`. | ⬜ |
+| 1.7 | **Surprise log + surprise gap** | Log a surprise (cost, how it was paid). Show the gap (stock and flow formulas in `DECISIONS.md`). Second surprise in a category within 12 months → offer a once-in-a-while card. | ⬜ |
+| 1.8 | **Borrow from a goal** | "Use money from Car fund" → pay it back (default) / push the date / shrink the goal, each with a preview. Buffer covering a surprise is shown as a win. | ⬜ |
+| 1.9 | **Over-allocation resolver** | "Your plan is $85 more than your paycheck" → take from Spending money (above a floor) / shrink flexible cards proportionally / pick donors / start smaller. Bills and the starter buffer are never touched. | ⬜ |
+| 1.10 | **Short-paycheck fill order** | Bills → starter buffer → once-in-a-while due soonest → goals → Spending money. | ⬜ |
+| 1.11 | **Transfer list** | Every plan ends with "Move $180 to savings: Car fund $80, Buffer $100", plus a one-time guide to automatic transfers / split deposit. | ⬜ |
+| 1.12 | **Credit card question** | "Do you pay your card in full every month?" → yes: Spending money; no: debt metric + Bills card. | ⬜ |
+| 1.13 | **Narrative → payday recap** | What changed since last payday, by exactly how much, one move. Fixes the logged narrative-quality issues (vague adjectives, unspecific numbers). | ⬜ |
+| 1.14 | **Payday reminders that work** | Email on payday (Resend/Postmark + a scheduled Supabase function) `[was #21]`; mobile push on payday (adapt the weekly reminder). | ⬜ |
+| 1.15 | **Snapshots sync on web** | Mobile syncs snapshots to Supabase; the web does not yet. Progress must follow the user. | ⬜ |
+| 1.16 | **Check-in streak** `[was #20]` | Consecutive paydays checked in. Small, motivating, uses existing snapshots. | ⬜ |
+| 1.17 | **Mobile parity for 1.1–1.12** | Same features on mobile, then freeze mobile-only work. | ⬜ |
+| 1.18 | **TestFlight beta for friends** | Needs the Apple Developer account ($99/yr), EAS env vars, and Apple sign-in enabled in Supabase. | ⬜ |
+| 1.19 | **Housing weight down** | Show housing as context; reduce its weight in the score. Decide the new weights in a short note first. | ⬜ |
 
 ---
 
-## P2 — Infrastructure / Big Builds
+## Phase 2 — Depth and Paying for Infra (months 4–9)
 
-| # | Feature | What + Why | Files | Depends On | Done |
-|---|---------|------------|-------|------------|------|
-| 31 | **Server-side persistence (Supabase)** | Budget cards, financial profile, and distribution log currently live only in localStorage. Add a Supabase `profiles` table keyed on a device-generated UUID. Sync on write, load on first visit. Optional opt-in ("sync across devices"). Survives browser clears and enables mobile app data sharing. Does NOT store sensitive financial numbers in plain text — follow the `.vit` model (encrypt before write). | `web/src/lib/store.ts`, `api/routes/profile.py`, `api/core/profile_db.py` | — | ⬜ |
-| 32 | **Mobile app (React Native + Expo)** | Same codebase philosophy, new target. Key swaps: `localStorage` → `AsyncStorage`, Tailwind → NativeWind, Recharts → Victory Native, Next.js routing → Expo Router, SVG ring → `react-native-svg`. FastAPI backend is unchanged. Requires the persistence layer (#31) so data survives app reinstall. Revisit after web product is stable. | new `mobile/` directory | #31 | ⬜ |
-| 12 | **Monthly Check-in Score Delta** | User returns next month, sees score change: "Last month: 58 → This month: 65". Storage already done — this is the UI layer. | `panel_results.py` | #3 | ⬜ |
-| 21 | **Optional Email Reminder** | ~1 week of work. Highest long-term retention impact. Email field after results: "Remind me next month." No account, just a scheduled email. Requires email backend (Resend/Postmark) + cron job or Supabase scheduled function. | new `reminders.py`, `panel_results.py` | ⬜ |
-| 22 | **Shareable Score Card** | Generate a simple image of the score and key metrics shareable on X or WhatsApp. "I scored 72/100 on my financial health checkup" with a link to Vitals. Dual purpose: retention mechanic + distribution. Requires server-side image generation (`Pillow` or `playwright` screenshot). | new `scorecard.py`, `panel_results.py` | ⬜ |
-| 13 | **Google Drive Connector** | Save/load `.vit` file directly from Google Drive. Removes manual download/upload step. Requires OAuth + Google verification. Build after traction. | new `drive.py` | — | ⬜ |
-| 17 | **Insurance Plan Finder (chat)** | User asks about insurance in chat → Vitals filters and recommends relevant plans/providers based on their financial snapshot (income, emergency fund, employment). One approach active at a time — options ranked by effort: **A** Curated JSON knowledge base (~15–20 providers per category, no API, ships fast); **B** Healthcare.gov Plans & Benefits API (real ACA quotes, ZIP + age + household + income, US only); **C** Web search tool (Serper/Brave API, real-time NerdWallet/Bankrate lookups). Start with A, layer B or C after traction. | `chat.py`, new `insurance_kb.py` | — | ⬜ |
-| 14 | **User-configurable Metric Weights** | Let users set priority % for each metric. Different life situations need different focus. | `health.py`, `panel_results.py` | — | ⬜ |
-| 15 | **Export to PDF** | Download snapshot as formatted PDF. Useful for sharing with an advisor. Addresses user feedback that `.vit` format is unfamiliar. PDF has 2 pages: metrics on p1, narrative + why-this-matters on p2. Export button is a popover at the bottom of results page alongside Save my data. | new `export_pdf.py`, `panel_results.py` | #3 | ✅ |
+**Goal:** keep people longer and cover running costs.
+**Gate:** ≥ 2% of monthly actives support it, or ≥ 50 supporters. **Under $100/month at month 12 → declare it an open-source/portfolio project, maintenance only.**
+
+| ID | Item | What + why | Status |
+|----|------|-----------|--------|
+| 2.1 | **"Where your money lives"** | Manual list of accounts (checking, savings, 401(k), IRA, brokerage, HSA, debts), balances updated at the monthly check-in; goals can name their account; net worth charted from snapshots. | ⬜ |
+| 2.2 | **History-based suggestions** | After three paychecks, suggest amounts from the user's own history instead of benchmarks. | ⬜ |
+| 2.3 | **Step up at a raise** | When take-home goes up, offer to move part of the raise into goals (Save More Tomorrow). | ⬜ |
+| 2.4 | **Supporter tier (pay-what-you-want)** | Suggested $3–5/month, framed as "keep Vitals running". Clear terms, consent, one-click cancel. | ⬜ |
+| 2.5 | **Public costs page** | What hosting + AI cost this month and how much supporters cover. | ⬜ |
+| 2.6 | **One-click self-hosting** | Railway template (Railway shares template usage with the author) + Docker Compose + a self-hosting guide. | ⬜ |
+| 2.7 | **AI fair-use cap** on the free hosted tier; self-hosters bring their own key. | ⬜ |
+| 2.8 | **Calculator pages** (also in Growth Track) | "How much can I spend until payday", "sinking fund calculator", "emergency fund calculator" — each a small standalone page that leads into the check-up. | ⬜ |
+
+---
+
+## Phase 3 — Optional Reach (after month 9, only if the gates pass)
+
+| ID | Item | Status |
+|----|------|--------|
+| 3.1 | **SimpleFIN** balances (the user pays $15/yr; no developer fee). | ⬜ |
+| 3.2 | **SnapTrade** brokerage holdings — only if many users ask. | ⬜ |
+| 3.3 | **Credit union / employer conversations** — needs engagement and outcome numbers first. | ⬜ |
+| 3.4 | **Fundraising conversations** — only if the habit and money gates pass and there is a reason to grow faster than organically. | ⬜ |
 
 ---
 
-## P3 — Long Term / Big Bets
+## Growth Track (ongoing, alongside every phase)
 
-| # | Feature | What + Why | Done |
-|---|---------|------------|------|
-| 16 | **Bank Connection (Plaid)** | Auto-pull real transaction data. Changes Vitals from "estimate" to "actual". High effort, compliance considerations. Revisit after P0–P2 stable. | ⬜ |
+Organic only, no paid ads. Small, repeatable actions beat one big launch.
+
+| ID | Channel | Concrete actions | Phase |
+|----|---------|------------------|-------|
+| G1 | **Open-source launch** | Polished README (problem, screenshots, self-host steps); good first issues; Show HN; submit to awesome-selfhosted and alternativeTo (as a Mint/YNAB alternative). | 0 |
+| G2 | **Build in public** | One short post a week on X/LinkedIn/Bluesky: what shipped, a real number from the gates, a lesson. Monthly public update post. | 0 → ongoing |
+| G3 | **Communities (help first)** | Answer questions in r/personalfinance, r/povertyfinance, r/budget, r/ynab (the irregular-expense and "gave up budgeting" threads) without linking unless allowed. Follow each sub's self-promotion rules. | 0 → ongoing |
+| G4 | **Long-tail search pages** | Calculator pages (2.8) + one short guide per common question ("What is a sinking fund?", "How big should my emergency fund be?"). Head terms belong to affiliate sites; skip them. | 1 → ongoing |
+| G5 | **Shareable results** | Check-up card (0.9) and score card; "loud budgeting" is a Gen Z habit. | 0 |
+| G6 | **Short video** | 30-second screen recordings: "I put my paycheck in and it told me what's safe to spend" for TikTok/Reels/Shorts. | 1 |
+| G7 | **Indie communities** | Indie Hackers milestone posts, Product Hunt launch once the payday plan exists. | 1 |
+| G8 | **Creators and newsletters** | Reach out to small personal-finance creators and newsletters (not big ones) with a free, no-signup tool their audience can use. | 1 → 2 |
+| G9 | **Campus and first-job** | College career centers and first-job communities: "your first paycheck plan". | 2 |
+| G10 | **Email list** | Everyone who opts in for reminders; a short monthly note with one useful idea. | 0 → ongoing |
 
 ---
+
+## Housekeeping
+
+| ID | Item | Status |
+|----|------|--------|
+| H1 | Update the model string `claude-opus-4-6` in `api/core/chat.py` to a current model. | ⬜ |
+| H2 | Remove unused `section*_visible` fields from the web form state. | ⬜ |
+| H3 | Delete Expo template leftovers in `mobile/` (`LICENSE`, `README.md`, `scripts/`, `use-color-scheme.web.ts` if unused). | ⬜ |
+| H4 | `npm audit` review for web and mobile (no `--force`). | ⬜ |
+| H5 | Unit tests for the shared budget and score math (`packages/shared`), then a few screen tests. | ⬜ |
+| H6 | README: describe the payday plan, self-hosting, and the supporter model (no Free/Pro framing). | ⬜ |
+
+---
+
+## Parked (revisit only with evidence)
+
+| Item | Why parked |
+|------|-----------|
+| One-device limit (`active_sessions` enforcement) | Nothing is gated until the habit gate passes. |
+| Guest / Free / Pro tiers | Replaced by free core + supporter tier (see `DECISIONS.md`). |
+| Charts in Chat `[was #24]` | Nice, not core to the payday job. |
+| Budget AI drawer + allocation simulator `[was #29, #30]` | The resolver and check-in cover the planning need. |
+| Form Assistant Chat `[was #10]` | Onboarding checklists solve the same friction more simply. |
+| Plaid bank connection `[was #16]` | Per-connection cost, frozen open-banking rule, liability. SimpleFIN/SnapTrade first, only if asked. |
+| Gig / irregular income features | Real need, but only with first-hand knowledge of that world. |
 
 ## Dropped
 
-| Feature | Reason |
-|---------|--------|
-| **Budget Planner Sheet (original)** | Originally dropped as commoditised. Reversed — rebuilt as an envelope budgeting model tightly integrated with the health score (live auto-recalculate, purpose classification, financial profile questions). The score IS the differentiator; the budget is the input method. |
-| **Module 5: One Next Step** | Redundant — narrative Q4 already is the one next step. |
-| **Guided Estimation Flow** | Sufficiently solved by form framing change + benchmark captions. |
-| **Decision Helper Q&A Chat** | Re-packages data already visible on screen. No new insight. Replaced by the scoped Vitals Chat (#5) which adds scenario planning + progress coaching. |
-| **Hosted API Key (SaaS tier) as P3** | Moved to P1 (#11) — removing BYOK friction is the most important adoption blocker, not a long-term bet. |
+| Item | Reason |
+|------|--------|
+| AI Personas `[was #9]` | Harsh framing ("tough love") works against people who already avoid looking at their money. |
+| Insurance Plan Finder `[was #17]` | Affiliate and regulatory distraction from the core job. |
+| User-configurable Metric Weights `[was #14]` | Adds complexity for beginners; the defaults are being fixed instead (1.19). |
+| Google Drive Connector `[was #13]` | Accounts + sync replaced the need. |
+| Couples / shared budgets | Monarch owns this; out of scope. |
+| Goal Tracker as a separate feature `[was #6]` | Covered by Goal cards. |
+| "Travel = X% of income" style suggestions | No real source; trips are planned from their cost. |
+| Module 5: One Next Step | Redundant — the narrative already gives one next step. |
+| Guided Estimation Flow | Solved by the form framing and benchmark captions. |
+| Decision Helper Q&A Chat | Replaced by the scoped Vitals Chat. |
 
 ---
 
-## Completed
+## Done (summary)
 
-| Feature | Done |
-|---------|------|
-| Landing page — hero, 3-step how it works, 5-pill why Vitals, trust bar, CTA | ✅ |
-| Metric citations — source line (CFPB, HUD, Fidelity, 50/30/20) on each metric tile | ✅ |
-| Trust signal bar on form page | ✅ |
-| Insurance chat prompt — allow company names as educational references, detailed plan guidance | ✅ |
-| Phase 5e tool calls — scenario chat uses real `calculate_metrics()` math, not LLM estimation | ✅ |
-| PDF export — 2-page report: score + metrics p1, narrative + why-this-matters p2. `fpdf2`. | ✅ |
-| Export popover — single "📤 Export" button at bottom of results with PDF + Save my data inside | ✅ |
-| Multi-statement PDF import — multi-file uploader (up to 10 PDFs), one-click state machine pipeline (extract all → parse merged lines → categorize), resets cleanly on file set change | ✅ |
-| PDF bank statement import — PDF parsing, coordinate-based table detection, LLM categorisation with per-transaction review UI, hallucination guard, multi-column detection fix | ✅ |
-| Vitals Chat Phase 5f — cognitive offload, goal tracker, narrative formatting, chat UX improvements | ✅ |
-| Landing page founder section — "Built by" card with circular avatar (photo from Railway secret `FOUNDER_PHOTO`), name, tagline, blurb, LinkedIn / GitHub / Twitter links | ✅ |
-| Landing page above-the-fold copy — trust eyebrow ("No bank connection · No signup · Free"), concrete one-liner sub-headline, CTA renamed to "Check my financial health →" | ✅ |
-| Streamlit widget state warning fix — removed `st.session_state.get()` from `value=` on all `number_input` widgets with `key=`; fixes warning on Clear / Try sample data | ✅ |
-| Form number input bug fix — added `key=` to all `number_input` widgets so + / − buttons respond immediately without bouncing | ✅ |
-| Form Framing Change | ✅ |
-| Expense Benchmark Hints | ✅ |
-| What-If Simulator | ✅ |
-| Simulator metric tooltips (short, net income note on DTI) | ✅ |
-| Results page tabs (4 tabs: Story / What If? / Progress / Chat) | ✅ |
-| Expense breakdown chart (Plotly, % of income, 30% reference line) | ✅ |
-| Debt payment missing flag (danger score + narrative warning) | ✅ |
-| Debt/payment mismatch validation on form | ✅ |
-| Minimum expense floors in AI prompt | ✅ |
-| DTI net income disclaimer on results page | ✅ |
-| Snapshot save / load (.vit encrypted format, Fernet) | ✅ |
-| Score delta vs previous snapshot on results page | ✅ |
-| Progress Charts (score + 4 metrics + cash flow, merges current session) | ✅ |
-| API key guide page (/get_api_key) | ✅ |
-| Default provider changed to Groq (free tier) | ✅ |
-| Module 1: Financial Snapshot | ✅ |
-| Module 2: Health Score + Mirror | ✅ |
-| Module 3: AI Narrative | ✅ |
-| Module 4: Contextual Education | ✅ |
-| Feedback page (/feedback) with Supabase backend | ✅ |
-| Feedback link on results page | ✅ |
-| Vitals Chat Phase 5a — base prompt + guardrails + chat UI | ✅ |
-| Vitals Chat Phase 5b — LLM classifier with Pydantic structured output | ✅ |
-| Vitals Chat Phase 5c — 9 category-specific prompt blocks | ✅ |
-| Vitals Chat Phase 5d — conversation summarisation (8 turns, keep 6 verbatim) | ✅ |
-| Rebrand from FinFriend → Vitals (.vit file format, 🩺 icon) | ✅ |
-| Hosted API key — `SHOW_API_INPUT` + `HOSTED_API_KEY` in secrets, zero friction for users | ✅ |
-| Session analytics — `analytics.py` + Supabase `sessions` table, tracks funnel: results → narrative → whatif → save → return | ✅ |
-| UX improvements — sample data banner, tab numbering (1·Story / 2·What If? / 3·Progress / 4·Ask Vitals), save callout, global font size bump | ✅ |
-| Screenshots added to README (`assets/` folder) | ✅ |
-| **Budget Planner** — envelope budgeting: income card, cash-in-hand, custom cards (fixed/percent/remainder), Split button, distribution log | ✅ |
-| **Budget → Score integration** — 3-question financial profile flow, live auto-recalculate (1.5s debounce), ScoreCard in income row with animated ring | ✅ |
-| **Budget card classification** — `classifyCard()` auto-labels saving/expense from name + description, tappable chip to override, drives score calculation correctly | ✅ |
-| **AI narrative popup on budget page** — info (i) icon glows when narrative ready, flip-animation centered popup shows streamed narrative | ✅ |
-| **Returning User Home Screen** (#25) — score recap, "What are you deciding?" quick chat, budget snapshot widget | ✅ |
-| **Quick Decision Flow** (#26) — inline answer on home page from `/chat` with full snapshot context | ✅ |
-| Device tracking — `_get_device()` in analytics.py using `st.context.headers` User-Agent | ✅ |
-| Progressive form reveal — sections 2–4 as expanders with one-way unlock flags, total expenses estimate in section 1 | ✅ |
-| Privacy trust note — `st.caption()` above income fields | ✅ |
-| Logo in form header — `assets/Logo.png` rendered via `st.image()` | ✅ |
-| Shared `get_financial_context()` — extracted to `health.py`, used by both `narrative.py` and `chat.py` | ✅ |
-| Partial data handling — narrative and chat handle missing sections gracefully with "not provided" text | ✅ |
-| Feedback form RLS fix — `returning="minimal"` in `feedback_db.py` | ✅ |
-| `ENABLE_LOGGING` secret — disable Supabase writes locally to avoid fake data | ✅ |
-| Custom CSS file — `.streamlit/custom.css` with Inter font, pill buttons, raised active tab, expander fade-in, metric card animations | ✅ |
-| Theme config — soft light default in `config.toml`, Dark available via ≡ menu, multiple palette presets documented | ✅ |
-| Metric breakdown redesign — 4-tile grid (single row) with progress bars and benchmark hints | ✅ |
-| Score display — CSS pop animation, theme-adaptive `var(--text-color)` | ✅ |
-| Tab fix — hidden `tab-highlight` and `tab-border` to remove duplicate blue line | ✅ |
-| Results page layout — sample banner above buttons, save button pinned far right | ✅ |
+**Web app (Next.js + FastAPI, Railway)**
+- Landing page (hero, how it works, trust bar, founder card), Terms and Privacy pages
+- Progressive form, expense benchmark hints, metric citations, trust signals
+- Health score (4 metrics, partial scoring), mirror label, AI narrative (streamed), contextual education
+- What-if simulator; Vitals Chat (classifier, category prompts, summarisation, tool-call math, cognitive offload, emotional awareness)
+- Snapshots (`.vit`, Fernet), progress charts, score delta, PDF export, multi-statement PDF import with review
+- Returning-user home screen `[#25]`, quick decision flow `[#26]`, hosted API key `[#11]`
+- Budget planner: income / Float / custom cards (fixed, percent), Split, distribution log, card purpose classification, live score with 1.5s debounce, narrative popup, inspectable metric pills, manual rent/expense fallbacks
+- Accounts and persistence on Supabase `[#31]`: profiles, budget cards, goals, distribution log, financial profile; guests in memory only
+- Session/event analytics with dev/prod tagging; feedback page
+
+**Monorepo and mobile**
+- `packages/shared` (types, API calls, budget logic) used by web and mobile
+- Expo app `[#32]`: auth (email, Google, Apple), profile setup, Budget / Score / Progress / Me tabs, card sheets, score form, chat, PDF import, weekly reminder, snapshot sync, themes and dark mode
+- Railway deploys from `main`; web builds from the repo root with npm workspaces
 
 ---
 
 ## How to use this file
-- Pick the next unchecked P0 item and bring it up in conversation
-- Do NOT load this file into context unless actively working on a feature
-- Note dependencies before starting any P2 feature
+- Work top to bottom: **Now**, then the current phase. Don't start a later phase before its gate.
+- One item = one branch = one PR.
+- When an item is done, mark it ✅ in the same PR.
+- Gate reviews (0.14 and the Phase 1/2 gates) get a short written note in `DECISIONS.md`.
