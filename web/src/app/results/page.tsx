@@ -60,7 +60,10 @@ export default function ResultsPage() {
 
   useEffect(() => {
     if (!overallScore) router.replace("/form");
-    else analytics.updateSession({ viewed_results: true });
+    else {
+      analytics.updateSession({ viewed_results: true });
+      analytics.track("result_viewed");
+    }
   }, [overallScore, router]);
 
   useEffect(() => {

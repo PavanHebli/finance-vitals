@@ -15,6 +15,7 @@ export function AnalyticsProvider() {
     if (initialized.current) return;
     initialized.current = true;
     analytics.init(overallScore !== null);
+    analytics.trackAcquisition();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track every page navigation
