@@ -67,18 +67,18 @@ def test_one_month_saved_lifts_the_cap():
     assert calculate_overall_score(scores) > 50
 
 
-def test_example_on_the_landing_page_is_64_fair():
+def test_example_on_the_landing_page_is_56_fair():
     # The made-up example on the landing page: keep this in step with web/src/app/page.tsx.
     metrics = {
-        "savings_rate": 15, "debt_to_income": 12, "emergency_fund_months": 2.1,
+        "savings_rate": 3, "debt_to_income": 12, "emergency_fund_months": 2.1,
         "housing_ratio": 31, "net_monthly_flow": 0, "debt_payment_missing": False,
     }
     scores = score_metrics(metrics)
     points = [scores[k]["score"] for k in
               ("savings_rate", "debt_to_income", "emergency_fund_months", "housing_ratio")]
-    assert points == [18, 18, 10, 18], points
+    assert points == [10, 18, 10, 18], points
     total = calculate_overall_score(scores)
-    assert total == 64, total
+    assert total == 56, total
     assert get_mirror_label(total)["label"] == "Fair"
 
 
@@ -87,11 +87,11 @@ def test_a_rough_spending_total_is_used_when_there_is_no_breakdown():
     state = person(income_main=4000, expenses_total_estimate=3400, expenses_rent=1250,
                    savings_total=7140, debt_monthly=480)
     metrics = calculate_metrics(state)
-    assert metrics["savings_rate"] == 15.0, metrics
+    assert metrics["savings_rate"] == 3.0, metrics  # 4000 - 3400 - 480 = 120 left
     assert metrics["emergency_fund_months"] == 2.1, metrics
     assert metrics["housing_ratio"] == 31.2, metrics
     assert metrics["debt_to_income"] == 12.0, metrics
-    assert calculate_overall_score(score_metrics(metrics)) == 64
+    assert calculate_overall_score(score_metrics(metrics)) == 56
 
 
 def test_the_larger_of_the_breakdown_and_the_estimate_wins():
@@ -121,6 +121,15 @@ def test_the_story_prompt_carries_the_next_step_shown_on_the_page():
 
     without_step = build_prompt(state, metrics, scores, total, mirror)
     assert "Do not suggest a different action" not in without_step
+
+
+def test_debt_payments_lower_what_you_keep():
+    # Same pay and spending; the one with debt payments keeps less of their pay.
+    no_debt   = calculate_metrics(person(income_main=4000, expenses_total_estimate=2600))
+    with_debt = calculate_metrics(person(income_main=4000, expenses_total_estimate=2600, debt_monthly=1300))
+    assert no_debt["savings_rate"] == 35.0, no_debt
+    assert with_debt["savings_rate"] == 2.5, with_debt
+    assert with_debt["savings_rate"] == round(with_debt["net_monthly_flow"] / 4000 * 100, 1)
 
 
 def test_thresholds_match_the_documented_steps():

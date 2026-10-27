@@ -222,7 +222,7 @@ The health score (0–100) is built on four metrics. Each scores 0–25 in four 
 
 | Metric | Plain label (Oct 2026) | Full marks (25) | OK (18) | Warning (10) | Danger (0) | Source |
 |--------|------|-------|-----|------|------|--------|
-| **Savings rate** | How much of your pay you keep | ≥ 20% | 10–20% | 0–10% | spending more than you earn | 50/30/20 rule |
+| **Savings rate** | How much of your pay you keep (after spending and debt payments) | ≥ 20% | 10–20% | 0–10% | spending more than you earn | 50/30/20 rule |
 | **Debt-to-income** | How much of your pay goes to debt | ≤ 10% | 10–20% | 20–43% | > 43% | Common lender guidelines |
 | **Emergency fund** | Could you handle a surprise? | ≥ 6 months | 3–6 months | 1–3 months | < 1 month | Fidelity / Vanguard |
 | **Housing ratio** | How much of your pay goes to rent | ≤ 25% | 25–35% | 35–50% | > 50% | HUD affordability standard (30%), applied to take-home |
