@@ -126,5 +126,11 @@ export function partialScore(scores: MetricScores, completeness: Completeness): 
     const entry = scores[METRIC_KEYS[name]];
     if ("score" in entry) sum += entry.score;
   }
-  return { score: Math.round((sum / (answered.length * 25)) * 100), count: answered.length };
+  let score = Math.round((sum / (answered.length * 25)) * 100);
+  // Same rule as the full score: under 1 month saved caps the score at 50.
+  const emergency = scores.emergency_fund_months;
+  if (completeness.emergencyFund.complete && "score" in emergency && emergency.score === 0) {
+    score = Math.min(score, 50);
+  }
+  return { score, count: answered.length };
 }

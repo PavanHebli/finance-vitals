@@ -140,6 +140,7 @@ IMPORTANT: Only reference data that was provided. If a section says "not provide
 - If savings rate is below 20%: focus on the single highest-impact cut.
 - If emergency fund is 0 and savings rate is healthy: the action is "move $X/month from checking into a separate savings account."
 - If debt-to-income is danger: action is about accelerating debt payoff.
+- If emergency fund is under 1 month, the overall score is capped at 50 whatever the other metrics say. Say this in one plain sentence, and make building a first month of savings the action.
 - Choose the ONE action that will move the needle most given their full picture.
 
 ## Answer ONLY these 4 questions. Keep the bold headers and emojis exactly as written.

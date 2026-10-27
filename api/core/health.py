@@ -119,13 +119,23 @@ def score_metrics(metrics: dict) -> dict:
     return scores
 
 
+# Without at least one month of savings, one surprise bill breaks you, so the
+# score cannot rise above "At Risk" no matter how good the other metrics are.
+# Without this rule, someone with no debt, modest rent and $0 saved scored 60 ("Fair").
+NO_CUSHION_SCORE_CAP = 50
+
+
 def calculate_overall_score(metric_scores: dict) -> int:
-    return (
+    total = (
         metric_scores["savings_rate"]["score"] +
         metric_scores["debt_to_income"]["score"] +
         metric_scores["emergency_fund_months"]["score"] +
         metric_scores["housing_ratio"]["score"]
     )
+    # The emergency fund metric scores 0 only when it is under 1 month.
+    if metric_scores["emergency_fund_months"]["score"] == 0:
+        total = min(total, NO_CUSHION_SCORE_CAP)
+    return total
 
 
 def get_mirror_label(score: int) -> dict:

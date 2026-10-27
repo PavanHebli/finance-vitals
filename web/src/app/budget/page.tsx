@@ -120,7 +120,14 @@ function computePartialScore(
     return acc + (typeof ms === "object" && "score" in ms ? ms.score : 0);
   }, 0);
   const maxPossible = complete.length * 25;
-  return { score: Math.round((sum / maxPossible) * 100), count: complete.length };
+  let score = Math.round((sum / maxPossible) * 100);
+  // Same rule as the full score: under 1 month saved caps the score at 50.
+  const emergency = metricScores.emergency_fund_months;
+  const emergencyAnswered = completeness.emergencyFund.complete;
+  if (emergencyAnswered && typeof emergency === "object" && "score" in emergency && emergency.score === 0) {
+    score = Math.min(score, 50);
+  }
+  return { score, count: complete.length };
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
