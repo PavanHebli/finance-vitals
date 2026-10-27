@@ -39,7 +39,7 @@ const METRICS = [
 ];
 
 const HOW = [
-  { step: "1", title: "Enter your pay and spending", body: "Two numbers are enough to start. Add debt and savings if you want a fuller picture." },
+  { step: "1", title: "Enter your pay and spending", body: "Five quick numbers are enough, and rough guesses are fine. Add more detail later if you want sharper tips." },
   { step: "2", title: "Get your score and your story", body: "A score out of 100, plus a plain-English note on what is working, what is not, and one thing to do this month." },
   { step: "3", title: "Come back next month", body: "Sign in to keep your numbers and see how your score moves." },
 ];
@@ -110,7 +110,7 @@ export default function Landing() {
           </div>
           <div className="rounded-xl p-4 text-sm text-[var(--text)] leading-relaxed" style={{ background: "color-mix(in srgb, var(--brand) 12%, transparent)" }}>
             <span className="font-semibold">Your next step: </span>
-            your biggest gap is your cushion, at 2.1 months. Adding about $300 a month would reach 3 months in around 10 months.
+            your biggest gap is your cushion: you have 2.1 months of spending saved. The usual goal is 3 months, about $10,200. At your current surplus of $120 a month, that takes about 26 months.
           </div>
         </div>
       </section>
