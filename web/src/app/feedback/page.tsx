@@ -26,7 +26,7 @@ export default function FeedbackPage() {
   const [submitted, setSubmitted]           = useState(false);
   const [error, setError]                   = useState(false);
 
-  const canSubmit = mostUseful.trim().length > 0 && !submitting;
+  const canSubmit = !submitting;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -126,7 +126,7 @@ export default function FeedbackPage() {
 
         {/* Most useful */}
         <div>
-          <label className="label">What was most useful? <span className="text-[var(--brand)]">*</span></label>
+          <label className="label">What was most useful? <span className="text-[var(--text-muted)] font-normal">(optional)</span></label>
           <textarea
             value={mostUseful}
             onChange={(e) => setMostUseful(e.target.value)}

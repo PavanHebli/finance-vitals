@@ -222,7 +222,11 @@ def run_import(pdf_bytes: bytes, provider: str, api_key: str) -> dict:
     lines, d1 = extract_lines(pdf_bytes)
     full_debug.extend(d1)
     if not lines:
-        return {"error": "Could not extract table content from this PDF.", "debug_log": full_debug}
+        if any("image-based" in line for line in d1):
+            message = "This PDF is a picture of a statement, not text, so it cannot be read. Download the statement PDF from your bank's website and upload that."
+        else:
+            message = "Could not find a table of transactions in this PDF."
+        return {"error": message, "debug_log": full_debug}
 
     transactions, d2 = parse_transactions(lines, provider, api_key)
     full_debug.extend(d2)
