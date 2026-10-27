@@ -48,8 +48,19 @@ def call_llm(prompt: str, provider: str, api_key: str):
         yield "Unsupported provider."
 
 
-def build_prompt(state: dict, metrics: dict, metric_scores: dict, overall_score: int, mirror: dict) -> str:
+def build_prompt(state: dict, metrics: dict, metric_scores: dict, overall_score: int, mirror: dict, next_step: str = "") -> str:
     ctx = get_financial_context(state)
+
+    # The results page already shows the user a next step worked out by code.
+    # The story must agree with it instead of suggesting something different.
+    next_step_block = ""
+    if next_step:
+        next_step_block = (
+            "## The next step the app already showed them\n"
+            f'"{next_step}"\n'
+            'Your answer to "What should you do this month" must be this same action, in your own words, '
+            "with why it matters for their numbers. Do not suggest a different action.\n"
+        )
     s2, s3, s4 = ctx["s2"], ctx["s3"], ctx["s4"]
 
     if s2:
@@ -135,6 +146,7 @@ IMPORTANT: Only reference data that was provided. If a section says "not provide
 - Rent: never suggest cutting rent directly. Only suggest moving/roommate if housing ratio above 35%.
 - Dining out / Shopping: fully discretionary.
 
+{next_step_block}
 ## Action item logic — read this carefully before writing "What should you do this month"
 - If savings rate is above 50%: their money problem is NOT that they spend too much. The action should be about WHERE to put what they already save (e.g. open a HYSA, start an index fund, build the emergency fund). Do NOT suggest cutting expenses.
 - If savings rate is below 20%: focus on the single highest-impact cut.

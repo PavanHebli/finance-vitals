@@ -129,7 +129,6 @@ export function HealthScore({
 
       {/* Right: description + metrics + chart */}
       <div className="space-y-5">
-        <p className="text-[var(--text-muted)] leading-relaxed">{mirror.description}</p>
         <NextStep metrics={metrics} metricScores={metricScores} />
         <MetricCards metrics={metrics} metricScores={metricScores} previousMetrics={previousMetrics} />
         {formData.section2Open && <ExpenseChart />}

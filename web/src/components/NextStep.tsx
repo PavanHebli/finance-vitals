@@ -1,25 +1,31 @@
 "use client";
 
 import { nextStep } from "@vitals/shared";
-import type { Metrics, MetricScores } from "@/lib/types";
+import type { FormData, Metrics, MetricScores } from "@/lib/types";
 import { useStore } from "@/lib/store";
 
-// "Your next step" box under the score. Worked out from the person's own
-// numbers by packages/shared/src/nextStep.ts, not written by the AI.
-export function NextStep({ metrics, metricScores }: { metrics: Metrics; metricScores: MetricScores }) {
-  const { formData } = useStore();
-
+// The next step as text. Used by the box below and passed to the AI story, so
+// the two always give the same advice.
+export function buildNextStep(formData: FormData, metrics: Metrics, metricScores: MetricScores): string {
   const breakdownTotal =
     formData.expensesRent + formData.expensesGroceries + formData.expensesTransport +
     formData.expensesSubscriptions + formData.expensesDining + formData.expensesShopping + formData.expensesOther;
 
-  const text = nextStep({
+  return nextStep({
     metrics,
     metricScores,
     income: formData.incomeMain + formData.incomeAdditional,
     monthlySpending: Math.max(breakdownTotal, formData.expensesTotalEstimate),
     savings: formData.savingsTotal,
   });
+}
+
+// "Your next step" box under the score. Worked out from the person's own
+// numbers by packages/shared/src/nextStep.ts, not written by the AI.
+export function NextStep({ metrics, metricScores }: { metrics: Metrics; metricScores: MetricScores }) {
+  const { formData } = useStore();
+
+  const text = buildNextStep(formData, metrics, metricScores);
 
   return (
     <div

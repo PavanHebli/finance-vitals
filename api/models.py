@@ -84,6 +84,8 @@ class NarrativeRequest(BaseModel):
     mirror: Mirror
     provider: str
     api_key: str
+    # The next step already shown on the results page. The story's action must match it.
+    next_step: str = ""
 
 
 # ── /simulate ─────────────────────────────────────────────────────────────────
