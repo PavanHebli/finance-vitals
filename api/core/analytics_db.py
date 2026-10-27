@@ -30,7 +30,16 @@ def insert_event(session_id: str, event: str, properties: dict, supabase_url: st
         }
         if env:
             row["env"] = env
-        client.table("events").insert(row).execute()
+        try:
+            client.table("events").insert(row).execute()
+        except Exception as e:
+            # The browser sends the session and its first event at nearly the same
+            # moment, so the event can arrive before the session row exists
+            # (foreign key error 23503). Create a bare session row and try once more.
+            if "23503" not in str(e):
+                raise
+            upsert_session(session_id, {"env": env} if env else {}, supabase_url, supabase_key)
+            client.table("events").insert(row).execute()
         return True
     except Exception as e:
         print(f"[analytics_db] insert_event error: {e}")
