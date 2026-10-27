@@ -51,10 +51,12 @@ def calculate_metrics(state: dict) -> dict:
     savings = state.get("savings_total", 0.0)
     rent    = state.get("expenses_rent", 0.0)
 
-    savings_rate   = ((income - monthly_expenses) / income * 100) if income > 0 else 0.0
+    # What is left at the end of the month, after spending and debt payments.
+    # The savings rate is this as a share of pay, so the two always agree.
+    net_monthly_flow = income - monthly_expenses - debt_payments
+    savings_rate   = (net_monthly_flow / income * 100) if income > 0 else 0.0
     debt_to_income = (debt_payments / income * 100) if income > 0 else 0.0
     housing_ratio  = (rent / income * 100) if income > 0 else 0.0
-    net_monthly_flow = income - monthly_expenses - debt_payments
 
     if monthly_expenses > 0:
         emergency_fund_months = savings / monthly_expenses

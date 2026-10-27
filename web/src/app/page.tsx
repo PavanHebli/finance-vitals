@@ -14,7 +14,7 @@ import { analytics } from "@/lib/analytics";
 const METRICS = [
   {
     label: "How much of your pay you keep",
-    description: "What is left each month after your spending.",
+    description: "What is left each month after spending and debt payments.",
     benchmark: "Healthy: keeping 20% or more of take-home pay",
     accent: "#00a043",
   },
@@ -46,7 +46,7 @@ const HOW = [
 
 // Made-up numbers, shown only as an example of what a result looks like.
 const EXAMPLE = [
-  { label: "Of your pay you keep", value: "15%", points: "18 / 25" },
+  { label: "Of your pay you keep", value: "3%", points: "10 / 25" },
   { label: "Of your pay goes to debt", value: "12%", points: "18 / 25" },
   { label: "Months you could last", value: "2.1", points: "10 / 25" },
   { label: "Of your pay goes to rent", value: "31%", points: "18 / 25" },
@@ -94,7 +94,7 @@ export default function Landing() {
         <p className="text-[var(--text-muted)] text-center mb-8">An example with made-up numbers.</p>
         <div className="max-w-xl mx-auto rounded-2xl border border-[var(--border)] bg-[var(--bg-2)] p-6">
           <div className="text-center mb-6">
-            <div className="text-6xl font-extrabold text-[var(--text)]">64</div>
+            <div className="text-6xl font-extrabold text-[var(--text)]">56</div>
             <div className="text-lg font-semibold text-[#dc6e00]">Fair</div>
             <div className="text-sm text-[var(--text-muted)]">out of 100</div>
           </div>

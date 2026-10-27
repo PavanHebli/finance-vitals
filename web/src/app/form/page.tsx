@@ -151,7 +151,7 @@ const K401_OPTIONS = [
 ];
 
 // A typical person, made up. Same numbers as the example on the landing page,
-// so it scores 64 ("Fair"): keeps 15% of pay, 12% to debt, 31% to rent, 2.1 months saved.
+// so it scores 56 ("Fair"): keeps 3% of pay, 12% to debt, 31% to rent, 2.1 months saved.
 const EXAMPLE_NUMBERS = {
   incomeMain:            4000,
   expensesTotalEstimate: 3400,

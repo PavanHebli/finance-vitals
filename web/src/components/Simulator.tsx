@@ -96,7 +96,7 @@ function buildAreas(metrics: Metrics, scores: MetricScores, fd: FormData): AreaD
       status: saveSt, label: AREA_LABELS.savings[saveSt],
       value: income > 0 ? `${metrics.savings_rate.toFixed(1)}% of income` : "—",
       formula: income > 0
-        ? `${fmt(income)} income − ${fmt(expTotal)} total expenses\n= ${fmt(income - expTotal)} kept each month\n= ${metrics.savings_rate.toFixed(1)}% of income\n\nGoal: save at least 20%`
+        ? `${fmt(income)} income − ${fmt(expTotal)} total expenses − ${fmt(debt)} debt payments\n= ${fmt(metrics.net_monthly_flow)} kept each month\n= ${metrics.savings_rate.toFixed(1)}% of income\n\nGoal: save at least 20%`
         : "Enter your income to see the breakdown",
     },
     {
