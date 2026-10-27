@@ -6,28 +6,28 @@ import { STATUS_COLORS, STATUS_LABELS } from "@/lib/types";
 const METRICS_CONFIG = [
   {
     key: "savings_rate" as const,
-    label: "Savings Rate",
+    label: "How much of your pay you keep",
     format: (v: number) => `${v}%`,
     benchmark: "Target: ≥ 20%",
     higherIsBetter: true,
   },
   {
     key: "debt_to_income" as const,
-    label: "Debt-to-Income",
+    label: "How much of your pay goes to debt",
     format: (v: number) => `${v}%`,
     benchmark: "Safe zone: < 20%",
     higherIsBetter: false,
   },
   {
     key: "emergency_fund_months" as const,
-    label: "Emergency Fund",
+    label: "How long you could last without a paycheck",
     format: (v: number) => `${v} mo`,
     benchmark: "Goal: 3–6 months",
     higherIsBetter: true,
   },
   {
     key: "housing_ratio" as const,
-    label: "Housing Ratio",
+    label: "How much of your pay goes to rent",
     format: (v: number) => `${v}%`,
     benchmark: "HUD limit: ≤ 30%",
     higherIsBetter: false,
@@ -69,7 +69,7 @@ export function MetricCards({
             className="card border-t-2 transition-shadow hover:shadow-sm"
             style={{ borderTopColor: STATUS_COLORS[status] }}
           >
-            <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+            <div className="text-xs font-semibold text-[var(--text-muted)] mb-2 leading-snug">
               {label}
             </div>
 

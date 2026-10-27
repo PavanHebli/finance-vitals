@@ -150,6 +150,17 @@ const K401_OPTIONS = [
   { value: "Not applicable",               label: "Not applicable" },
 ];
 
+// A typical person, made up. Same numbers as the example on the landing page,
+// so it scores 64 ("Fair"): keeps 15% of pay, 12% to debt, 31% to rent, 2.1 months saved.
+const EXAMPLE_NUMBERS = {
+  incomeMain:            4000,
+  expensesTotalEstimate: 3400,
+  expensesRent:          1250,
+  debtMonthly:           480,
+  debtTotal:             14000,
+  savingsTotal:          7140,
+};
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function FormPage() {
@@ -162,11 +173,25 @@ export default function FormPage() {
   }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  const [usedExample, setUsedExample] = useState(false);
+
+  function fillExample() {
+    setFormData({ ...formData, ...EXAMPLE_NUMBERS });
+    setUsedExample(true);
+    setError(null);
+    analytics.track("example_numbers_used");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.incomeMain) {
-      setError("Monthly income is required.");
+      setError("Add your monthly take-home pay to get a score.");
+      return;
+    }
+    const breakdownTotal = formData.expensesRent + formData.expensesGroceries + formData.expensesTransport +
+      formData.expensesSubscriptions + formData.expensesDining + formData.expensesShopping + formData.expensesOther;
+    if (!formData.expensesTotalEstimate && !breakdownTotal) {
+      setError("Add a rough guess of what you spend each month. Without it, the score would assume you spend nothing.");
       return;
     }
     setError(null);
@@ -208,8 +233,20 @@ export default function FormPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-1">Check your financial health</h1>
         <p className="text-[var(--text-muted)]">
-          Fill in what you know. Every section you complete improves your results.
+          Five quick numbers are enough. Rough guesses are fine.
         </p>
+        <button
+          type="button"
+          onClick={fillExample}
+          className="text-sm text-[var(--brand)] hover:underline mt-3"
+        >
+          Not sure? Try it with example numbers
+        </button>
+        {usedExample && (
+          <p className="text-sm text-[var(--text-muted)] mt-2">
+            These are made-up numbers for a typical person. Change any of them to match your own.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10 items-start">
@@ -237,73 +274,80 @@ export default function FormPage() {
                   className="input"
                 />
                 <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Stays in your browser — never sent to our servers.
+                  Sent with your request to the AI provider you picked. We don't save it.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Income — always visible */}
+          {/* The five numbers the score needs — always visible */}
           <div className="border-b border-[var(--border)] py-5 space-y-4 px-4">
-            <div className="font-semibold text-[var(--text)]">Income</div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="font-semibold text-[var(--text)]">Your numbers</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <NumInput
-                label="Monthly take-home income"
+                label="Monthly take-home pay"
                 value={formData.incomeMain}
                 onChange={(v) => setFormField("incomeMain", v)}
+                hint="What lands in your account each month, after tax."
               />
               <NumInput
-                label="Additional monthly income"
-                value={formData.incomeAdditional}
-                onChange={(v) => setFormField("incomeAdditional", v)}
+                label="What you spend in a month"
+                value={formData.expensesTotalEstimate}
+                onChange={(v) => setFormField("expensesTotalEstimate", v)}
+                hint="Everything, including rent. A rough guess is fine."
+              />
+              <NumInput
+                label="Rent or mortgage"
+                value={formData.expensesRent}
+                onChange={(v) => setFormField("expensesRent", v)}
+                hint="Per month. Leave empty if you don't pay rent."
+              />
+              <NumInput
+                label="Monthly debt payments"
+                value={formData.debtMonthly}
+                onChange={(v) => setFormField("debtMonthly", v)}
+                hint="Loans, credit cards, car payments. Leave empty if none."
+              />
+              <NumInput
+                label="Money you have saved right now"
+                value={formData.savingsTotal}
+                onChange={(v) => setFormField("savingsTotal", v)}
+                hint="In your bank accounts today, not what you save each month."
               />
             </div>
           </div>
 
-          {/* Section 2 — expenses */}
+          {/* Section 2 — optional spending breakdown */}
           <Section
-            title="Expense breakdown"
-            subtitle="Optional — needed for detailed recommendations"
+            title="Spending breakdown"
+            subtitle="Optional: where your money goes, for more specific tips"
             open={formData.section2Open}
             onToggle={() => setFormField("section2Open", !formData.section2Open)}
           >
-            {!formData.section2Open && (
-              <NumInput
-                label="Total monthly expenses (estimate)"
-                value={formData.expensesTotalEstimate}
-                onChange={(v) => setFormField("expensesTotalEstimate", v)}
-              />
-            )}
-            {formData.section2Open && (
-              <div className="grid grid-cols-2 gap-3">
-                <NumInput label="Rent / mortgage"  value={formData.expensesRent}          onChange={(v) => setFormField("expensesRent", v)} />
-                <NumInput label="Groceries"        value={formData.expensesGroceries}     onChange={(v) => setFormField("expensesGroceries", v)} />
-                <NumInput label="Transport"        value={formData.expensesTransport}     onChange={(v) => setFormField("expensesTransport", v)} />
-                <NumInput label="Subscriptions"    value={formData.expensesSubscriptions} onChange={(v) => setFormField("expensesSubscriptions", v)} />
-                <NumInput label="Dining out"       value={formData.expensesDining}        onChange={(v) => setFormField("expensesDining", v)} />
-                <NumInput label="Shopping"         value={formData.expensesShopping}      onChange={(v) => setFormField("expensesShopping", v)} />
-                <NumInput label="Other"            value={formData.expensesOther}         onChange={(v) => setFormField("expensesOther", v)} />
-              </div>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <NumInput label="Groceries"     value={formData.expensesGroceries}     onChange={(v) => setFormField("expensesGroceries", v)} />
+              <NumInput label="Transport"     value={formData.expensesTransport}     onChange={(v) => setFormField("expensesTransport", v)} />
+              <NumInput label="Subscriptions" value={formData.expensesSubscriptions} onChange={(v) => setFormField("expensesSubscriptions", v)} />
+              <NumInput label="Dining out"    value={formData.expensesDining}        onChange={(v) => setFormField("expensesDining", v)} />
+              <NumInput label="Shopping"      value={formData.expensesShopping}      onChange={(v) => setFormField("expensesShopping", v)} />
+              <NumInput label="Other"         value={formData.expensesOther}         onChange={(v) => setFormField("expensesOther", v)} />
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              If these add up to more than your monthly spending above, we use the larger number.
+            </p>
           </Section>
 
-          {/* Section 3 — position */}
+          {/* Section 3 — optional extra money details */}
           <Section
-            title="Financial position"
-            subtitle="Optional — savings, investments, and debt"
+            title="More about your money"
+            subtitle="Optional: extra income, total debt, investments"
             open={formData.section3Open}
             onToggle={() => setFormField("section3Open", !formData.section3Open)}
           >
-            <div className="grid grid-cols-2 gap-3">
-              <NumInput
-                label="Total savings"
-                value={formData.savingsTotal}
-                onChange={(v) => setFormField("savingsTotal", v)}
-                hint="Money already in your bank or savings account — not what you save monthly"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <NumInput label="Additional monthly income" value={formData.incomeAdditional} onChange={(v) => setFormField("incomeAdditional", v)} hint="Side work, rental income, and so on." />
+              <NumInput label="Total debt (all accounts)" value={formData.debtTotal}        onChange={(v) => setFormField("debtTotal", v)} hint="What you owe in total, not the monthly payment." />
               <NumInput label="Total investments"         value={formData.investmentsTotal} onChange={(v) => setFormField("investmentsTotal", v)} />
-              <NumInput label="Total debt (all accounts)" value={formData.debtTotal}        onChange={(v) => setFormField("debtTotal", v)} />
-              <NumInput label="Monthly debt payments"     value={formData.debtMonthly}      onChange={(v) => setFormField("debtMonthly", v)} />
             </div>
           </Section>
 
@@ -314,7 +358,7 @@ export default function FormPage() {
             open={formData.section4Open}
             onToggle={() => setFormField("section4Open", !formData.section4Open)}
           >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Age</label>
                 <input
@@ -389,7 +433,10 @@ export default function FormPage() {
           </div>
 
           <div className="text-xs text-[var(--text-muted)] border-t border-[var(--border)] pt-4 space-y-1">
-            <p>Your data never leaves your device unless you explicitly export it.</p>
+            <p>
+              Your numbers are sent to our server only to work out your score and write your summary.
+              They are not saved unless you create an account.
+            </p>
             <p>No account required. No bank connection.</p>
           </div>
         </div>

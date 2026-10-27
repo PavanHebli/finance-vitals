@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Metrics, MetricScores, Mirror } from "@/lib/types";
 import { MetricCards } from "./MetricCards";
+import { NextStep } from "./NextStep";
 import { ExpenseChart } from "./ExpenseChart";
 import { useStore } from "@/lib/store";
 
@@ -129,6 +130,7 @@ export function HealthScore({
       {/* Right: description + metrics + chart */}
       <div className="space-y-5">
         <p className="text-[var(--text-muted)] leading-relaxed">{mirror.description}</p>
+        <NextStep metrics={metrics} metricScores={metricScores} />
         <MetricCards metrics={metrics} metricScores={metricScores} previousMetrics={previousMetrics} />
         {formData.section2Open && <ExpenseChart />}
       </div>

@@ -6,7 +6,10 @@ def get_financial_context(state: dict) -> dict:
     s3 = state.get("section3_visible", False)
     s4 = state.get("section4_visible", False)
 
-    total_expenses = sum(state.get(f"expenses_{k}", 0.0) for k in _EXPENSE_KEYS)
+    total_expenses = max(
+        sum(state.get(f"expenses_{k}", 0.0) for k in _EXPENSE_KEYS),
+        state.get("expenses_total_estimate", 0.0),
+    )
 
     ctx: dict = {
         "income":                  state.get("income_main", 0.0) + state.get("income_additional", 0.0),
@@ -37,11 +40,14 @@ def get_financial_context(state: dict) -> dict:
 def calculate_metrics(state: dict) -> dict:
     income = state.get("income_main", 0.0) + state.get("income_additional", 0.0)
 
-    monthly_expenses = sum(state.get(f"expenses_{k}", 0.0) for k in _EXPENSE_KEYS)
+    # A rough total ("I spend about $3,400 a month") is enough. If a category
+    # breakdown is also given, use whichever is larger, since the total is
+    # meant to include rent and everything else.
+    category_total   = sum(state.get(f"expenses_{k}", 0.0) for k in _EXPENSE_KEYS)
+    monthly_expenses = max(category_total, state.get("expenses_total_estimate", 0.0))
 
+    # Monthly debt payments count even if the user did not fill in total debt.
     debt_payments = state.get("debt_monthly", 0.0)
-    if state.get("debt_total", 0.0) == 0:
-        debt_payments = 0.0
     savings = state.get("savings_total", 0.0)
     rent    = state.get("expenses_rent", 0.0)
 
