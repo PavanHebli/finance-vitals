@@ -205,7 +205,7 @@ export default function FormPage() {
         submitted_form: true,
         score:          result.overall_score,
         score_band:     ["0-20","21-40","41-60","61-80","81-100"][Math.min(Math.floor(result.overall_score / 20), 4)],
-        provider:       formData.provider,
+        llm_provider:   formData.provider || null,
       });
       addSnapshot({
         saved_at: new Date().toISOString().slice(0, 7),
