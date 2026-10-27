@@ -372,6 +372,7 @@ DTI:            >43% → 0 | 20-43% → 10 | 10-20% → 18 | ≤10% → 25
 Emergency Fund: <1mo → 0 | 1-3mo → 10 | 3-6mo → 18 | ≥6mo → 25
 Housing Ratio:  >50% → 0 | 35-50% → 10 | 25-35% → 18 | ≤25% → 25
 Labels: 0-30 Critical | 31-50 At Risk | 51-70 Fair | 71-85 Good | 86-100 Healthy
+Cushion rule: if emergency fund is under 1 month, the overall score is capped at 50 (At Risk), however strong the other metrics are.
 The lowest-scoring metric has the highest ceiling for improvement.
 """.strip(),
 
@@ -388,6 +389,7 @@ Savings Rate: <0%→0 | 0-10%→10 | 10-20%→18 | ≥20%→25
 DTI: >43%→0 | 20-43%→10 | 10-20%→18 | ≤10%→25
 Emergency Fund: <1mo→0 | 1-3mo→10 | 3-6mo→18 | ≥6mo→25
 Housing Ratio: >50%→0 | 35-50%→10 | 25-35%→18 | ≤25%→25
+Cushion rule: emergency fund under 1 month caps the overall score at 50, so getting to 1 month of savings is worth more than any other single change for that person.
 """.strip(),
 
     "cognitive_offload": """

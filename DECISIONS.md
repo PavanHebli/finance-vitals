@@ -218,14 +218,20 @@ A metric that is silently wrong while displaying "Good" is more dangerous than o
 
 ## The Score
 
-The health score (0–100) is built on four metrics. Each scores 0–25; a partial score covers only the answered metrics and is scaled to 0–100.
+The health score (0–100) is built on four metrics. Each scores 0–25 in four steps (0, 10, 18 or 25 points); a partial score covers only the answered metrics and is scaled to 0–100. `api/core/health.py` is the single source of truth. If a threshold changes, also update the landing page, the PDF export, the goal tracker, the education text and the chat prompt (all of them quote these numbers).
 
-| Metric | Plain label (Oct 2026) | Green | Yellow | Red | Source |
-|--------|------|-------|--------|-----|--------|
-| **Savings rate** | How much of your pay you keep | ≥ 20% | 10–20% | < 10% | 50/30/20 rule |
-| **Debt-to-income** | How much of your pay goes to debt | ≤ 20% | 20–43% | > 43% | Common lender guideline |
-| **Emergency fund** | Could you handle a surprise? | ≥ 3 months | 1–3 months | < 1 month | Fidelity / Vanguard |
-| **Housing ratio** | How much of your pay goes to rent | ≤ 30% | 30–50% | > 50% | HUD affordability standard |
+| Metric | Plain label (Oct 2026) | Full marks (25) | OK (18) | Warning (10) | Danger (0) | Source |
+|--------|------|-------|-----|------|------|--------|
+| **Savings rate** | How much of your pay you keep | ≥ 20% | 10–20% | 0–10% | spending more than you earn | 50/30/20 rule |
+| **Debt-to-income** | How much of your pay goes to debt | ≤ 10% | 10–20% | 20–43% | > 43% | Common lender guidelines |
+| **Emergency fund** | Could you handle a surprise? | ≥ 6 months | 3–6 months | 1–3 months | < 1 month | Fidelity / Vanguard |
+| **Housing ratio** | How much of your pay goes to rent | ≤ 25% | 25–35% | 35–50% | > 50% | HUD affordability standard (30%), applied to take-home |
+
+The PDF export and the goal tracker show the "safe zone" targets (DTI under 20%, 3–6 months saved, housing at most 30%). Those are the lower edge of the OK band, not full marks. That is why they differ from the table above.
+
+### The cushion rule (Oct 2026)
+
+**With under 1 month of savings, the overall score is capped at 50 ("At Risk").** Debt-to-income and housing are "less is better" ratios, so someone with no debt and low rent earned 50 of 100 points whatever their cushion was, and 10 more just for saving anything. A person spending every dollar with $0 saved scored 60 ("Fair, on the right track"), with or without card debt. That contradicts the point of the product, which is whether a surprise bill would break you. The cap is a blunt tool (the score jumps instead of rising smoothly), but it is simple to explain, and it makes getting to a first month of savings the clearest next step. It applies to the full score (`calculate_overall_score`) and to the partial scores on web and mobile.
 
 ### Why keep a score at all
 

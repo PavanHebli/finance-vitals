@@ -118,7 +118,7 @@ export default function Landing() {
       {/* Metrics */}
       <section className="py-12 border-t border-[var(--border)]">
         <h2 className="text-2xl font-bold text-center mb-2">Four things that matter</h2>
-        <p className="text-[var(--text-muted)] text-center mb-10">Each one counts for up to 25 points.</p>
+        <p className="text-[var(--text-muted)] text-center mb-10">Each one counts for up to 25 points. Without at least one month of savings, your score can't go above 50.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {METRICS.map((m) => (
             <div key={m.label} className="rounded-xl border border-[var(--border)] p-5">
