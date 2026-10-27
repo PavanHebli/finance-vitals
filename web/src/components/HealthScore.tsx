@@ -119,7 +119,7 @@ export function HealthScore({
           )}
 
           <div className="text-xs text-[var(--text-muted)]">
-            Net flow:{" "}
+            Left each month (pay − spending − debt payments):{" "}
             <span className={metrics.net_monthly_flow >= 0 ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
               ${metrics.net_monthly_flow.toLocaleString("en-US", { maximumFractionDigits: 0 })}/mo
             </span>

@@ -183,7 +183,7 @@ METRICS:
 - Debt-to-Income:  {metrics['debt_to_income']}%    | {metric_scores['debt_to_income']['status']} | {metric_scores['debt_to_income']['score']}/25
 - Emergency Fund:  {metrics['emergency_fund_months']} months | {metric_scores['emergency_fund_months']['status']} | {metric_scores['emergency_fund_months']['score']}/25
 - Housing Ratio:   {metrics['housing_ratio']}%     | {metric_scores['housing_ratio']['status']} | {metric_scores['housing_ratio']['score']}/25
-- Net cash flow:   ${metric_scores['net_monthly_flow']['value']:,.0f}/month
+- Net cash flow:   ${metric_scores['net_monthly_flow']['value']:,.0f}/month (= take-home pay − monthly expenses − monthly debt payment; debt payments are NOT included in the expenses figure above, they are subtracted separately)
 """.strip()
 
 
