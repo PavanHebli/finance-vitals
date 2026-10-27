@@ -81,6 +81,30 @@ def test_example_on_the_landing_page_is_64_fair():
     assert get_mirror_label(total)["label"] == "Fair"
 
 
+def test_a_rough_spending_total_is_used_when_there_is_no_breakdown():
+    # Income $4,000, "I spend about $3,400", rent $1,250, $7,140 saved.
+    state = person(income_main=4000, expenses_total_estimate=3400, expenses_rent=1250,
+                   savings_total=7140, debt_monthly=480)
+    metrics = calculate_metrics(state)
+    assert metrics["savings_rate"] == 15.0, metrics
+    assert metrics["emergency_fund_months"] == 2.1, metrics
+    assert metrics["housing_ratio"] == 31.2, metrics
+    assert metrics["debt_to_income"] == 12.0, metrics
+    assert calculate_overall_score(score_metrics(metrics)) == 64
+
+
+def test_the_larger_of_the_breakdown_and_the_estimate_wins():
+    # Breakdown adds up to 3,600, estimate says 3,000: use 3,600.
+    state = person(income_main=4000, expenses_rent=1000, expenses_groceries=1600, expenses_other=1000,
+                   expenses_total_estimate=3000)
+    assert calculate_metrics(state)["savings_rate"] == 10.0
+
+
+def test_debt_payments_count_even_without_a_total_debt_figure():
+    state = person(income_main=4000, expenses_total_estimate=3000, debt_monthly=1000)
+    assert calculate_metrics(state)["debt_to_income"] == 25.0
+
+
 def test_thresholds_match_the_documented_steps():
     def pts(metric, value):
         base = {"savings_rate": 25, "debt_to_income": 0, "emergency_fund_months": 6,
