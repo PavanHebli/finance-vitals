@@ -158,6 +158,7 @@ export default function FormPage() {
 
   useEffect(() => {
     analytics.updateSession({ visited_form: true });
+    analytics.track("form_started");
   }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -174,6 +175,7 @@ export default function FormPage() {
     try {
       const result = await fetchScore(toApiFormData(formData));
       setResults(result.metrics, result.metric_scores, result.overall_score, result.mirror);
+      analytics.track("form_submitted");
       analytics.updateSession({
         submitted_form: true,
         score:          result.overall_score,
