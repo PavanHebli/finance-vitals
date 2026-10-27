@@ -44,6 +44,7 @@ export async function streamNarrative(
     mirror: Mirror;
     provider: string;
     api_key: string;
+    next_step?: string;
   },
   onChunk: (chunk: string) => void
 ): Promise<void> {

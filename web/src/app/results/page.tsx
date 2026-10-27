@@ -13,6 +13,7 @@ import { Simulator } from "@/components/Simulator";
 import { InlineChat } from "@/components/InlineChat";
 import { ExportMenu } from "@/components/ExportMenu";
 import { GoalSection } from "@/components/GoalSection";
+import { buildNextStep } from "@/components/NextStep";
 import type { Snapshot } from "@/lib/types";
 
 // Returns snapshots from months other than the current one
@@ -79,6 +80,7 @@ export default function ResultsPage() {
         mirror,
         provider: formData.provider,
         api_key:  formData.apiKey,
+        next_step: buildNextStep(formData, metrics, metricScores),
       },
       (chunk) => appendNarrative(chunk),
     )
@@ -123,16 +125,8 @@ export default function ResultsPage() {
         metricScores={metricScores}
       />
 
-      {/* Export */}
-      <div className="flex justify-end mt-4">
-        <ExportMenu />
-      </div>
-
-      {/* Goals */}
-      <GoalSection />
-
       {/* Tabs */}
-      <Tabs.Root
+      <Tabs.Root className="mt-8"
         value={activeTab}
         onValueChange={(tab) => {
           analytics.track("tab_changed", { tab, previous: activeTab });
@@ -168,6 +162,12 @@ export default function ResultsPage() {
 
 
       </Tabs.Root>
+
+      {/* Follow-ups, after the story */}
+      <GoalSection />
+      <div className="flex justify-end mt-4">
+        <ExportMenu />
+      </div>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "api"))
 
+from core.narrative import build_prompt
 from core.health import (
     calculate_metrics,
     calculate_overall_score,
@@ -103,6 +104,23 @@ def test_the_larger_of_the_breakdown_and_the_estimate_wins():
 def test_debt_payments_count_even_without_a_total_debt_figure():
     state = person(income_main=4000, expenses_total_estimate=3000, debt_monthly=1000)
     assert calculate_metrics(state)["debt_to_income"] == 25.0
+
+
+def test_the_story_prompt_carries_the_next_step_shown_on_the_page():
+    state = person(income_main=4000, expenses_total_estimate=3400, expenses_rent=1250,
+                   savings_total=7140, debt_monthly=480)
+    metrics = calculate_metrics(state)
+    scores = score_metrics(metrics)
+    total = calculate_overall_score(scores)
+    mirror = get_mirror_label(total)
+    step = "Your biggest gap is your cushion: you have 2.1 months of spending saved."
+
+    with_step = build_prompt(state, metrics, scores, total, mirror, step)
+    assert step in with_step
+    assert "Do not suggest a different action" in with_step
+
+    without_step = build_prompt(state, metrics, scores, total, mirror)
+    assert "Do not suggest a different action" not in without_step
 
 
 def test_thresholds_match_the_documented_steps():
