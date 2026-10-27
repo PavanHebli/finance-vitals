@@ -175,6 +175,20 @@ export default function FormPage() {
   const [error, setError]     = useState<string | null>(null);
   const [usedExample, setUsedExample] = useState(false);
 
+  // The form asks for rent and "everything else" as two separate boxes. Behind
+  // the scenes the total (rent + everything else) is what the score uses, so we
+  // keep storing the total and work "everything else" out from it.
+  const everythingElse = Math.max(0, formData.expensesTotalEstimate - formData.expensesRent);
+
+  function setRent(rent: number) {
+    setFormField("expensesRent", rent);
+    setFormField("expensesTotalEstimate", everythingElse + rent);
+  }
+
+  function setEverythingElse(amount: number) {
+    setFormField("expensesTotalEstimate", amount + formData.expensesRent);
+  }
+
   function fillExample() {
     setFormData({ ...formData, ...EXAMPLE_NUMBERS });
     setUsedExample(true);
@@ -190,8 +204,8 @@ export default function FormPage() {
     }
     const breakdownTotal = formData.expensesRent + formData.expensesGroceries + formData.expensesTransport +
       formData.expensesSubscriptions + formData.expensesDining + formData.expensesShopping + formData.expensesOther;
-    if (!formData.expensesTotalEstimate && !breakdownTotal) {
-      setError("Add a rough guess of what you spend each month. Without it, the score would assume you spend nothing.");
+    if (!everythingElse && breakdownTotal === formData.expensesRent) {
+      setError("Add a rough guess of what you spend each month apart from rent. Without it, the score would assume you spend nothing else.");
       return;
     }
     setError(null);
@@ -291,22 +305,22 @@ export default function FormPage() {
                 hint="What lands in your account each month, after tax."
               />
               <NumInput
-                label="What you spend in a month"
-                value={formData.expensesTotalEstimate}
-                onChange={(v) => setFormField("expensesTotalEstimate", v)}
-                hint="Everything, including rent. A rough guess is fine."
-              />
-              <NumInput
                 label="Rent or mortgage"
                 value={formData.expensesRent}
-                onChange={(v) => setFormField("expensesRent", v)}
+                onChange={setRent}
                 hint="Per month. Leave empty if you don't pay rent."
+              />
+              <NumInput
+                label="Everything else you spend in a month"
+                value={everythingElse}
+                onChange={setEverythingElse}
+                hint="Food, transport, bills, fun, including what you put on a card. Not rent. A rough guess is fine."
               />
               <NumInput
                 label="Monthly debt payments"
                 value={formData.debtMonthly}
                 onChange={(v) => setFormField("debtMonthly", v)}
-                hint="Loans, credit cards, car payments. Leave empty if none."
+                hint="Loans, and card payments on old balances. Leave empty if none."
               />
               <NumInput
                 label="Money you have saved right now"
