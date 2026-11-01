@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold text-[var(--text)] mb-2">Privacy Policy</h1>
-      <p className="text-sm text-[var(--text-muted)] mb-10">Last updated September 12, 2026</p>
+      <p className="text-sm text-[var(--text-muted)] mb-10">Last updated October 27, 2026</p>
 
       <div className="space-y-8 text-[var(--text)] leading-relaxed">
         <section>
@@ -16,15 +16,30 @@ export default function PrivacyPage() {
           <p className="mb-3">What we collect depends entirely on how you use Vitals:</p>
           <ul className="list-disc pl-5 space-y-2 text-sm">
             <li>
-              <strong>Using Vitals without an account (Guest):</strong> nothing at all. Your
-              numbers stay in your browser&apos;s memory for that session only — nothing is sent
-              to or stored on our servers, not even locally on your device.
+              <strong>Using Vitals without an account:</strong> your numbers are sent to our
+              server to work out your score, and to our AI provider to write your summary and
+              answer chat questions. They are used for that request only and are not saved.
             </li>
             <li>
-              <strong>Creating an account (Free or Pro):</strong> your email and password, or
-              your name/email/profile photo if you sign in with Google. Anything you enter into
-              the app — income, expenses, debt, savings, budget cards, goals, and the questions
-              you ask in chat.
+              <strong>Creating an account:</strong> your email and password, or your
+              name/email/profile photo if you sign in with Google. We save what you enter so it
+              is there next time: income, expenses, debt, savings, budget cards, goals and saved
+              snapshots. Chat messages are not saved.
+            </li>
+            <li>
+              <strong>Bank statements (PDF import):</strong> the file is uploaded to our server
+              and read there. The transaction lines (descriptions, amounts, and any balances or
+              reference numbers printed on those lines) are sent to our AI provider to sort them
+              into categories. The file itself is not saved.
+            </li>
+            <li>
+              <strong>Usage data:</strong> a record of each visit — pages viewed, buttons
+              clicked, your device type, the site that sent you, and your overall score after a
+              check-up (not the numbers behind it). If you are signed in, it is linked to your
+              account. We use it only to see which parts of Vitals work.
+            </li>
+            <li>
+              <strong>Feedback form:</strong> what you write, and your email only if you add it.
             </li>
             <li>
               <strong>Optional profile details:</strong> date of birth, gender, and country, if
@@ -50,6 +65,9 @@ export default function PrivacyPage() {
               <strong>Supabase</strong>, which hosts our database and handles authentication.
             </li>
             <li>
+              <strong>Railway</strong>, which runs our website and server.
+            </li>
+            <li>
               <strong>The AI provider that powers chat and your narrative</strong> (currently
               Anthropic, OpenAI, Groq, or Google, depending on configuration) — your financial
               figures and questions are sent there to generate a response. If you provide your
@@ -69,8 +87,9 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-semibold mb-2">How long we keep it</h2>
           <p className="text-sm">
-            Guest sessions: never stored anywhere — gone the moment you close the tab. Free and
-            Pro accounts: kept until you delete it yourself.
+            Without an account, your numbers are not stored. Accounts are kept until you delete
+            them yourself. Usage data is kept to understand how Vitals is used; to have yours
+            removed, email us.
           </p>
         </section>
 
