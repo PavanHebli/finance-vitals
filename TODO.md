@@ -1,6 +1,6 @@
 # Vitals — Roadmap & Backlog
 
-The plan behind this file is in `DECISIONS.md` (see "Where Vitals Is Headed" and "Analytics and the Gates").
+The reasoning behind this file is in `DECISIONS.md` (see "From budget planner to payday plan" and "Learning before building"). Exact gate numbers live here, in each phase.
 
 **How this file works**
 - Work goes in **phases**. Each phase ends at a **gate**: a number that decides whether to keep going, change direction, or stop.
@@ -66,6 +66,8 @@ The plan behind this file is in `DECISIONS.md` (see "Where Vitals Is Headed" and
 
 ## Phase 1 — Payday Plan MVP (2–3 months)
 
+> **Oct 28, 2026:** the payday plan replaces the budget page instead of being built next to it. Order, layout and the bill-entry flow are in `DECISIONS.md` → "From budget planner to payday plan". Step 1 there (Cash in Hand counted as spending) is a bug fix and can be done any time.
+
 **Goal:** turn the one-time check-up into a payday habit.
 **Gate:** ≥ 25% of planners do a second payday check-in; ≥ 15% active at day 60. **Below 10% second check-in → stop feature work.**
 
@@ -77,7 +79,7 @@ The plan behind this file is in `DECISIONS.md` (see "Where Vitals Is Headed" and
 | 1.4 | **Pay schedule** | Periods follow paydays, not calendar months. Next payday date drives safe-to-spend and reminders. | ⬜ |
 | 1.5 | **Safe to spend on the home screen** | Spending money ÷ weeks until payday. Never counts pots. Plain negative when over-committed. Optional "type your checking balance" for a live mid-cycle figure. | ⬜ |
 | 1.6 | **60-second payday check-in** `[was #27]` | Plan carries forward; confirm or tweak; "Anything unexpected since last payday?"; score delta shown `[was #12, #19]`. | ⬜ |
-| 1.7 | **Surprise log + surprise gap** | Log a surprise (cost, how it was paid). Show the gap (stock and flow formulas in `DECISIONS.md`). Second surprise in a category within 12 months → offer a once-in-a-while card. | ⬜ |
+| 1.7 | **Surprise log + surprise gap** | Log a surprise (cost, how it was paid). Show the gap (formulas below the table). Second surprise in a category within 12 months → offer a once-in-a-while card. | ⬜ |
 | 1.8 | **Borrow from a goal** | "Use money from Car fund" → pay it back (default) / push the date / shrink the goal, each with a preview. Buffer covering a surprise is shown as a win. | ⬜ |
 | 1.9 | **Over-allocation resolver** | "Your plan is $85 more than your paycheck" → take from Spending money (above a floor) / shrink flexible cards proportionally / pick donors / start smaller. Bills and the starter buffer are never touched. | ⬜ |
 | 1.10 | **Short-paycheck fill order** | Bills → starter buffer → once-in-a-while due soonest → goals → Spending money. | ⬜ |
@@ -90,6 +92,19 @@ The plan behind this file is in `DECISIONS.md` (see "Where Vitals Is Headed" and
 | 1.17 | **Mobile parity for 1.1–1.12** | Same features on mobile, then freeze mobile-only work. | ⬜ |
 | 1.18 | **TestFlight beta for friends** | Needs the Apple Developer account ($99/yr), EAS env vars, and Apple sign-in enabled in Supabase. | ⬜ |
 | 1.19 | **Housing weight down** | Show housing as context; reduce its weight in the score. Decide the new weights in a short note first. | ⬜ |
+
+**Surprise gap formulas (for 1.5–1.7).** Defaults are rules of thumb (Ramsey's $1,000 starter; Fidelity's 3–6 months and 5% for unplanned costs), not validated outcomes.
+
+```
+Set-aside per paycheck (each once-in-a-while cost)
+  = (target amount − already set aside) ÷ paychecks left before the due date
+Surprise cushion target
+  start: the larger of $1,000 or one month of essential costs; then grow toward 3 months
+Surprise gap, stock  = cushion target − current cushion balance
+Surprise run-rate    = 5% of take-home per month until 3+ months of logged surprises,
+                       then logged surprises over the last 12 months ÷ 12
+Surprise gap, flow   = surprise run-rate − monthly cushion contribution
+```
 
 ---
 
