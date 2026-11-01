@@ -14,6 +14,7 @@ import { InlineChat } from "@/components/InlineChat";
 import { ExportMenu } from "@/components/ExportMenu";
 import { GoalSection } from "@/components/GoalSection";
 import { buildNextStep } from "@/components/NextStep";
+import { PaydayReminder } from "@/components/PaydayReminder";
 import type { Snapshot } from "@/lib/types";
 
 // Returns snapshots from months other than the current one
@@ -127,6 +128,11 @@ export default function ResultsPage() {
         metrics={metrics}
         metricScores={metricScores}
       />
+
+      {/* Come back on payday */}
+      <div className="mt-6">
+        <PaydayReminder />
+      </div>
 
       {/* Tabs */}
       <Tabs.Root className="mt-8"
