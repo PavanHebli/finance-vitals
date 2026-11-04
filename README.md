@@ -6,7 +6,7 @@
 
 **Your financial health score in 5 minutes. No bank connection. Free to start — sign in only if you want it saved.**
 
-[![Live App](https://img.shields.io/badge/Live%20App-myfinancevitals.app-4F46E5?style=for-the-badge)](https://myfinancevitals.app/)
+[![Live App](https://img.shields.io/badge/Live%20App-myfinancevitals.app-4F46E5?style=for-the-badge)](https://myfinancevitals.app/?utm_source=github)
 [![License](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs)](https://nextjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
