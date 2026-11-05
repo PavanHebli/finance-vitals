@@ -4,7 +4,7 @@
 
 # Vitals
 
-**Your financial health score in 5 minutes. No bank connection. Free to start — sign in only if you want it saved.**
+**Your financial health score in 2 minutes. No bank connection. Free — sign in only if you want it saved.**
 
 [![Live App](https://img.shields.io/badge/Live%20App-myfinancevitals.app-4F46E5?style=for-the-badge)](https://myfinancevitals.app/?utm_source=github)
 [![License](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
@@ -29,7 +29,7 @@ Vitals fixes that. Enter your rough monthly numbers. Get a real score, benchmark
 | | |
 |---|---|
 | 🔐 **Accounts (optional)** | Try everything with zero setup, nothing saved. Sign in with Google or email if you want your budget, goals, and progress persisted and available on other devices |
-| 🩺 **Health Score** | Scored 0–100 across 4 metrics, each benchmarked against CFPB, HUD, and Fidelity standards |
+| 🩺 **Health Score** | Scored 0–100 across 4 metrics, each benchmarked against published guidance (50/30/20 rule, common lender guidelines, HUD, Fidelity) |
 | 🤖 **AI Narrative** | Streaming plain-English story of your finances — what's working, what needs attention, one action this month |
 | 💬 **Inline Chat** | Ask follow-ups right below your story. No tab switch, no help-center feel — it flows like a conversation |
 | 🎛️ **What-If Simulator** | Move sliders to see how income/expense changes affect your score in real time |
@@ -44,14 +44,16 @@ Vitals fixes that. Enter your rough monthly numbers. Get a real score, benchmark
 
 ## How the score works
 
-Each metric is scored independently against a published benchmark, then weighted into a 0–100 composite.
+Each metric earns 0, 10, 18 or 25 points against a published benchmark. The four add up to a score out of 100. The rules live in one place, [`api/core/health.py`](api/core/health.py).
 
-| Metric | Green | Yellow | Red | Source |
-|--------|-------|--------|-----|--------|
-| **Savings rate** | ≥ 20% of take-home | 10–20% | < 10% | 50/30/20 rule |
-| **Debt-to-income** | ≤ 20% of take-home | 20–43% | > 43% | CFPB qualified mortgage threshold |
-| **Emergency fund** | ≥ 3 months expenses | 1–3 months | < 1 month | Fidelity / Vanguard |
-| **Housing ratio** | ≤ 30% of take-home | 30–50% | > 50% | HUD affordability standard |
+| Metric | Full marks (25) | OK (18) | Warning (10) | Danger (0) | Source |
+|--------|-----------------|---------|--------------|------------|--------|
+| **Savings rate** — pay kept after spending and debt payments | ≥ 20% | 10–20% | 0–10% | below 0% | 50/30/20 rule |
+| **Debt-to-income** — monthly debt payments ÷ take-home | ≤ 10% | 10–20% | 20–43% | > 43% | Common lender guidelines |
+| **Emergency fund** — savings ÷ monthly spending | ≥ 6 months | 3–6 months | 1–3 months | < 1 month | Fidelity / Vanguard |
+| **Housing ratio** — rent or mortgage ÷ take-home | ≤ 25% | 25–35% | 35–50% | > 50% | HUD affordability standard (30%), applied to take-home |
+
+> **No cushion, no high score:** with less than one month of spending saved, the score is capped at 50 ("At Risk"), whatever the other metrics say.
 
 > DTI uses **take-home income** (not gross) — your payments come out of what actually hits your account. This gives a stricter and more honest picture than a lender's calculation.
 
