@@ -147,6 +147,8 @@ The payday plan **replaces** the budget page rather than sitting next to it; two
 | **Goals** | Surprise cushion, car fund, trip | Builds up |
 | **Spending money** | Groceries, eating out, fun | Whatever is left; the weekly number |
 
+**Cards and amounts.** Expenses stay, but as rows, not one card each: a bill doesn't build up, and everyday spending lives inside Spending money. Only goals get cards. Bills are fixed dollars, once-in-a-while costs are worked out from amount and due date, only goals can be a percent (of take-home pay), and Spending money is always the remainder.
+
 **Layout:** one number on top, then groups, not one card per bill.
 
 ```
@@ -186,7 +188,7 @@ Goals
 **Rules that keep it honest:**
 
 - **Taking money from a goal is a loan, not a silent withdrawal.** Pay it back over the next paychecks (default), push the date, or shrink the goal. When the cushion covers a surprise, that's shown as a win.
-- **Over-allocating is a plain state, not an error** ("your plan is $85 more than your paycheck"). Nothing is cut silently; the user chooses where it comes from.
+- **Over-allocating is a plain state, not an error, and never blocks adding a card** ("your plan is $85 more than your paycheck"). Nothing is cut silently; the user chooses where it comes from, and bills are never touched.
 - **Suggestions show their source** (for example the 50/30/20 rule, adjusted for real rent). Folk rules with no real source, like "travel should be 5–10% of income", are not used.
 - **Surprises are logged, not purchases.** One question per payday: "anything unexpected?" If the same kind of surprise repeats, Vitals offers to turn it into a once-in-a-while card. Most "surprises" are predictable.
 

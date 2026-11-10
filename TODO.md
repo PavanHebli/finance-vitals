@@ -12,16 +12,28 @@ The reasoning behind this file is in `DECISIONS.md` (see "From budget planner to
 
 ---
 
-## Now — Finish What Is In Flight
+## Now — Payday Plan Project (from Nov 2026)
+
+Mobile first, money logic shared with web, launch after it ships. **Full spec, open decisions and order: `PAYDAY_PLAN.md` (local file, not in git yet).** Status is tracked there; this is the summary.
+
+| Part | What | Status |
+|------|------|--------|
+| A1–A6 | Shared logic: score bug fix, pay schedules, card kinds + migration, pay cycle, over-allocation, tests | ⬜ |
+| B1–B7 | Mobile screens: setup, plan screen, payday check-in, payday notification, once-in-a-while, over-allocation | ⬜ |
+| C1–C8 | Shipping: developer accounts, 12-tester Google test, name, icon, EAS, listings, review, release | ⬜ |
+| D1–D2 | Web parity + "Get the app" link in the web header | ⬜ |
+| E1–E3 | Launch: Show HN, Reddit, Product Hunt | ⬜ |
+
+### Still open from before
 
 | ID | Item | Status |
 |----|------|--------|
-| N1 | **Merge the Expo SDK 58 PR** (`expo-sdk-58`): SDK upgrade, mobile gets its own install, root layout route fix, PDF import upload fix, design icons, Budget page layout. Watch the Railway web build after merge. | 🔄 |
-| N2 | **Merge `ignore-test-plan`** (one `.gitignore` line). | ⬜ |
-| N3 | **Finish the mobile test pass** in `MOBILE_TEST_PLAN.md` (local) — send screenshots of anything broken; fix each as its own small PR. | 🔄 |
-| N4 | **Delete stale branches**: `nextjs-fastapi-prod`, `mobile-monorepo`, `shared-package` (Railway now deploys from `main`). | ⬜ |
-| N5 | **GitHub settings**: require a PR to merge into `main`; auto-delete merged branches. | ⬜ |
-| N6 | **Test sign-in on the live site** (email and Google). The production database has never had a user; confirm Google is enabled in Supabase and the redirect URLs are set. | ⬜ |
+| N4 | Delete stale branches: `nextjs-fastapi-prod`, `PROD_railway_Streamlit` (if no longer needed), `payday-reminder` (merged). | ⬜ |
+| N5 | GitHub settings: require a PR to merge into `main`; auto-delete merged branches. | ⬜ |
+| N6 | Test sign-in on the live site (email and Google). | ⬜ |
+| N7 | Verify the payday reminder in production (incognito check-up → `reminder_opened` / `reminder_set` in Supabase). | ⬜ |
+| N8 | Fix `setup.sh` (root `npm install` for the workspace, mention mobile) and add `CONTRIBUTING.md` before inviting contributors. | ⬜ |
+| N9 | Re-source the 43% debt line in `api/core/export_pdf.py` (still cites the CFPB rule; README already fixed). | ⬜ |
 
 ---
 
@@ -35,12 +47,12 @@ The reasoning behind this file is in `DECISIONS.md` (see "From budget planner to
 | ID | Item | What + why | Where | Status |
 |----|------|-----------|-------|--------|
 | 0.1 | **Re-source the 43% DTI line** | It cites the CFPB qualified-mortgage cap, which the CFPB replaced in 2020. Say "common lender guideline". | `web/src/components/Narrative.tsx`, `api/core/export_pdf.py`, metric citations | ⬜ |
-| 0.2 | **Plain-language metric labels** | "How much of your pay you keep", "Could you handle a surprise?" etc. (table in `DECISIONS.md`). Labels only, no logic change. | `web/src/components/MetricCards.tsx`, `HealthScore.tsx`, mobile `completeness.ts` | ⬜ |
+| 0.2 | **Plain-language metric labels** | "How much of your pay you keep", "Could you handle a surprise?" etc. (table in `DECISIONS.md`). Labels only, no logic change. | `web/src/components/MetricCards.tsx`, `HealthScore.tsx`, mobile `completeness.ts` | ✅ web (mobile pending) |
 | 0.3 | **No-signup "Payday check-up"** — the core of Phase 0. Split into: | | | |
 | 0.3a | Check-up form | Take-home pay, pay schedule (weekly/biweekly/monthly), rent, a checklist of monthly bills, once-in-a-while costs, current savings. Reuses guest mode and the progressive form. | `web/src/app/form` (or new `web/src/app/check-up`) | ⬜ |
 | 0.3b | Check-up result | Headline: **safe to spend per week until payday**. Then "Could you handle a surprise?" (buffer vs $1,000 / one month of essentials), the four plain answers, and one next step. Reuses the score engine and partial scoring. | `web/src/app/results`, `api/core/health.py` | ⬜ |
 | 0.3c | Check-up math in shared code | `safeToSpendPerWeek()`, `setAsidePerPaycheck()`, `bufferTarget()` as pure functions with unit tests, so web and mobile use the same numbers. | `packages/shared/src/` | ⬜ |
-| 0.4 | **Reminder opt-in** `[was #18, #28]` | After the result: "Remind me on my next payday." Generates a `.ics` calendar event (no backend) that opens Vitals. | `web/src/components/ExportMenu.tsx` | ⬜ |
+| 0.4 | **Reminder opt-in** `[was #18, #28]` | After the result: "Remind me on my next payday." Generates a `.ics` calendar event (no backend) that opens Vitals. | `web/src/components/PaydayReminder.tsx` | ✅ |
 | 0.5 | **Email opt-in (optional)** `[part of #21]` | "Email me on payday" — store the email in a Supabase table with consent. Update the privacy policy first. Sending comes in Phase 1. | new table, `web/src/app/privacy` | ⬜ |
 | 0.6 | **Gate analytics events** | `checkup_started`, `checkup_completed`, `reminder_set`, `email_optin`. No financial numbers. | `web/src/lib/analytics`, `api/core/analytics.py` | ⬜ |
 | 0.7 | **Landing page rewrite** | New promise: "Know what's safe to spend until payday — in one minute, without linking your bank." CTA goes to the check-up. Keep the trust bar and founder card. | `web/src/app/page.tsx` | ⬜ |
