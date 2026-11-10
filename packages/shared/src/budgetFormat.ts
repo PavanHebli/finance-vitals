@@ -181,6 +181,7 @@ export function budgetToFormData(
   profile: FinancialProfile
 ): Record<string, unknown> {
   const incomeCard  = budgetCards.find(c => c.type === "income")!;
+  const cashCard    = budgetCards.find(c => c.type === "cash");
   const customCards = budgetCards.filter(c => c.type === "custom" && !c.paused);
 
   // Use last split amount as monthly income proxy; fall back to pending balance
@@ -220,6 +221,17 @@ export function budgetToFormData(
     .filter(c => !classifiedExpenseIds.has(c.id))
     .reduce((sum, c) => sum + cardAmount(c), 0);
 
+  // Money left in Cash in Hand gets spent (groceries, eating out, fun), so it
+  // counts as spending. Counting it as saved made the budget page score far
+  // higher than the check-up for the same person.
+  let cashAmount = 0;
+  if (lastAlloc && cashCard) {
+    cashAmount = lastAlloc.get(cashCard.id) ?? 0;
+  } else {
+    const allocatedTotal = customCards.reduce((sum, c) => sum + cardAmount(c), 0);
+    cashAmount = Math.max(0, income - allocatedTotal);
+  }
+
   // A card always wins when one exists; the Financial Profile's manual
   // housingMonthly/expensesMonthly are only a fallback for whatever isn't
   // represented by a card yet, so a real card never gets silently
@@ -229,9 +241,13 @@ export function budgetToFormData(
   const transportAmount  = transport ? cardAmount(transport) : 0;
   const diningAmount     = dining    ? cardAmount(dining)    : 0;
   const subsAmount       = subs      ? cardAmount(subs)      : 0;
-  // The manual "monthly expenses" fallback only applies when there are no
-  // expense cards at all — once even one exists, we trust the cards.
-  const otherAmount = unclassifiedCardTotal + (expenseCards.length === 0 ? (profile.expensesMonthly ?? 0) : 0);
+  // With no expense cards, a manual "monthly expenses" answer is the user's
+  // own figure for everyday spending, so it wins over the Cash in Hand guess
+  // (counting both would count the same spending twice). Once even one
+  // expense card exists, we trust the cards plus Cash in Hand.
+  const otherAmount = expenseCards.length === 0
+    ? (profile.expensesMonthly ?? cashAmount)
+    : unclassifiedCardTotal + cashAmount;
 
   const expensesTotal = rentAmount + groceriesAmount + transportAmount + diningAmount + subsAmount + otherAmount;
 
