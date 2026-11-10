@@ -68,3 +68,6 @@ CLAUDE.md
 # Streamlit agent skills (environment-specific symlinks)
 .agents/skills/developing-with-streamlit
 .claude/skills/developing-with-streamlit
+
+# Local-only plan for the payday project (kept out of git for now)
+PAYDAY_PLAN.md

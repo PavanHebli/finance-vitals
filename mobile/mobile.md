@@ -74,6 +74,10 @@ Build in this order, each piece visible on its own with sample data first, then 
 - [x] **F7. Delete account** — Calls the backend `DELETE /account`.
 - [ ] **F8. Footer** — Disclaimer, version, feedback link. **Fix the wording**: the design says "Data stays on your device", which is wrong now that signed-in data is stored in Supabase.
 
+## Next: the payday plan
+
+The Budget tab is being rebuilt as the payday plan (pay schedules, bills that reset, goals that build up, a weekly spending number, payday check-in and notification), together with the App Store/Play Store release. The spec and checklist live in `PAYDAY_PLAN.md` at the repo root (local file, not in git yet); new mobile work is tracked there, not here.
+
 ## G. After V1 (deliberately later)
 
 - [x] **G1. Chat** — Floating chat button and chat bottom sheet with starter questions (design shows it on Budget). Needs the streaming test on React Native first.
