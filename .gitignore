@@ -71,3 +71,6 @@ CLAUDE.md
 
 # Local-only plan for the payday project (kept out of git for now)
 PAYDAY_PLAN.md
+
+# Compiled output of packages/shared/test.sh
+packages/shared/.test-build/
