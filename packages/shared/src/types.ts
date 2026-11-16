@@ -125,6 +125,13 @@ export interface FinancialProfile {
   expensesMonthly?: number;
 }
 
+// What a custom card holds, for the payday plan:
+// bill        resets every paycheck (rent, phone, car payment)
+// occasional  builds up toward a bill with a due date (car insurance in Feb)
+// goal        builds up toward a target (cushion, trip)
+// Cards saved before kinds existed only have `purpose`; use cardKind().
+export type CardKind = "bill" | "occasional" | "goal";
+
 export interface BudgetCard {
   id: string;
   label: string;
@@ -139,6 +146,10 @@ export interface BudgetCard {
   description?: string;
   goalAmount?: number;
   savedSoFar?: number;
+  kind?: CardKind;
+  dueDate?: string;     // "YYYY-MM-DD", occasional cards
+  targetDate?: string;  // "YYYY-MM-DD", goals (optional)
+  isHousing?: boolean;  // the bill that is rent or mortgage
 }
 
 export interface DistributionLogEntry {

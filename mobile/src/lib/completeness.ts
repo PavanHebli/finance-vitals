@@ -1,10 +1,11 @@
+// The rent card: same rule as web and the score (marked card first, then name).
+import { findHousingCard } from "@vitals/shared";
 import type { BudgetCard, DistributionLogEntry, FinancialProfile, MetricScores } from "@vitals/shared";
 
 // Which of the four metrics have enough information to be shown, and the
 // partial score built from only those. Ported from the web budget page, so
 // keep the two in step if the rules change.
 
-const HOUSING_PATTERNS = [/rent/i, /mortgage/i, /housing/i, /home\s*loan/i, /hoa/i];
 
 export type MetricName = "savingsRate" | "debtToIncome" | "emergencyFund" | "housingRatio";
 
@@ -36,14 +37,6 @@ export function monthlyIncome(cards: BudgetCard[], log: DistributionLogEntry[]):
   return log[0]?.incomeAmount ?? cards.find((c) => c.type === "income")?.balance ?? 0;
 }
 
-export function findHousingCard(cards: BudgetCard[]): BudgetCard | undefined {
-  return cards.find(
-    (c) =>
-      c.type === "custom" &&
-      (c.purpose ?? "expense") === "expense" &&
-      HOUSING_PATTERNS.some((p) => p.test(c.label + " " + (c.description ?? "")))
-  );
-}
 
 export function checkCompleteness(
   cards: BudgetCard[],
