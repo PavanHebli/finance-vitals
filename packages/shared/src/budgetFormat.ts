@@ -1,4 +1,31 @@
-import type { BudgetCard, UserGoal, MetricKey, DistributionLogEntry, FinancialProfile, FormData } from "./types";
+import type { BudgetCard, CardKind, UserGoal, MetricKey, DistributionLogEntry, FinancialProfile, FormData } from "./types";
+
+// ── Card kinds ─────────────────────────────────────────────────────────────
+
+// The kind of a custom card. Cards saved before kinds existed only have a
+// purpose: expense counts as a bill, saving as a goal.
+export function cardKind(card: BudgetCard): CardKind {
+  if (card.kind) return card.kind;
+  return card.purpose === "saving" ? "goal" : "bill";
+}
+
+// The kind that matches a purpose, used while the card screens still ask
+// "expense or saving" instead of the kind directly.
+export function kindForPurpose(purpose: "expense" | "saving"): CardKind {
+  return purpose === "saving" ? "goal" : "bill";
+}
+
+// Word boundaries matter: a plain /rent/ also matched "Parents" and "Current".
+const HOUSING_NAME = /\b(rent|mortgage|housing|home\s*loan|hoa)\b/i;
+
+// The bill that is rent or mortgage. A card the user marked as housing wins;
+// otherwise fall back to guessing from the card's name and description.
+export function findHousingCard(cards: BudgetCard[]): BudgetCard | undefined {
+  const bills = cards.filter(c => c.type === "custom" && !c.paused && cardKind(c) === "bill");
+  const marked = bills.find(c => c.isHousing);
+  if (marked) return marked;
+  return bills.find(c => HOUSING_NAME.test(c.label + " " + (c.description ?? "")));
+}
 
 // ── Supabase row mapping ────────────────────────────────────────────────────
 // Converts between the store's camelCase shapes and the DB's snake_case
@@ -18,6 +45,10 @@ interface BudgetCardRow {
   description: string | null;
   goal_amount: number | null;
   saved_so_far: number | null;
+  kind: CardKind | null;
+  due_date: string | null;
+  target_date: string | null;
+  is_housing: boolean | null;
   created_at: string;
 }
 
@@ -36,6 +67,10 @@ export function budgetCardToRow(card: BudgetCard, userId: string, sortOrder: num
     description: card.description ?? null,
     goal_amount: card.goalAmount ?? null,
     saved_so_far: card.savedSoFar ?? null,
+    kind: card.type === "custom" ? cardKind(card) : null,
+    due_date: card.dueDate ?? null,
+    target_date: card.targetDate ?? null,
+    is_housing: card.isHousing ?? false,
     sort_order: sortOrder,
   };
 }
@@ -55,6 +90,10 @@ export function rowToBudgetCard(row: BudgetCardRow): BudgetCard {
     description: row.description ?? undefined,
     goalAmount: row.goal_amount ?? undefined,
     savedSoFar: row.saved_so_far ?? undefined,
+    kind: row.kind ?? undefined,
+    dueDate: row.due_date ?? undefined,
+    targetDate: row.target_date ?? undefined,
+    isHousing: row.is_housing ?? false,
   };
 }
 
@@ -201,12 +240,13 @@ export function budgetToFormData(
     return 0;
   }
 
-  // Split by user-confirmed purpose — saving cards never pollute expense ratios
-  const expenseCards = customCards.filter(c => (c.purpose ?? "expense") === "expense");
-  const savingCards  = customCards.filter(c => c.purpose === "saving");
+  // Bills and once-in-a-while costs are spending; goals are saving, so they
+  // never pollute expense ratios.
+  const expenseCards = customCards.filter(c => cardKind(c) !== "goal");
+  const savingCards  = customCards.filter(c => cardKind(c) === "goal");
 
   // Within expense cards, pattern-match for specific buckets
-  const housing   = expenseCards.find(c => /rent|hous|mortg/i.test(c.label));
+  const housing   = findHousingCard(expenseCards);
   const transport = expenseCards.find(c => /transport|commut|fuel|petrol|gas/i.test(c.label));
   const groceries = expenseCards.find(c => /grocer|food|supermark/i.test(c.label));
   const dining    = expenseCards.find(c => /din|restaur|eat.?out|takeout/i.test(c.label));

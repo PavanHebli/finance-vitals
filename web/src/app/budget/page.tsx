@@ -7,6 +7,7 @@ import { useStore, budgetToFormData } from "@/lib/store";
 import { fetchScore, streamNarrative } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
 import type { BudgetCard, DistributionLogEntry, FinancialProfile, Metrics, MetricScores } from "@/lib/types";
+import { findHousingCard } from "@vitals/shared";
 import { ImportPDFModal } from "@/components/ImportPDFModal";
 
 // ── Auto-classifier ───────────────────────────────────────────────────────────
@@ -41,7 +42,6 @@ function classifyCard(name: string, description = ""): "expense" | "saving" {
 
 // ── Metric completeness ───────────────────────────────────────────────────────
 
-const HOUSING_PATTERNS = [/rent/i, /mortgage/i, /housing/i, /home\s*loan/i, /hoa/i];
 
 interface MetricStatus { complete: boolean; hint: string | null; }
 interface BudgetCompleteness {
@@ -62,9 +62,7 @@ function checkCompleteness(
   const expenseCards  = custom.filter(c => (c.purpose ?? "expense") === "expense");
   const savingCards   = custom.filter(c => c.purpose === "saving");
   const hasSavings    = savingCards.length > 0 || (profile.profileComplete && profile.savingsTotal > 0);
-  const hasHousingCard = expenseCards.some(c =>
-    HOUSING_PATTERNS.some(p => p.test(c.label + " " + (c.description ?? "")))
-  );
+  const hasHousingCard = findHousingCard(expenseCards) !== undefined;
   // A card always counts as "answered" when it exists; the profile's manual
   // fallback (housingMonthly/expensesMonthly) only fills the gap when no
   // card exists yet — undefined means "never answered," 0 is a real answer.
@@ -1505,7 +1503,7 @@ function FinancialProfileCard({
   // fallback for whatever isn't represented by a card yet, so they get out
   // of the way (become a read-only note) the moment a real card shows up.
   const expenseCards = budgetCards.filter(c => c.type === "custom" && (c.purpose ?? "expense") === "expense");
-  const housingCard  = expenseCards.find(c => HOUSING_PATTERNS.some(p => p.test(c.label + " " + (c.description ?? ""))));
+  const housingCard  = findHousingCard(expenseCards);
   const hasExpenseCard = expenseCards.length > 0;
 
   return (
@@ -1596,9 +1594,7 @@ export default function BudgetPage() {
   // explanation of what produced it.
   const expenseCardsForSource = customCards.filter(c => (c.purpose ?? "expense") === "expense");
   const savingCardsForSource  = customCards.filter(c => c.purpose === "saving");
-  const housingCardForSource  = expenseCardsForSource.find(c =>
-    HOUSING_PATTERNS.some(p => p.test(c.label + " " + (c.description ?? "")))
-  );
+  const housingCardForSource  = findHousingCard(expenseCardsForSource);
   const metricSources: Record<keyof BudgetCompleteness, string> = {
     savingsRate: savingCardsForSource.length > 0
       ? `${savingCardsForSource.length} saving card${savingCardsForSource.length > 1 ? "s" : ""}${financialProfile.profileComplete ? " + your profile's total savings" : ""}`

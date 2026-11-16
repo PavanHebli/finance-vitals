@@ -74,3 +74,6 @@ PAYDAY_PLAN.md
 
 # Compiled output of packages/shared/test.sh
 packages/shared/.test-build/
+
+# Local list of tracked links for recruiters and outreach
+TRACKING_LINKS.md

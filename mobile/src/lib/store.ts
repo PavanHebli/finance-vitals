@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { randomUUID } from "expo-crypto";
-import { budgetCardToRow, goalToRow } from "@vitals/shared";
+import { budgetCardToRow, goalToRow, kindForPurpose } from "@vitals/shared";
 import type {
   BudgetCard,
   DistributionLogEntry,
@@ -161,8 +161,10 @@ export const useStore = create<MobileStore>()((set, get) => ({
   },
 
   updateBudgetCard: (id, updates) => {
+    // Until the card screens ask for a kind directly, the kind follows the purpose.
+    const changes = updates.purpose !== undefined ? { ...updates, kind: kindForPurpose(updates.purpose) } : updates;
     set((s) => ({
-      budgetCards: s.budgetCards.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+      budgetCards: s.budgetCards.map((c) => (c.id === id ? { ...c, ...changes } : c)),
     }));
     if (get().userId) {
       // Only send the columns that actually changed, under their database names.
@@ -171,7 +173,7 @@ export const useStore = create<MobileStore>()((set, get) => ({
       if (updates.allocationMode !== undefined) row.allocation_mode = updates.allocationMode;
       if (updates.allocationValue !== undefined) row.allocation_value = updates.allocationValue;
       if (updates.color !== undefined) row.color = updates.color;
-      if (updates.purpose !== undefined) row.purpose = updates.purpose;
+      if (updates.purpose !== undefined) { row.purpose = updates.purpose; row.kind = kindForPurpose(updates.purpose); }
       if (updates.description !== undefined) row.description = updates.description;
       if (updates.goalAmount !== undefined) row.goal_amount = updates.goalAmount;
       if (updates.savedSoFar !== undefined) row.saved_so_far = updates.savedSoFar;
