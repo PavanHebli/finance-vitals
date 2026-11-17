@@ -9,12 +9,13 @@ import { useStore } from "@/lib/store";
 export function AccountHydrator() {
   useEffect(() => {
     async function loadUserData(userId: string) {
-      const [cardsRes, goalsRes, logRes, profileRes, snapsRes] = await Promise.all([
+      const [cardsRes, goalsRes, logRes, profileRes, snapsRes, settingsRes] = await Promise.all([
         supabase.from("budget_cards").select("*").eq("user_id", userId).order("sort_order"),
         supabase.from("goals").select("*").eq("user_id", userId),
         supabase.from("distribution_log").select("*").eq("user_id", userId).order("timestamp", { ascending: false }),
         supabase.from("profiles").select("financial_profile").eq("id", userId).single(),
         supabase.from("snapshots").select("*").eq("user_id", userId).order("saved_at"),
+        supabase.from("user_settings").select("pay_frequency, next_payday, pay_timezone").eq("user_id", userId).maybeSingle(),
       ]);
 
       const store = useStore.getState();
@@ -42,6 +43,19 @@ export function AccountHydrator() {
       );
       store.setGoals((goalsRes.data ?? []).map(rowToGoal));
       store.setDistributionLog((logRes.data ?? []).map(rowToDistributionEntry));
+
+      // The pay schedule, if this user has set one up. Loaded with setState
+      // rather than setPaySchedule, which would save it straight back.
+      const settings = settingsRes.data;
+      if (settings?.pay_frequency && settings.next_payday) {
+        useStore.setState({
+          paySchedule: {
+            frequency: settings.pay_frequency,
+            nextPayday: settings.next_payday,
+            payTimezone: settings.pay_timezone ?? undefined,
+          },
+        });
+      }
       // Set last: once the user id is set, every change starts saving to the
       // database, so everything above must already be loaded.
       store.setFinancialProfile(profileRes.data?.financial_profile ?? {});
