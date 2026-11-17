@@ -9,6 +9,8 @@ const {
   daysBetween,
   perPaycheckToMonthly,
   monthlyToPerPaycheck,
+  perPaycheckToWeekly,
+  addDays,
   todayString,
   todayInTimezone,
 } = require("../.test-build/paySchedule.js");
@@ -81,4 +83,12 @@ test("today in the pay time zone, not where the phone is", () => {
   // An unknown time zone falls back to the device's date instead of crashing.
   assert.equal(todayInTimezone("Not/AZone", moment), todayString(moment));
   assert.equal(todayInTimezone(undefined, moment), todayString(moment));
+});
+
+test("adding days and weekly amounts", () => {
+  assert.equal(addDays("2026-11-30", 1), "2026-12-01");
+  assert.equal(addDays("2027-01-01", -1), "2026-12-31");
+  assert.equal(perPaycheckToWeekly(1000, "biweekly"), 500);
+  assert.equal(perPaycheckToWeekly(1300, "semimonthly"), 600);
+  assert.equal(perPaycheckToWeekly(2600, "monthly"), 600);
 });

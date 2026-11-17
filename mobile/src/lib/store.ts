@@ -135,6 +135,7 @@ export const useStore = create<MobileStore>()((set, get) => ({
           pay_frequency: schedule.frequency,
           next_payday: schedule.nextPayday,
           pay_timezone: schedule.payTimezone ?? null,
+          paycheck_amount: schedule.paycheckAmount ?? null,
         })
       );
     }

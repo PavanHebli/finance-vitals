@@ -15,7 +15,7 @@ export function AccountHydrator() {
         supabase.from("distribution_log").select("*").eq("user_id", userId).order("timestamp", { ascending: false }),
         supabase.from("profiles").select("financial_profile").eq("id", userId).single(),
         supabase.from("snapshots").select("*").eq("user_id", userId).order("saved_at"),
-        supabase.from("user_settings").select("pay_frequency, next_payday, pay_timezone").eq("user_id", userId).maybeSingle(),
+        supabase.from("user_settings").select("pay_frequency, next_payday, pay_timezone, paycheck_amount").eq("user_id", userId).maybeSingle(),
       ]);
 
       const store = useStore.getState();
@@ -53,6 +53,7 @@ export function AccountHydrator() {
             frequency: settings.pay_frequency,
             nextPayday: settings.next_payday,
             payTimezone: settings.pay_timezone ?? undefined,
+            paycheckAmount: settings.paycheck_amount ?? undefined,
           },
         });
       }
