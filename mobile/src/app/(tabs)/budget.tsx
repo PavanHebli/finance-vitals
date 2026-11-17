@@ -38,6 +38,7 @@ export default function Budget() {
   const narrative = useStore((s) => s.narrativeText);
   const narrativeLoading = useStore((s) => s.narrativeLoading);
   const distributeBudget = useStore((s) => s.distributeBudget);
+  const paySchedule = useStore((s) => s.paySchedule);
 
   const [selected, setSelected] = useState<MetricName | null>(null);
   const [calculating, setCalculating] = useState(false);
@@ -136,6 +137,17 @@ export default function Budget() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {!paySchedule && (
+          <Pressable
+            onPress={() => router.push("/plan-setup")}
+            style={[styles.setupBanner, { backgroundColor: theme.brandSoft, borderColor: theme.brand }]}
+          >
+            <Text style={[styles.setupTitle, { color: theme.text }]}>Plan your paycheck</Text>
+            <Text style={{ color: theme.textMuted, fontSize: 13 }}>
+              See what you can spend each week after rent and bills. About a minute.
+            </Text>
+          </Pressable>
+        )}
         <ScoreCard
           score={shownScore}
           label={mirror?.label ?? null}
@@ -211,6 +223,8 @@ const styles = StyleSheet.create({
   headerButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
   iconButton: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   content: { paddingBottom: 40, gap: 12 },
+  setupBanner: { marginHorizontal: 16, borderWidth: 1.5, borderRadius: 14, padding: 14, gap: 4 },
+  setupTitle: { fontSize: 16, fontWeight: "800" },
   insight: { marginHorizontal: 12, borderWidth: 1, borderRadius: 12, padding: 10, flexDirection: "row", gap: 8 },
   insightIcon: { width: 22, height: 22, borderRadius: 6, alignItems: "center", justifyContent: "center", marginTop: 1 },
   insightTitle: { fontSize: 11, fontWeight: "700" },

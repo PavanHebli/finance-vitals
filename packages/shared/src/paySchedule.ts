@@ -11,6 +11,7 @@ export interface PaySchedule {
   frequency: PayFrequency;
   nextPayday: string;    // "YYYY-MM-DD"
   payTimezone?: string;  // where the user is paid, e.g. "America/Chicago"
+  paycheckAmount?: number; // take-home pay per paycheck
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -60,6 +61,11 @@ export function deviceTimezone(): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+// The date `days` days after `date` (negative goes back).
+export function addDays(date: string, days: number): string {
+  return format(new Date(parse(date).getTime() + days * DAY_MS));
 }
 
 // Whole days from one date to another (negative if `to` is earlier).
@@ -141,6 +147,12 @@ export function paychecksPerYear(frequency: PayFrequency): number {
 // A per-paycheck amount as a monthly amount (the score works in months).
 export function perPaycheckToMonthly(amount: number, frequency: PayFrequency): number {
   return (amount * paychecksPerYear(frequency)) / 12;
+}
+
+// A per-paycheck amount spread over a week: what a paycheck's spending money
+// works out to per week, on average across the year.
+export function perPaycheckToWeekly(amount: number, frequency: PayFrequency): number {
+  return Math.round(((amount * paychecksPerYear(frequency)) / 52) * 100) / 100;
 }
 
 // A monthly bill as each paycheck's share of it, rounded to cents.
