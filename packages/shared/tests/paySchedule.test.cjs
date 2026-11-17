@@ -8,7 +8,9 @@ const {
   weeksUntil,
   daysBetween,
   perPaycheckToMonthly,
+  monthlyToPerPaycheck,
   todayString,
+  todayInTimezone,
 } = require("../.test-build/paySchedule.js");
 
 test("biweekly paydays are 14 days apart, across month and year ends", () => {
@@ -62,4 +64,21 @@ test("per-paycheck amounts convert to monthly", () => {
 
 test("today is the device's local calendar date", () => {
   assert.equal(todayString(new Date(2026, 10, 10, 23, 30)), "2026-11-10");
+});
+
+test("monthly bills as each paycheck's share", () => {
+  assert.equal(monthlyToPerPaycheck(1300, "biweekly"), 600);
+  assert.equal(monthlyToPerPaycheck(1300, "semimonthly"), 650);
+  assert.equal(monthlyToPerPaycheck(1300, "monthly"), 1300);
+  assert.equal(monthlyToPerPaycheck(100, "biweekly"), 46.15);
+});
+
+test("today in the pay time zone, not where the phone is", () => {
+  // 2026-11-20 03:00 UTC is still Nov 19 in Austin, already Nov 20 in Tokyo.
+  const moment = new Date(Date.UTC(2026, 10, 20, 3, 0));
+  assert.equal(todayInTimezone("America/Chicago", moment), "2026-11-19");
+  assert.equal(todayInTimezone("Asia/Tokyo", moment), "2026-11-20");
+  // An unknown time zone falls back to the device's date instead of crashing.
+  assert.equal(todayInTimezone("Not/AZone", moment), todayString(moment));
+  assert.equal(todayInTimezone(undefined, moment), todayString(moment));
 });

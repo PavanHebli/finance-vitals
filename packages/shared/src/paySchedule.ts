@@ -9,7 +9,8 @@ export type PayFrequency = "biweekly" | "semimonthly" | "monthly";
 
 export interface PaySchedule {
   frequency: PayFrequency;
-  nextPayday: string; // "YYYY-MM-DD"
+  nextPayday: string;    // "YYYY-MM-DD"
+  payTimezone?: string;  // where the user is paid, e.g. "America/Chicago"
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -37,6 +38,28 @@ export function todayString(now: Date = new Date()): string {
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+// Today's date in a given time zone, as "YYYY-MM-DD". Used with the pay time
+// zone, so travelling doesn't move "is it payday yet". Falls back to the
+// device's own date if the time zone is unknown.
+export function todayInTimezone(timeZone: string | undefined, now: Date = new Date()): string {
+  if (!timeZone) return todayString(now);
+  try {
+    // "en-CA" formats dates as YYYY-MM-DD.
+    return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  } catch {
+    return todayString(now);
+  }
+}
+
+// The device's time zone, e.g. "America/Chicago", or undefined if unknown.
+export function deviceTimezone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 // Whole days from one date to another (negative if `to` is earlier).
@@ -118,4 +141,11 @@ export function paychecksPerYear(frequency: PayFrequency): number {
 // A per-paycheck amount as a monthly amount (the score works in months).
 export function perPaycheckToMonthly(amount: number, frequency: PayFrequency): number {
   return (amount * paychecksPerYear(frequency)) / 12;
+}
+
+// A monthly bill as each paycheck's share of it, rounded to cents.
+// Rent of $1,300 a month is $600 a paycheck when paid every two weeks
+// (1,300 x 12 / 26), $650 when paid twice a month.
+export function monthlyToPerPaycheck(amount: number, frequency: PayFrequency): number {
+  return Math.round(((amount * 12) / paychecksPerYear(frequency)) * 100) / 100;
 }

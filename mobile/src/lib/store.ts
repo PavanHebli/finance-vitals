@@ -3,7 +3,9 @@ import { randomUUID } from "expo-crypto";
 import { budgetCardToRow, goalToRow, kindForPurpose } from "@vitals/shared";
 import type {
   BudgetCard,
+  CardKind,
   DistributionLogEntry,
+  PaySchedule,
   FinancialProfile,
   FormData,
   Metrics,
@@ -71,6 +73,8 @@ interface MobileStore {
   snapshots: Snapshot[];
   // Signed-in user id. null means guest.
   userId: string | null;
+  // The pay schedule for the payday plan. null until the user sets it up.
+  paySchedule: PaySchedule | null;
 
   addBudgetIncome: (amount: number) => void;
   addBudgetCard: (label: string, allocationMode: "percent" | "fixed", allocationValue: number, color: string, purpose: "expense" | "saving", description: string, goalAmount?: number) => void;
@@ -81,6 +85,8 @@ interface MobileStore {
   toggleBudgetPause: (id: string) => void;
   distributeBudget: () => { success: true } | { success: false; error: string };
   setFinancialProfile: (updates: Partial<FinancialProfile>) => void;
+  setPaySchedule: (schedule: PaySchedule) => void;
+  addPlanCard: (card: { label: string; kind: CardKind; amountPerPaycheck: number; color: string; isHousing?: boolean; goalAmount?: number; dueDate?: string }) => void;
 
   addGoal: (goal: UserGoal) => void;
   removeGoal: (id: string) => void;
@@ -115,6 +121,59 @@ export const useStore = create<MobileStore>()((set, get) => ({
   formData: DEFAULT_FORM,
   snapshots: [],
   userId: null,
+  paySchedule: null,
+
+  // Save the pay schedule. Signed-in users get it in user_settings too
+  // (upsert, because the settings row may not exist yet).
+  setPaySchedule: (schedule) => {
+    set({ paySchedule: schedule });
+    const { userId } = get();
+    if (userId) {
+      saveInBackground(
+        supabase.from("user_settings").upsert({
+          user_id: userId,
+          pay_frequency: schedule.frequency,
+          next_payday: schedule.nextPayday,
+          pay_timezone: schedule.payTimezone ?? null,
+        })
+      );
+    }
+  },
+
+  // Add a card for the payday plan: a bill, a once-in-a-while cost or a goal,
+  // with a fixed amount per paycheck. The older card screens still read
+  // `purpose`, so it is set to match the kind.
+  addPlanCard: ({ label, kind, amountPerPaycheck, color, isHousing, goalAmount, dueDate }) => {
+    const newCard: BudgetCard = {
+      id: randomUUID(),
+      label,
+      type: "custom",
+      allocationMode: "fixed",
+      allocationValue: amountPerPaycheck,
+      balance: 0,
+      paused: false,
+      color,
+      purpose: kind === "goal" ? "saving" : "expense",
+      createdAt: new Date().toISOString(),
+      kind,
+      isHousing: isHousing ?? false,
+      ...(goalAmount && goalAmount > 0 ? { goalAmount } : {}),
+      ...(dueDate ? { dueDate } : {}),
+    };
+    const customCountBefore = get().budgetCards.filter((c) => c.type === "custom").length;
+    // Like addBudgetCard: new cards go before the Float card, which stays last.
+    set((s) => ({
+      budgetCards: [
+        ...s.budgetCards.filter((c) => c.type !== "cash"),
+        newCard,
+        ...s.budgetCards.filter((c) => c.type === "cash"),
+      ],
+    }));
+    const { userId } = get();
+    if (userId) {
+      saveInBackground(supabase.from("budget_cards").insert(budgetCardToRow(newCard, userId, 2 + customCountBefore)));
+    }
+  },
 
   addBudgetIncome: (amount) => {
     set((s) => ({
@@ -401,6 +460,7 @@ export const useStore = create<MobileStore>()((set, get) => ({
   resetToGuestState: () =>
     set({
       userId: null,
+      paySchedule: null,
       budgetCards: defaultBudgetCards(),
       goals: [],
       distributionLog: [],
