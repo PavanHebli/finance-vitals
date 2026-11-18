@@ -8,7 +8,8 @@ import { useAppTheme, useIsDark } from "@/hooks/use-app-theme";
 import { API_URL } from "@/lib/api-config";
 import { signOut } from "@/lib/auth";
 import { usePrefs } from "@/lib/prefs";
-import { setWeeklyReminder } from "@/lib/reminders";
+import { formatDay } from "@/lib/format";
+import { allowNotifications, reminderTime, sendTestReminder } from "@/lib/reminders";
 import { useStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 
@@ -21,6 +22,7 @@ export default function Me() {
   const userId = useStore((s) => s.userId);
   const overall = useStore((s) => s.overallScore);
   const resetToGuestState = useStore((s) => s.resetToGuestState);
+  const schedule = useStore((s) => s.paySchedule);
   const [message, setMessage] = useState("");
 
   async function leave() {
@@ -28,12 +30,30 @@ export default function Me() {
     router.replace("/sign-in");
   }
 
-  async function toggleWeekly(on: boolean) {
-    prefs.setWeeklyCheckin(on);
-    const ok = await setWeeklyReminder(on);
-    if (!ok) {
-      prefs.setWeeklyCheckin(false);
+  // Turning it on asks for permission first. The reminder itself is
+  // scheduled by PaydayReminder (components/payday-reminder.tsx).
+  async function togglePayday(on: boolean) {
+    if (on && !(await allowNotifications())) {
       setMessage("Allow notifications in Settings to get reminders.");
+      return;
+    }
+    prefs.setPaydayReminder(on);
+  }
+
+  async function testReminder() {
+    const ok = await sendTestReminder();
+    setMessage(ok ? "Test reminder in 5 seconds. Lock the phone or leave the app to see it." : "Allow notifications in Settings first.");
+  }
+
+  // When the next reminder goes off, if it's scheduled.
+  let reminderText = "";
+  if (prefs.paydayReminder) {
+    if (!schedule) {
+      reminderText = "Set up your payday plan on the Budget tab to get it.";
+    } else if (reminderTime(schedule.nextPayday).getTime() > Date.now()) {
+      reminderText = `Next: ${formatDay(schedule.nextPayday)} at 9:00 AM`;
+    } else {
+      reminderText = "It's payday now: check in from the Budget tab.";
     }
   }
 
@@ -114,9 +134,17 @@ export default function Me() {
         <Text style={[styles.section, { color: theme.textMuted }]}>NOTIFICATIONS</Text>
         <View style={card}>
           <View style={styles.row}>
-            <Text style={{ color: theme.text, fontSize: 14 }}>Weekly check-in</Text>
-            <Switch value={prefs.weeklyCheckin} onValueChange={toggleWeekly} trackColor={{ true: theme.brand }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.text, fontSize: 14 }}>Payday reminder</Text>
+              {reminderText !== "" && <Text style={{ color: theme.textMuted, fontSize: 12 }}>{reminderText}</Text>}
+            </View>
+            <Switch value={prefs.paydayReminder} onValueChange={togglePayday} trackColor={{ true: theme.brand }} />
           </View>
+          {__DEV__ && (
+            <Pressable onPress={testReminder}>
+              <Text style={{ color: theme.brand, fontSize: 14, fontWeight: "600" }}>Send a test reminder (development only)</Text>
+            </Pressable>
+          )}
           <View style={styles.row}>
             <Text style={{ color: theme.text, fontSize: 14 }}>Goal milestones</Text>
             <Switch value={prefs.goalMilestones} onValueChange={prefs.setGoalMilestones} trackColor={{ true: theme.brand }} />
