@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { randomUUID } from "expo-crypto";
-import { budgetCardToRow, goalToRow, kindForPurpose } from "@vitals/shared";
+import { budgetCardToRow, goalToRow, kindForPurpose, startPaycheck } from "@vitals/shared";
 import type {
   BudgetCard,
   CardKind,
@@ -84,6 +84,7 @@ interface MobileStore {
   deleteBudgetCard: (id: string) => void;
   toggleBudgetPause: (id: string) => void;
   distributeBudget: () => { success: true } | { success: false; error: string };
+  checkInPaycheck: (amount: number, payday: string) => void;
   setFinancialProfile: (updates: Partial<FinancialProfile>) => void;
   setPaySchedule: (schedule: PaySchedule) => void;
   addPlanCard: (card: { label: string; kind: CardKind; amountPerPaycheck: number; color: string; isHousing?: boolean; goalAmount?: number; dueDate?: string; balance?: number }) => void;
@@ -311,6 +312,51 @@ export const useStore = create<MobileStore>()((set, get) => ({
 
   // The Split button: spread the Income balance across the active cards.
   // Fixed-dollar cards first, then percent cards, and Float gets the rest.
+  // The payday check-in: apply this paycheck to the plan. Bills reset,
+  // once-in-a-while costs and goals build up, Spending money is set to what's
+  // left, and the next payday moves forward. Replaces Split once a plan exists.
+  checkInPaycheck: (amount, payday) => {
+    const { budgetCards, distributionLog, paySchedule } = get();
+    if (!paySchedule) return;
+
+    const result = startPaycheck(budgetCards, amount, payday, paySchedule.frequency);
+    const cash = result.cards.find((c) => c.type === "cash");
+
+    const entry: DistributionLogEntry = {
+      id: randomUUID(),
+      timestamp: new Date().toISOString(),
+      incomeAmount: amount,
+      allocations: [
+        ...result.plan.allocations,
+        ...(cash ? [{ cardId: cash.id, label: cash.label, amount: result.plan.spendingMoney }] : []),
+      ],
+    };
+
+    set({ budgetCards: result.cards, distributionLog: [entry, ...distributionLog] });
+    // Saves the new next payday (and this paycheck's amount) like any schedule change.
+    get().setPaySchedule({ ...paySchedule, nextPayday: result.nextPayday, paycheckAmount: amount });
+
+    const { userId } = get();
+    if (userId) {
+      // Save only the cards whose balance changed, then the log entry.
+      const oldBalances = new Map(budgetCards.map((c) => [c.id, c.balance]));
+      for (const card of result.cards) {
+        if (card.balance !== oldBalances.get(card.id)) {
+          saveInBackground(supabase.from("budget_cards").update({ balance: card.balance }).eq("id", card.id));
+        }
+      }
+      saveInBackground(
+        supabase.from("distribution_log").insert({
+          id: entry.id,
+          user_id: userId,
+          income_amount: entry.incomeAmount,
+          allocations: entry.allocations,
+          timestamp: entry.timestamp,
+        })
+      );
+    }
+  },
+
   distributeBudget: () => {
     const { budgetCards, distributionLog } = get();
     const incomeCard = budgetCards.find((c) => c.type === "income");

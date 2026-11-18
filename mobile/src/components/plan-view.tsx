@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import {
   amountThisPaycheck,
   cardKind,
+  daysBetween,
   nextPaydayFrom,
+  paydayDue,
   perPaycheckToWeekly,
   planPaycheck,
   todayInTimezone,
@@ -24,6 +27,7 @@ interface PlanViewProps {
 
 export function PlanView({ onEditCard, onAddCard }: PlanViewProps) {
   const theme = useAppTheme();
+  const router = useRouter();
   const cards = useStore((s) => s.budgetCards);
   const schedule = useStore((s) => s.paySchedule);
   if (!schedule) return null;
@@ -34,6 +38,9 @@ export function PlanView({ onEditCard, onAddCard }: PlanViewProps) {
   const nextPayday = nextPaydayFrom(schedule, today);
   const plan = planPaycheck(cards, paycheck, nextPayday, schedule.frequency);
   const weekly = perPaycheckToWeekly(plan.spendingMoney, schedule.frequency);
+  // A payday that has arrived (or was missed) and hasn't been checked in yet.
+  const due = paydayDue(schedule, today);
+  const daysLeft = daysBetween(today, nextPayday);
 
   const custom = cards.filter((c) => c.type === "custom");
   const bills = custom.filter((c) => cardKind(c) === "bill");
@@ -45,6 +52,15 @@ export function PlanView({ onEditCard, onAddCard }: PlanViewProps) {
 
   return (
     <View style={styles.wrap}>
+      {due && (
+        <Pressable
+          onPress={() => router.push("/paycheck")}
+          style={[styles.payday, { backgroundColor: theme.brand }]}
+        >
+          <Text style={styles.paydayTitle}>It's payday ({formatDay(due)})</Text>
+          <Text style={styles.paydayText}>Plan this paycheck in about a minute →</Text>
+        </Pressable>
+      )}
       <View style={[styles.hero, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <Text style={{ color: theme.textMuted, fontSize: 13 }}>You can spend about</Text>
         <Text style={[styles.heroNumber, { color: weekly < 0 ? "#ef4444" : theme.text }]}>
@@ -52,7 +68,8 @@ export function PlanView({ onEditCard, onAddCard }: PlanViewProps) {
           {money(Math.abs(weekly))} a week
         </Text>
         <Text style={{ color: theme.textMuted, fontSize: 13 }}>
-          until your next payday ({formatDay(nextPayday)}) · {money(paycheck)} a paycheck
+          until your next payday ({formatDay(nextPayday)}
+          {daysLeft > 0 ? `, ${daysLeft} ${daysLeft === 1 ? "day" : "days"} away` : ""}) · {money(paycheck)} a paycheck
         </Text>
         {plan.spendingMoney < 0 && (
           <Text style={{ color: "#ef4444", fontSize: 13, marginTop: 6 }}>
@@ -162,6 +179,9 @@ function GoalCard({ card, perPaycheck, onPress }: { card: BudgetCard; perPaychec
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 16, gap: 12 },
   hero: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 2 },
+  payday: { borderRadius: 16, padding: 16, gap: 2 },
+  paydayTitle: { color: "#ffffff", fontSize: 17, fontWeight: "800" },
+  paydayText: { color: "#ffffff", fontSize: 13 },
   heroNumber: { fontSize: 34, fontWeight: "900" },
   section: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 10 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
