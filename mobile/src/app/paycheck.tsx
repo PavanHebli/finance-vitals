@@ -28,7 +28,10 @@ export default function PaycheckCheckIn() {
   const schedule = useStore((s) => s.paySchedule);
   const checkInPaycheck = useStore((s) => s.checkInPaycheck);
 
-  const [amount, setAmount] = useState(schedule?.paycheckAmount ?? 0);
+  // null until the user types: until then, use the usual paycheck. (Signed-in
+  // data can arrive a moment after this screen opens.)
+  const [typedAmount, setAmount] = useState<number | null>(null);
+  const amount = typedAmount ?? schedule?.paycheckAmount ?? 0;
   // The bill or goal being edited from this screen (a lasting change to the plan).
   const [editing, setEditing] = useState<BudgetCard | null>(null);
 

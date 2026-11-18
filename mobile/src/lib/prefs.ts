@@ -12,25 +12,25 @@ export type ModeChoice = "system" | "light" | "dark";
 interface PrefsState {
   scheme: SchemeName;
   mode: ModeChoice;
-  weeklyCheckin: boolean;
+  paydayReminder: boolean;
   goalMilestones: boolean;
   loaded: boolean;
   setScheme: (scheme: SchemeName) => void;
   setMode: (mode: ModeChoice) => void;
-  setWeeklyCheckin: (on: boolean) => void;
+  setPaydayReminder: (on: boolean) => void;
   setGoalMilestones: (on: boolean) => void;
   load: () => Promise<void>;
 }
 
 function saveSoon(state: PrefsState) {
-  const { scheme, mode, weeklyCheckin, goalMilestones } = state;
-  SecureStore.setItemAsync(PREFS_KEY, JSON.stringify({ scheme, mode, weeklyCheckin, goalMilestones })).catch(() => {});
+  const { scheme, mode, paydayReminder, goalMilestones } = state;
+  SecureStore.setItemAsync(PREFS_KEY, JSON.stringify({ scheme, mode, paydayReminder, goalMilestones })).catch(() => {});
 }
 
 export const usePrefs = create<PrefsState>()((set, get) => ({
   scheme: "vitals",
   mode: "system",
-  weeklyCheckin: true,
+  paydayReminder: true,
   goalMilestones: true,
   loaded: false,
 
@@ -42,8 +42,8 @@ export const usePrefs = create<PrefsState>()((set, get) => ({
     set({ mode });
     saveSoon(get());
   },
-  setWeeklyCheckin: (on) => {
-    set({ weeklyCheckin: on });
+  setPaydayReminder: (on) => {
+    set({ paydayReminder: on });
     saveSoon(get());
   },
   setGoalMilestones: (on) => {
