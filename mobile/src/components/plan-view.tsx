@@ -17,7 +17,12 @@ import { useStore } from "@/lib/store";
 // list), Set aside for later (one list) and Goals (a card each). Shown on the
 // Budget tab once a pay schedule exists. Amounts are per paycheck.
 
-export function PlanView({ onEditCard }: { onEditCard: (card: BudgetCard) => void }) {
+interface PlanViewProps {
+  onEditCard: (card: BudgetCard) => void;
+  onAddCard: (kind: "bill" | "goal") => void;
+}
+
+export function PlanView({ onEditCard, onAddCard }: PlanViewProps) {
   const theme = useAppTheme();
   const cards = useStore((s) => s.budgetCards);
   const schedule = useStore((s) => s.paySchedule);
@@ -56,10 +61,12 @@ export function PlanView({ onEditCard }: { onEditCard: (card: BudgetCard) => voi
         )}
       </View>
 
-      <Section title="Bills this paycheck" total={total(bills)} empty="No bills yet.">
+      <Section title="Bills this paycheck" total={total(bills)}>
+        {bills.length === 0 && <Text style={{ color: theme.textMuted, fontSize: 13 }}>No bills yet.</Text>}
         {bills.map((card) => (
           <Row key={card.id} card={card} value={money(amount(card))} onPress={() => onEditCard(card)} />
         ))}
+        <AddButton label="+ Add bill" onPress={() => onAddCard("bill")} />
       </Section>
 
       {setAsides.length > 0 && (
@@ -81,20 +88,29 @@ export function PlanView({ onEditCard }: { onEditCard: (card: BudgetCard) => voi
       {goals.map((card) => (
         <GoalCard key={card.id} card={card} perPaycheck={amount(card)} onPress={() => onEditCard(card)} />
       ))}
+      <AddButton label="+ Add goal" onPress={() => onAddCard("goal")} />
     </View>
   );
 }
 
-function Section({ title, total, empty, children }: { title: string; total: number; empty?: string; children: ReactNode }) {
+function AddButton({ label, onPress }: { label: string; onPress: () => void }) {
   const theme = useAppTheme();
-  const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
+  return (
+    <Pressable onPress={onPress} hitSlop={8}>
+      <Text style={{ color: theme.brand, fontSize: 14, fontWeight: "700" }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Section({ title, total, children }: { title: string; total: number; children: ReactNode }) {
+  const theme = useAppTheme();
   return (
     <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>{title}</Text>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>{money(total)}</Text>
       </View>
-      {hasRows ? children : empty ? <Text style={{ color: theme.textMuted, fontSize: 13 }}>{empty}</Text> : null}
+      {children}
     </View>
   );
 }
