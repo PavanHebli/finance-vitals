@@ -78,7 +78,7 @@ interface MobileStore {
 
   addBudgetIncome: (amount: number) => void;
   addBudgetCard: (label: string, allocationMode: "percent" | "fixed", allocationValue: number, color: string, purpose: "expense" | "saving", description: string, goalAmount?: number) => void;
-  updateBudgetCard: (id: string, updates: Partial<Pick<BudgetCard, "label" | "allocationMode" | "allocationValue" | "color" | "purpose" | "description" | "goalAmount" | "savedSoFar">>) => void;
+  updateBudgetCard: (id: string, updates: Partial<Pick<BudgetCard, "label" | "allocationMode" | "allocationValue" | "color" | "purpose" | "description" | "goalAmount" | "savedSoFar" | "isHousing">>) => void;
   setBudgetCardBalance: (id: string, balance: number) => void;
   transferFromCash: (toCardId: string, amount: number) => { success: true } | { success: false; error: string };
   deleteBudgetCard: (id: string) => void;
@@ -86,7 +86,7 @@ interface MobileStore {
   distributeBudget: () => { success: true } | { success: false; error: string };
   setFinancialProfile: (updates: Partial<FinancialProfile>) => void;
   setPaySchedule: (schedule: PaySchedule) => void;
-  addPlanCard: (card: { label: string; kind: CardKind; amountPerPaycheck: number; color: string; isHousing?: boolean; goalAmount?: number; dueDate?: string }) => void;
+  addPlanCard: (card: { label: string; kind: CardKind; amountPerPaycheck: number; color: string; isHousing?: boolean; goalAmount?: number; dueDate?: string; balance?: number }) => void;
 
   addGoal: (goal: UserGoal) => void;
   removeGoal: (id: string) => void;
@@ -144,14 +144,14 @@ export const useStore = create<MobileStore>()((set, get) => ({
   // Add a card for the payday plan: a bill, a once-in-a-while cost or a goal,
   // with a fixed amount per paycheck. The older card screens still read
   // `purpose`, so it is set to match the kind.
-  addPlanCard: ({ label, kind, amountPerPaycheck, color, isHousing, goalAmount, dueDate }) => {
+  addPlanCard: ({ label, kind, amountPerPaycheck, color, isHousing, goalAmount, dueDate, balance }) => {
     const newCard: BudgetCard = {
       id: randomUUID(),
       label,
       type: "custom",
       allocationMode: "fixed",
       allocationValue: amountPerPaycheck,
-      balance: 0,
+      balance: balance ?? 0,
       paused: false,
       color,
       purpose: kind === "goal" ? "saving" : "expense",
@@ -237,6 +237,7 @@ export const useStore = create<MobileStore>()((set, get) => ({
       if (updates.description !== undefined) row.description = updates.description;
       if (updates.goalAmount !== undefined) row.goal_amount = updates.goalAmount;
       if (updates.savedSoFar !== undefined) row.saved_so_far = updates.savedSoFar;
+      if (updates.isHousing !== undefined) row.is_housing = updates.isHousing;
       if (Object.keys(row).length > 0) {
         saveInBackground(supabase.from("budget_cards").update(row).eq("id", id));
       }

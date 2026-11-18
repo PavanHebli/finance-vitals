@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { budgetToFormData } from "@vitals/shared";
+import { budgetToFormData, cardKind } from "@vitals/shared";
 import type { BudgetCard } from "@vitals/shared";
 import { Icon } from "@/components/icons";
 import { CategoryCard, FloatCard, IncomeCard } from "@/components/budget-cards";
 import { CardSheet } from "@/components/card-sheet";
 import { ImportSheet } from "@/components/import-sheet";
 import { MetricPanel } from "@/components/metric-panel";
+import { PlanCardSheet } from "@/components/plan-card-sheet";
 import { PlanView } from "@/components/plan-view";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { ScoreCard } from "@/components/score-card";
@@ -46,6 +47,9 @@ export default function Budget() {
   const [error, setError] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<BudgetCard | null>(null);
   const [cardSheetOpen, setCardSheetOpen] = useState(false);
+  // The plan's own editor (bills and goals), used once a payday plan exists.
+  const [planSheetOpen, setPlanSheetOpen] = useState(false);
+  const [planSheetKind, setPlanSheetKind] = useState<"bill" | "goal">("bill");
   const [profileOpen, setProfileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -101,6 +105,18 @@ export default function Budget() {
     setCardSheetOpen(true);
   }
 
+  function openPlanCard(card: BudgetCard | null, kind: "bill" | "goal" = "bill") {
+    // Once-in-a-while costs get their own editor in a later step; until then
+    // the general card editor handles them.
+    if (card && cardKind(card) === "occasional") {
+      openCard(card);
+      return;
+    }
+    setEditingCard(card);
+    setPlanSheetKind(kind);
+    setPlanSheetOpen(true);
+  }
+
   function split() {
     const result = distributeBudget();
     if (!result.success) {
@@ -152,7 +168,9 @@ export default function Budget() {
             </Text>
           </Pressable>
         )}
-        {paySchedule && <PlanView onEditCard={openCard} />}
+        {paySchedule && (
+          <PlanView onEditCard={(card) => openPlanCard(card)} onAddCard={(kind) => openPlanCard(null, kind)} />
+        )}
         <ScoreCard
           score={shownScore}
           label={mirror?.label ?? null}
@@ -213,12 +231,15 @@ export default function Budget() {
             </View>
           </>
         )}
-        <Pressable onPress={() => openCard(null)} style={[styles.addCard, { borderColor: theme.brand }]}>
-          <Text style={{ color: theme.brand, fontSize: 13, fontWeight: "700" }}>+ Add card</Text>
-        </Pressable>
+        {!paySchedule && (
+          <Pressable onPress={() => openCard(null)} style={[styles.addCard, { borderColor: theme.brand }]}>
+            <Text style={{ color: theme.brand, fontSize: 13, fontWeight: "700" }}>+ Add card</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       <CardSheet visible={cardSheetOpen} onClose={() => setCardSheetOpen(false)} card={editingCard} />
+      <PlanCardSheet visible={planSheetOpen} onClose={() => setPlanSheetOpen(false)} card={editingCard} newKind={planSheetKind} />
       <ProfileSheet visible={profileOpen} onClose={() => setProfileOpen(false)} />
       <ImportSheet visible={importOpen} onClose={() => setImportOpen(false)} />
       <ScoreFormSheet visible={formOpen} onClose={() => setFormOpen(false)} />
