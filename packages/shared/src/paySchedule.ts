@@ -116,6 +116,19 @@ export function nextPaydayFrom(schedule: PaySchedule, today: string): string {
   return payday;
 }
 
+// The payday a check-in is for, or null if the next payday hasn't come yet.
+// If several paydays were missed (the app wasn't opened for a while), this is
+// the most recent one on or before today, so the user checks in once instead
+// of catching up paycheck by paycheck.
+export function paydayDue(schedule: PaySchedule, today: string): string | null {
+  if (daysBetween(today, schedule.nextPayday) > 0) return null;
+  let payday = schedule.nextPayday;
+  while (daysBetween(paydayAfter(payday, schedule.frequency), today) >= 0) {
+    payday = paydayAfter(payday, schedule.frequency);
+  }
+  return payday;
+}
+
 // How many paychecks arrive before a due date, counting `firstPayday` itself.
 // Used to spread a once-in-a-while bill: $720 due in Feb with 6 paychecks
 // before it is $120 a paycheck. A paycheck that lands on the due date itself

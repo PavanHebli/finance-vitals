@@ -11,6 +11,7 @@ const {
   monthlyToPerPaycheck,
   perPaycheckToWeekly,
   addDays,
+  paydayDue,
   todayString,
   todayInTimezone,
 } = require("../.test-build/paySchedule.js");
@@ -91,4 +92,13 @@ test("adding days and weekly amounts", () => {
   assert.equal(perPaycheckToWeekly(1000, "biweekly"), 500);
   assert.equal(perPaycheckToWeekly(1300, "semimonthly"), 600);
   assert.equal(perPaycheckToWeekly(2600, "monthly"), 600);
+});
+
+test("which payday a check-in is for", () => {
+  const schedule = { frequency: "biweekly", nextPayday: "2026-11-20" };
+  assert.equal(paydayDue(schedule, "2026-11-19"), null);          // not yet
+  assert.equal(paydayDue(schedule, "2026-11-20"), "2026-11-20");  // payday itself
+  assert.equal(paydayDue(schedule, "2026-11-25"), "2026-11-20");  // a few days late
+  assert.equal(paydayDue(schedule, "2026-12-10"), "2026-12-04");  // missed one: the latest
+  assert.equal(paydayDue({ frequency: "semimonthly", nextPayday: "2026-11-30" }, "2026-12-15"), "2026-12-15");
 });
