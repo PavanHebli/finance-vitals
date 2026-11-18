@@ -9,6 +9,7 @@ import { CategoryCard, FloatCard, IncomeCard } from "@/components/budget-cards";
 import { CardSheet } from "@/components/card-sheet";
 import { ImportSheet } from "@/components/import-sheet";
 import { MetricPanel } from "@/components/metric-panel";
+import { PlanView } from "@/components/plan-view";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { ScoreCard } from "@/components/score-card";
 import { ScoreFormSheet } from "@/components/score-form-sheet";
@@ -130,9 +131,12 @@ export default function Budget() {
           <Pressable onPress={() => setFormOpen(true)} style={[styles.iconButton, { backgroundColor: theme.surface2 }]}>
             <Icon name="form" color={theme.textMuted} size={16} />
           </Pressable>
-          <Pressable onPress={split} style={[styles.iconButton, { backgroundColor: theme.brand }]}>
-            <Icon name="split" color="#ffffff" size={16} />
-          </Pressable>
+          {/* With a payday plan, the payday check-in replaces Split (coming next). */}
+          {!paySchedule && (
+            <Pressable onPress={split} style={[styles.iconButton, { backgroundColor: theme.brand }]}>
+              <Icon name="split" color="#ffffff" size={16} />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -148,6 +152,7 @@ export default function Budget() {
             </Text>
           </Pressable>
         )}
+        {paySchedule && <PlanView onEditCard={openCard} />}
         <ScoreCard
           score={shownScore}
           label={mirror?.label ?? null}
@@ -195,14 +200,19 @@ export default function Budget() {
 
         {splitMessage !== "" && <Text style={[styles.splitNote, { color: theme.brand }]}>{splitMessage}</Text>}
 
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>CARDS</Text>
-        <View style={styles.grid}>
-          {incomeCard && <IncomeCard card={incomeCard} />}
-          {floatCard && <FloatCard card={floatCard} nextSplit={nextSplit.get(floatCard.id) ?? 0} />}
-          {customCards.map((card) => (
-            <CategoryCard key={card.id} card={card} onPress={() => openCard(card)} />
-          ))}
-        </View>
+        {/* The old card grid, until a payday plan is set up. */}
+        {!paySchedule && (
+          <>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>CARDS</Text>
+            <View style={styles.grid}>
+              {incomeCard && <IncomeCard card={incomeCard} />}
+              {floatCard && <FloatCard card={floatCard} nextSplit={nextSplit.get(floatCard.id) ?? 0} />}
+              {customCards.map((card) => (
+                <CategoryCard key={card.id} card={card} onPress={() => openCard(card)} />
+              ))}
+            </View>
+          </>
+        )}
         <Pressable onPress={() => openCard(null)} style={[styles.addCard, { borderColor: theme.brand }]}>
           <Text style={{ color: theme.brand, fontSize: 13, fontWeight: "700" }}>+ Add card</Text>
         </Pressable>
