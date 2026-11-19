@@ -150,6 +150,7 @@ export interface BudgetCard {
   dueDate?: string;     // "YYYY-MM-DD", occasional cards
   targetDate?: string;  // "YYYY-MM-DD", goals (optional)
   isHousing?: boolean;  // the bill that is rent or mortgage
+  isDebt?: boolean;     // a bill that is a loan or credit card payment
 }
 
 export interface DistributionLogEntry {

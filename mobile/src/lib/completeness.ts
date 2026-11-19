@@ -1,6 +1,6 @@
 // The rent card: same rule as web and the score (marked card first, then name).
-import { findHousingCard } from "@vitals/shared";
-import type { BudgetCard, DistributionLogEntry, FinancialProfile, MetricScores } from "@vitals/shared";
+import { findHousingCard, perPaycheckToMonthly } from "@vitals/shared";
+import type { BudgetCard, DistributionLogEntry, FinancialProfile, MetricScores, PaySchedule } from "@vitals/shared";
 
 // Which of the four metrics have enough information to be shown, and the
 // partial score built from only those. Ported from the web budget page, so
@@ -33,7 +33,9 @@ export const METRIC_KEYS: Record<MetricName, keyof MetricScores> = {
 
 export const METRIC_ORDER: MetricName[] = ["savingsRate", "debtToIncome", "housingRatio", "emergencyFund"];
 
-export function monthlyIncome(cards: BudgetCard[], log: DistributionLogEntry[]): number {
+export function monthlyIncome(cards: BudgetCard[], log: DistributionLogEntry[], schedule: PaySchedule | null = null): number {
+  // The payday plan keeps the paycheck; the score needs a month.
+  if (schedule) return perPaycheckToMonthly(schedule.paycheckAmount ?? 0, schedule.frequency);
   return log[0]?.incomeAmount ?? cards.find((c) => c.type === "income")?.balance ?? 0;
 }
 
@@ -41,9 +43,10 @@ export function monthlyIncome(cards: BudgetCard[], log: DistributionLogEntry[]):
 export function checkCompleteness(
   cards: BudgetCard[],
   log: DistributionLogEntry[],
-  profile: FinancialProfile
+  profile: FinancialProfile,
+  schedule: PaySchedule | null = null
 ): Completeness {
-  const hasIncome = monthlyIncome(cards, log) > 0;
+  const hasIncome = monthlyIncome(cards, log, schedule) > 0;
   const custom = cards.filter((c) => c.type === "custom");
   const expenseCards = custom.filter((c) => (c.purpose ?? "expense") === "expense");
   const savingCards = custom.filter((c) => c.purpose === "saving");
@@ -81,7 +84,7 @@ export function checkCompleteness(
 
 // Where each metric's input came from. Shown when a pill is opened so a
 // confident number is never just a bare digit.
-export function metricSources(cards: BudgetCard[], profile: FinancialProfile): Record<MetricName, string> {
+export function metricSources(cards: BudgetCard[], profile: FinancialProfile, hasPlan = false): Record<MetricName, string> {
   const custom = cards.filter((c) => c.type === "custom");
   const expenseCards = custom.filter((c) => (c.purpose ?? "expense") === "expense");
   const savingCards = custom.filter((c) => c.purpose === "saving");
@@ -94,7 +97,9 @@ export function metricSources(cards: BudgetCard[], profile: FinancialProfile): R
         : profile.profileComplete
         ? "Your profile's total savings"
         : "Not answered yet",
-    debtToIncome: profile.profileComplete ? "Your profile's debt fields" : "Not answered yet",
+    debtToIncome: hasPlan
+      ? "Loan and credit card bills on your plan, and your profile's total debt"
+      : profile.profileComplete ? "Your profile's debt fields" : "Not answered yet",
     emergencyFund:
       expenseCards.length > 0
         ? `${expenseCards.length} expense card${expenseCards.length > 1 ? "s" : ""}`

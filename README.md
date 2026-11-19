@@ -50,7 +50,7 @@ Each metric earns 0, 10, 18 or 25 points against a published benchmark. The four
 |--------|-----------------|---------|--------------|------------|--------|
 | **Savings rate** — pay kept after spending and debt payments | ≥ 20% | 10–20% | 0–10% | below 0% | 50/30/20 rule |
 | **Debt-to-income** — monthly debt payments ÷ take-home | ≤ 10% | 10–20% | 20–43% | > 43% | Common lender guidelines |
-| **Emergency fund** — savings ÷ monthly spending | ≥ 6 months | 3–6 months | 1–3 months | < 1 month | Fidelity / Vanguard |
+| **Emergency fund** — savings ÷ monthly spending plus debt payments | ≥ 6 months | 3–6 months | 1–3 months | < 1 month | Fidelity / Vanguard |
 | **Housing ratio** — rent or mortgage ÷ take-home | ≤ 25% | 25–35% | 35–50% | > 50% | HUD affordability standard (30%), applied to take-home |
 
 > **No cushion, no high score:** with less than one month of spending saved, the score is capped at 50 ("At Risk"), whatever the other metrics say.

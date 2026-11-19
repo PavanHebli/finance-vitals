@@ -1,4 +1,5 @@
 import type { BudgetCard, CardKind, UserGoal, MetricKey, DistributionLogEntry, FinancialProfile, FormData } from "./types";
+import { type PaySchedule, perPaycheckToMonthly } from "./paySchedule";
 
 // ── Card kinds ─────────────────────────────────────────────────────────────
 
@@ -49,6 +50,7 @@ interface BudgetCardRow {
   due_date: string | null;
   target_date: string | null;
   is_housing: boolean | null;
+  is_debt: boolean | null;
   created_at: string;
 }
 
@@ -71,6 +73,7 @@ export function budgetCardToRow(card: BudgetCard, userId: string, sortOrder: num
     due_date: card.dueDate ?? null,
     target_date: card.targetDate ?? null,
     is_housing: card.isHousing ?? false,
+    is_debt: card.isDebt ?? false,
     sort_order: sortOrder,
   };
 }
@@ -94,6 +97,7 @@ export function rowToBudgetCard(row: BudgetCardRow): BudgetCard {
     dueDate: row.due_date ?? undefined,
     targetDate: row.target_date ?? undefined,
     isHousing: row.is_housing ?? false,
+    isDebt: row.is_debt ?? false,
   };
 }
 
@@ -177,8 +181,15 @@ export function rowToDistributionEntry(row: DistributionLogRow): DistributionLog
 }
 
 /** Serialises the budget planner state into a string for chat context injection */
-export function formatBudgetContext(budgetCards: BudgetCard[], distributionLog: DistributionLogEntry[]): string {
+export function formatBudgetContext(
+  budgetCards: BudgetCard[],
+  distributionLog: DistributionLogEntry[],
+  paySchedule: PaySchedule | null = null
+): string {
   const customCards = budgetCards.filter(c => c.type === "custom");
+  // Payday plan: amounts are per paycheck, so say so, with the monthly figure
+  // next to them (otherwise the AI reads them as monthly).
+  if (paySchedule) return formatPlanContext(customCards, paySchedule);
   if (customCards.length === 0 && distributionLog.length === 0) return "";
 
   const lines: string[] = ["BUDGET PLANNER (user-configured envelopes):"];
@@ -206,6 +217,29 @@ export function formatBudgetContext(budgetCards: BudgetCard[], distributionLog: 
     lines.push(`Most recent: $${latest.incomeAmount.toFixed(0)} on ${new Date(latest.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`);
   }
 
+  return lines.join("\n");
+}
+
+const FREQUENCY_WORDS = { biweekly: "every 2 weeks", semimonthly: "twice a month", monthly: "once a month" } as const;
+
+function formatPlanContext(customCards: BudgetCard[], schedule: PaySchedule): string {
+  const pay = schedule.paycheckAmount ?? 0;
+  const perMonth = (amount: number) => perPaycheckToMonthly(amount, schedule.frequency).toFixed(0);
+  const lines: string[] = [
+    "PAYDAY PLAN (amounts are per paycheck unless marked as a month):",
+    `- Paid $${pay.toFixed(0)} ${FREQUENCY_WORDS[schedule.frequency]} (about $${perMonth(pay)} a month). Next payday: ${schedule.nextPayday}.`,
+  ];
+  for (const card of customCards) {
+    const kind = cardKind(card);
+    const perPaycheck = card.allocationMode === "percent" ? (card.allocationValue / 100) * pay : card.allocationValue;
+    const name = kind === "goal" ? "Goal" : kind === "occasional" ? "Set aside" : "Bill";
+    let line = `- ${name}: ${card.label}${card.isHousing ? " (rent/mortgage)" : ""}${card.isDebt ? " (loan/credit card payment)" : ""}: $${perPaycheck.toFixed(0)} per paycheck (about $${perMonth(perPaycheck)} a month)`;
+    if (kind !== "bill") line += `, $${card.balance.toFixed(0)} saved so far`;
+    if (kind !== "bill" && card.goalAmount) line += ` of $${card.goalAmount.toFixed(0)}`;
+    if (card.paused) line += " (paused)";
+    lines.push(line);
+  }
+  lines.push("- Whatever is left after bills and goals is spending money until the next payday.");
   return lines.join("\n");
 }
 

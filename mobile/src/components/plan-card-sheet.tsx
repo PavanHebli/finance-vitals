@@ -20,7 +20,8 @@ import { useStore } from "@/lib/store";
 
 // Add or edit a bill or a goal on the payday plan.
 // - Bills are typed per month (how people know them) and stored as each
-//   paycheck's share. One bill can be marked as rent.
+//   paycheck's share. One bill can be marked as rent; any bill can be marked
+//   as a loan or credit card payment (the score counts those as debt).
 // - Goals are typed per paycheck, with an optional target and what's already saved.
 // A preview shows what the weekly spending number becomes before saving.
 
@@ -50,6 +51,7 @@ export function PlanCardSheet({ visible, onClose, card, newKind }: PlanCardSheet
   const [monthly, setMonthly] = useState(0);        // bills: per month
   const [perPaycheck, setPerPaycheck] = useState(0); // goals: per paycheck
   const [isRent, setIsRent] = useState(false);
+  const [isDebt, setIsDebt] = useState(false);
   const [target, setTarget] = useState(0);
   const [saved, setSaved] = useState(0);
 
@@ -61,6 +63,7 @@ export function PlanCardSheet({ visible, onClose, card, newKind }: PlanCardSheet
     setMonthly(card ? Math.round(perPaycheckToMonthly(current, frequency)) : 0);
     setPerPaycheck(current);
     setIsRent(card?.isHousing ?? false);
+    setIsDebt(card?.isDebt ?? false);
     setTarget(card?.goalAmount ?? 0);
     setSaved(card?.balance ?? 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,7 +105,7 @@ export function PlanCardSheet({ visible, onClose, card, newKind }: PlanCardSheet
         allocationMode: "fixed",
         allocationValue: amountPerPaycheck,
         // A target of 0 means "no target" (and clears an old one).
-        ...(kind === "bill" ? { isHousing: isRent } : { goalAmount: target }),
+        ...(kind === "bill" ? { isHousing: isRent, isDebt } : { goalAmount: target }),
       });
       if (kind === "goal" && saved !== card.balance) setBudgetCardBalance(card.id, saved);
     } else {
@@ -113,6 +116,7 @@ export function PlanCardSheet({ visible, onClose, card, newKind }: PlanCardSheet
         amountPerPaycheck,
         color: CARD_COLORS[customCount % CARD_COLORS.length],
         isHousing: kind === "bill" ? isRent : false,
+        isDebt: kind === "bill" ? isDebt : false,
         goalAmount: kind === "goal" && target > 0 ? target : undefined,
         balance: kind === "goal" ? saved : 0,
       });
@@ -150,11 +154,19 @@ export function PlanCardSheet({ visible, onClose, card, newKind }: PlanCardSheet
             hint={monthly > 0 ? `${money(amountPerPaycheck)} from each paycheck` : undefined}
           />
           <Pressable
-            onPress={() => setIsRent(!isRent)}
+            onPress={() => { setIsRent(!isRent); setIsDebt(false); }}
             style={[styles.toggle, { borderColor: isRent ? theme.brand : theme.border, backgroundColor: isRent ? theme.brandSoft : theme.surface }]}
           >
             <Text style={{ color: isRent ? theme.brand : theme.text, fontWeight: "600" }}>
               {isRent ? "✓ " : ""}This is my rent or mortgage
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { setIsDebt(!isDebt); setIsRent(false); }}
+            style={[styles.toggle, { borderColor: isDebt ? theme.brand : theme.border, backgroundColor: isDebt ? theme.brandSoft : theme.surface }]}
+          >
+            <Text style={{ color: isDebt ? theme.brand : theme.text, fontWeight: "600" }}>
+              {isDebt ? "✓ " : ""}This is a loan or credit card payment
             </Text>
           </Pressable>
         </>

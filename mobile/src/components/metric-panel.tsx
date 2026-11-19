@@ -7,6 +7,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { METRIC_KEYS, METRIC_LABELS, type Completeness, type MetricName } from "@/lib/completeness";
 import { describeMetric, statusColor, statusWord } from "@/lib/budget-utils";
 import { money } from "@/lib/format";
+import { sliderChange } from "@/lib/score";
 
 // Which number the slider changes for each metric, and how it is worded.
 const SLIDERS: Record<MetricName, { field: string; label: string; fallbackMax: number }> = {
@@ -43,7 +44,7 @@ export function MetricPanel({ name, completeness, metrics, metricScores, source,
   async function trySlider(next: number) {
     setSimError(false);
     try {
-      const result = await fetchSimulate(baseForm, { [slider.field]: next });
+      const result = await fetchSimulate(baseForm, sliderChange(slider.field, next));
       setSimScore(result.sim_score);
     } catch {
       setSimError(true);
@@ -74,7 +75,10 @@ export function MetricPanel({ name, completeness, metrics, metricScores, source,
 
       <View style={styles.sliderHeader}>
         <Text style={[styles.sliderLabel, { color: theme.text }]}>{slider.label}</Text>
-        <Text style={[styles.sliderValue, { color: theme.brand }]}>{money(value)}</Text>
+        <Text style={[styles.sliderValue, { color: theme.brand }]}>
+          {money(value)}
+          {slider.field === "debt_monthly" && value === 0 ? " (paid off)" : ""}
+        </Text>
       </View>
       <Slider
         minimumValue={0}

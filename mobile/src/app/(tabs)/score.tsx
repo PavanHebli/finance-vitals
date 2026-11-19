@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Slider from "@react-native-community/slider";
 import Svg, { Circle } from "react-native-svg";
-import { budgetToFormData, fetchSimulate } from "@vitals/shared";
+import { fetchSimulate } from "@vitals/shared";
+import { currentScoreForm, sliderChange } from "@/lib/score";
 import { ScoreFormSheet } from "@/components/score-form-sheet";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { describeMetric, labelColor, statusColor, statusWord } from "@/lib/budget-utils";
@@ -36,6 +37,7 @@ export default function ScoreTab() {
   const log = useStore((s) => s.distributionLog);
   const profile = useStore((s) => s.financialProfile);
   const snapshots = useStore((s) => s.snapshots);
+  const schedule = useStore((s) => s.paySchedule);
 
   const [tab, setTab] = useState<"story" | "whatif">("story");
   const [openTile, setOpenTile] = useState<MetricName | null>(null);
@@ -44,11 +46,11 @@ export default function ScoreTab() {
   const [formOpen, setFormOpen] = useState(false);
 
   const hasScore = overall !== null && metrics !== null && metricScores !== null && mirror !== null;
-  const baseForm = budgetToFormData(cards, log, profile);
+  const baseForm = currentScoreForm(cards, log, profile, schedule);
 
   async function trySlider(name: MetricName, next: number) {
     try {
-      const result = await fetchSimulate(baseForm, { [TILES[name].field]: next });
+      const result = await fetchSimulate(baseForm, sliderChange(TILES[name].field, next));
       setSimScores({ ...simScores, [name]: result.sim_score });
     } catch {
       // The tile just shows no result if the backend can't be reached.
@@ -163,7 +165,10 @@ export default function ScoreTab() {
                     <View>
                       <View style={styles.tileHeader}>
                         <Text style={{ color: theme.textMuted, fontSize: 12 }}>{tile.label}</Text>
-                        <Text style={{ color: theme.brand, fontWeight: "800" }}>{money(value)}</Text>
+                        <Text style={{ color: theme.brand, fontWeight: "800" }}>
+                          {money(value)}
+                          {tile.field === "debt_monthly" && value === 0 ? " (paid off)" : ""}
+                        </Text>
                       </View>
                       <Slider
                         minimumValue={0}
