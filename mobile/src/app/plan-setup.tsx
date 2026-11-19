@@ -29,9 +29,11 @@ const FREQUENCIES: { value: PayFrequency; label: string; hint: string }[] = [
   { value: "monthly", label: "Once a month", hint: "12 paychecks a year" },
 ];
 
+// One chip for every loan together (car, student, personal, credit cards,
+// buy now pay later). It becomes a bill marked as debt, split later if wanted.
+const LOANS = "Loans and credit cards";
 const COMMON_BILLS = [
-  "Phone", "Internet", "Electricity", "Car payment", "Car insurance",
-  "Student loan", "Credit card", "Subscriptions", "Gym",
+  "Phone", "Internet", "Electricity", "Car insurance", "Subscriptions", "Gym", LOANS,
 ];
 
 const LAST_STEP = 5;
@@ -60,12 +62,13 @@ export default function PlanSetup() {
   const [billAmounts, setBillAmounts] = useState<Record<string, number>>({});
   const [useTotal, setUseTotal] = useState(false);
   const [billsTotal, setBillsTotal] = useState(0);
+  const [loansTotal, setLoansTotal] = useState(0); // with "type my total": all loan payments, per month
 
   // Everything per paycheck, from what was typed per month.
   const freq: PayFrequency = frequency ?? "biweekly";
   const rentPerPaycheck = monthlyToPerPaycheck(rent, freq);
   const billsMonthly = useTotal
-    ? billsTotal
+    ? billsTotal + loansTotal
     : picked.reduce((sum, name) => sum + (billAmounts[name] ?? 0), 0);
   const billsPerPaycheck = monthlyToPerPaycheck(billsMonthly, freq);
   const spendingPerPaycheck = pay - rentPerPaycheck - billsPerPaycheck;
@@ -103,13 +106,22 @@ export default function PlanSetup() {
     }
     if (useTotal) {
       if (billsTotal > 0) {
-        addPlanCard({ label: "Bills", kind: "bill", amountPerPaycheck: billsPerPaycheck, color: nextColor() });
+        addPlanCard({ label: "Bills", kind: "bill", amountPerPaycheck: monthlyToPerPaycheck(billsTotal, frequency), color: nextColor() });
+      }
+      if (loansTotal > 0) {
+        addPlanCard({ label: "Loan payments", kind: "bill", amountPerPaycheck: monthlyToPerPaycheck(loansTotal, frequency), color: nextColor(), isDebt: true });
       }
     } else {
       for (const name of picked) {
         const monthly = billAmounts[name] ?? 0;
         if (monthly <= 0) continue;
-        addPlanCard({ label: name, kind: "bill", amountPerPaycheck: monthlyToPerPaycheck(monthly, frequency), color: nextColor() });
+        addPlanCard({
+          label: name === LOANS ? "Loan payments" : name,
+          kind: "bill",
+          amountPerPaycheck: monthlyToPerPaycheck(monthly, frequency),
+          color: nextColor(),
+          isDebt: name === LOANS,
+        });
       }
     }
     router.back();
@@ -198,7 +210,15 @@ export default function PlanSetup() {
                 Tap the ones you have, then add what each costs a month. Rough is fine.
               </Text>
               {useTotal ? (
-                <NumberField label="All your bills, per month" value={billsTotal} onChange={setBillsTotal} />
+                <>
+                  <NumberField label="All your bills, per month" value={billsTotal} onChange={setBillsTotal} hint="Not counting loans. Those go below." />
+                  <NumberField
+                    label="Loan and credit card payments, per month"
+                    value={loansTotal}
+                    onChange={setLoansTotal}
+                    hint="All of them together: car, student, personal, cards."
+                  />
+                </>
               ) : (
                 <>
                   <View style={styles.chipRow}>
@@ -214,6 +234,7 @@ export default function PlanSetup() {
                       label={`${name} per month`}
                       value={billAmounts[name] ?? 0}
                       onChange={(value) => setBillAmounts((current) => ({ ...current, [name]: value }))}
+                      hint={name === LOANS ? "All of them together: car, student, personal, cards. You can list them one by one later." : undefined}
                     />
                   ))}
                 </>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { budgetToFormData, cardKind } from "@vitals/shared";
+import { cardKind, planDebtMonthly, todayInTimezone } from "@vitals/shared";
 import type { BudgetCard } from "@vitals/shared";
 import { Icon } from "@/components/icons";
 import { CategoryCard, FloatCard, IncomeCard } from "@/components/budget-cards";
@@ -24,7 +24,8 @@ import {
   partialScore,
   type MetricName,
 } from "@/lib/completeness";
-import { calculateFromBudget } from "@/lib/score";
+import { money } from "@/lib/format";
+import { calculateFromBudget, currentScoreForm } from "@/lib/score";
 import { useStore } from "@/lib/store";
 
 export default function Budget() {
@@ -60,10 +61,14 @@ export default function Budget() {
   const customCards = cards.filter((c) => c.type === "custom");
   const nextSplit = previewSplit(cards);
 
-  const hasIncome = monthlyIncome(cards, log) > 0;
-  const completeness = hasIncome ? checkCompleteness(cards, log, profile) : null;
-  const sources = metricSources(cards, profile);
-  const baseForm = useMemo(() => budgetToFormData(cards, log, profile), [cards, log, profile]);
+  const hasIncome = monthlyIncome(cards, log, paySchedule) > 0;
+  const completeness = hasIncome ? checkCompleteness(cards, log, profile, paySchedule) : null;
+  const sources = metricSources(cards, profile, paySchedule !== null);
+  // Monthly debt payments: the plan's loan bills, or the profile without a plan.
+  const debtMonthlyShown = paySchedule
+    ? planDebtMonthly(cards, paySchedule, todayInTimezone(paySchedule.payTimezone))
+    : profile.debtMonthly;
+  const baseForm = useMemo(() => currentScoreForm(cards, log, profile, paySchedule), [cards, log, profile, paySchedule]);
 
   // Partial score: only the answered metrics, scaled to 0-100.
   let shownScore: number | null = null;
@@ -186,6 +191,16 @@ export default function Budget() {
           onAction={onAction}
         />
 
+        {/* The profile numbers, always visible and editable once answered. */}
+        {profile.profileComplete && (
+          <Pressable onPress={() => setProfileOpen(true)} style={[styles.profileRow, { borderColor: theme.border }]}>
+            <Text style={{ color: theme.textMuted, fontSize: 12, flex: 1 }}>
+              Debt {money(profile.debtTotal)} ({money(debtMonthlyShown)} a month) · Savings {money(profile.savingsTotal)}
+            </Text>
+            <Text style={{ color: theme.brand, fontSize: 12, fontWeight: "700" }}>Edit</Text>
+          </Pressable>
+        )}
+
         {selected && completeness && (
           <MetricPanel
             key={selected}
@@ -248,6 +263,7 @@ export default function Budget() {
 }
 
 const styles = StyleSheet.create({
+  profileRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   screen: { flex: 1 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10 },
   title: { fontSize: 24, fontWeight: "900" },

@@ -58,8 +58,11 @@ def calculate_metrics(state: dict) -> dict:
     debt_to_income = (debt_payments / income * 100) if income > 0 else 0.0
     housing_ratio  = (rent / income * 100) if income > 0 else 0.0
 
-    if monthly_expenses > 0:
-        emergency_fund_months = savings / monthly_expenses
+    # Months the savings would last with no paycheck. Loan payments don't stop
+    # when the paycheck does, so they count as part of what a month costs.
+    monthly_costs = monthly_expenses + debt_payments
+    if monthly_costs > 0:
+        emergency_fund_months = savings / monthly_costs
     elif income > 0:
         emergency_fund_months = savings / income
     else:

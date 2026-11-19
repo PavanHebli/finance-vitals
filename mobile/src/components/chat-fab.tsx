@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
-import { budgetToFormData, formatBudgetContext, streamChat } from "@vitals/shared";
+import { formatBudgetContext, streamChat } from "@vitals/shared";
+import { currentScoreForm } from "@/lib/score";
 import type { Message } from "@vitals/shared";
 import { Sheet } from "@/components/sheet";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -35,6 +36,7 @@ export function ChatFab() {
   const profile = useStore((s) => s.financialProfile);
   const cards = useStore((s) => s.budgetCards);
   const log = useStore((s) => s.distributionLog);
+  const schedule = useStore((s) => s.paySchedule);
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -68,7 +70,7 @@ export function ChatFab() {
         {
           message: question,
           history: messages,
-          form_data: budgetToFormData(cards, log, profile),
+          form_data: currentScoreForm(cards, log, profile, schedule),
           metrics,
           metric_scores: metricScores,
           overall_score: overallScore,
@@ -76,7 +78,7 @@ export function ChatFab() {
           provider: "",
           api_key: "",
           summarised_history: summary,
-          budget_context: formatBudgetContext(cards, log),
+          budget_context: formatBudgetContext(cards, log, schedule),
         },
         (chunk) => {
           streamed += chunk;
