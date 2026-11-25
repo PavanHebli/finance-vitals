@@ -12,6 +12,7 @@ import { MetricPanel } from "@/components/metric-panel";
 import { PlanCardSheet } from "@/components/plan-card-sheet";
 import { PlanView } from "@/components/plan-view";
 import { ProfileSheet } from "@/components/profile-sheet";
+import { plainText } from "@/components/rich-text";
 import { ScoreCard } from "@/components/score-card";
 import { ScoreFormSheet } from "@/components/score-form-sheet";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -223,7 +224,7 @@ export default function Budget() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.insightTitle, { color: theme.text }]}>AI Insight</Text>
               <Text style={[styles.insightText, { color: theme.textMuted }]} numberOfLines={2}>
-                {narrative}
+                {plainText(narrative)}
               </Text>
               <Text style={[styles.insightCta, { color: theme.brand }]}>View full story →</Text>
             </View>

@@ -6,6 +6,7 @@ import { currentScoreForm } from "@/lib/score";
 import type { Message } from "@vitals/shared";
 import { Sheet } from "@/components/sheet";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { RichText } from "@/components/rich-text";
 import { useStore } from "@/lib/store";
 
 const STARTERS = [
@@ -119,12 +120,12 @@ export function ChatFab() {
               key={i}
               style={[m.role === "user" ? styles.userBubble : styles.botBubble, { backgroundColor: m.role === "user" ? theme.brand : theme.surface }]}
             >
-              <Text style={{ color: m.role === "user" ? "#ffffff" : theme.text, fontSize: 13, lineHeight: 19 }}>{m.content}</Text>
+              <RichText style={{ color: m.role === "user" ? "#ffffff" : theme.text, fontSize: 13, lineHeight: 19 }} text={m.content} />
             </View>
           ))}
           {loading && (
             <View style={[styles.botBubble, { backgroundColor: theme.surface }]}>
-              {answer ? <Text style={{ color: theme.text, fontSize: 13, lineHeight: 19 }}>{answer}</Text> : <ActivityIndicator color={theme.brand} />}
+              {answer ? <RichText style={{ color: theme.text, fontSize: 13, lineHeight: 19 }} text={answer} /> : <ActivityIndicator color={theme.brand} />}
             </View>
           )}
           {error && <Text style={{ color: "#dc3535", fontSize: 12 }}>Couldn't get an answer. Check your connection and try again.</Text>}

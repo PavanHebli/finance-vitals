@@ -5,6 +5,7 @@ import Slider from "@react-native-community/slider";
 import Svg, { Circle } from "react-native-svg";
 import { fetchSimulate } from "@vitals/shared";
 import { currentScoreForm, sliderChange } from "@/lib/score";
+import { RichText } from "@/components/rich-text";
 import { ScoreFormSheet } from "@/components/score-form-sheet";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { describeMetric, labelColor, statusColor, statusWord } from "@/lib/budget-utils";
@@ -126,9 +127,11 @@ export default function ScoreTab() {
           <View style={styles.section}>
             <View style={[styles.box, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <Text style={[styles.boxTitle, { color: theme.text }]}>✦ AI Narrative</Text>
-              <Text style={[styles.body, { color: theme.textMuted }]}>
-                {narrative || (narrativeLoading ? "Writing your story…" : mirror.description)}
-              </Text>
+              <RichText
+                style={[styles.body, { color: theme.textMuted }]}
+                boldColor={theme.text}
+                text={narrative || (narrativeLoading ? "Writing your story…" : mirror.description)}
+              />
             </View>
             <View style={styles.miniGrid}>
               {METRIC_ORDER.map((name) => {

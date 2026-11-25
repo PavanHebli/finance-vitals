@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { RichText } from "@/components/rich-text";
 import { METRIC_LABELS, METRIC_ORDER, type Completeness, type MetricName } from "@/lib/completeness";
 import { labelColor } from "@/lib/budget-utils";
 
@@ -98,10 +99,14 @@ export function ScoreCard(props: ScoreCardProps) {
         >
           <Text style={[styles.backTitle, { color: theme.text }]}>✦ AI Narrative</Text>
           <ScrollView>
-            <Text style={[styles.narrative, { color: theme.textMuted }]}>
-              {props.narrative ||
-                (props.narrativeLoading ? "Writing your story…" : "Calculate your score to get your AI narrative.")}
-            </Text>
+            <RichText
+              style={[styles.narrative, { color: theme.textMuted }]}
+              boldColor={theme.text}
+              text={
+                props.narrative ||
+                (props.narrativeLoading ? "Writing your story…" : "Calculate your score to get your AI narrative.")
+              }
+            />
           </ScrollView>
         </Animated.View>
 
