@@ -209,7 +209,6 @@ export default function Budget() {
             metrics={metrics}
             metricScores={metricScores}
             source={sources[selected]}
-            baseForm={baseForm}
           />
         )}
 
