@@ -6,9 +6,9 @@
 // and a $46 phone share per paycheck is $100 a month.
 
 import type { BudgetCard, DistributionLogEntry, FinancialProfile } from "./types";
-import { budgetToFormData } from "./budgetFormat";
+import { budgetToFormData, formatBudgetContext } from "./budgetFormat";
 import { amountThisPaycheck, planPaycheck } from "./payCycle";
-import { type PaySchedule, nextPaydayFrom, perPaycheckToMonthly } from "./paySchedule";
+import { type PaySchedule, nextPaydayFrom, perPaycheckToMonthly, perPaycheckToWeekly } from "./paySchedule";
 
 export function planToFormData(
   cards: BudgetCard[],
@@ -66,4 +66,15 @@ export function scoreFormData(
   today: string
 ): Record<string, unknown> {
   return schedule ? planToFormData(cards, schedule, profile, today) : budgetToFormData(cards, log, profile);
+}
+
+// The payday plan as text for the AI story: pay, bills and goals per paycheck,
+// plus the spending money the plan screen shows ("$475 a week"), so the story
+// can talk about the same numbers the person sees.
+export function planStoryContext(cards: BudgetCard[], schedule: PaySchedule, today: string): string {
+  const paycheck = schedule.paycheckAmount ?? 0;
+  const plan = planPaycheck(cards, paycheck, nextPaydayFrom(schedule, today), schedule.frequency);
+  const weekly = perPaycheckToWeekly(plan.spendingMoney, schedule.frequency);
+  const spending = `- Spending money after bills and goals: $${plan.spendingMoney.toFixed(0)} per paycheck, about $${weekly.toFixed(0)} a week.`;
+  return formatBudgetContext(cards, [], schedule) + "\n" + spending;
 }

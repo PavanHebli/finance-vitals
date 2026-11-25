@@ -48,8 +48,28 @@ def call_llm(prompt: str, provider: str, api_key: str):
         yield "Unsupported provider."
 
 
-def build_prompt(state: dict, metrics: dict, metric_scores: dict, overall_score: int, mirror: dict, next_step: str = "") -> str:
+def build_prompt(
+    state: dict,
+    metrics: dict,
+    metric_scores: dict,
+    overall_score: int,
+    mirror: dict,
+    next_step: str = "",
+    plan_context: str = "",
+) -> str:
     ctx = get_financial_context(state)
+
+    # Mobile users plan by paycheck. Their screen shows pay, bills and goals per
+    # paycheck and a weekly spending number, so the story should talk the same way.
+    plan_block = ""
+    if plan_context:
+        plan_block = (
+            "## Their payday plan (what they see in the app)\n"
+            f"{plan_context}\n"
+            "The monthly numbers above are this same plan converted to months. When you mention money, "
+            "use the plan's terms: per paycheck, or the weekly spending number. Make the action a change "
+            "they can make in their plan: add or raise a goal, lower or remove a bill, or spend less each week.\n"
+        )
 
     # The results page already shows the user a next step worked out by code.
     # The story must agree with it instead of suggesting something different.
@@ -112,19 +132,21 @@ Your job: explain what the numbers mean in real life, not just repeat them back.
 IMPORTANT: Only reference data that was provided. If a section says "not provided", skip it — don't estimate or invent.
 
 ## Their Numbers
-- Monthly Income: ${ctx['income']:,.2f}
-- Monthly Expenses: ${ctx['total_expenses']:,.2f}
-- Monthly Debt Payments: ${ctx['debt_monthly']:,.2f}
-- Cash left this month: ${metrics["net_monthly_flow"]:,.2f}
+- Monthly pay: ${ctx['income']:,.2f}
+- Monthly spending: ${ctx['total_expenses']:,.2f}
+- Monthly loan and credit card payments: ${ctx['debt_monthly']:,.2f}
+- Left over each month: ${metrics["net_monthly_flow"]:,.2f}
 {position_lines}
 
 {expense_breakdown}
 
+{plan_block}
 ## Health Score: {overall_score}/100 — {mirror["label"]}
-- Savings Rate: {metrics["savings_rate"]}% ({metric_scores["savings_rate"]["status"]}) — means they keep {metrics["savings_rate"]}% of every dollar earned
-- Debt-to-Income: {metrics["debt_to_income"]}% ({metric_scores["debt_to_income"]["status"]}){" ⚠️ debt exists but monthly payment is $0" if metrics.get("debt_payment_missing") else ""}
-- Emergency Fund: {metrics["emergency_fund_months"]} months ({metric_scores["emergency_fund_months"]["status"]}) — months they could survive with zero income
-- Housing Ratio: {metrics["housing_ratio"]}% ({metric_scores["housing_ratio"]["status"]}) — share of income going to rent/mortgage
+(Each line: the plain words to use, then the app's label in brackets for your reference only.)
+- What's left after everything: {metrics["savings_rate"]}% of pay ({metric_scores["savings_rate"]["status"]}) — they keep {metrics["savings_rate"]} cents of every dollar [savings rate]
+- Share of pay going to loans and credit cards: {metrics["debt_to_income"]}% ({metric_scores["debt_to_income"]["status"]}){" ⚠️ they owe money but entered $0 in monthly payments" if metrics.get("debt_payment_missing") else ""} [debt to income]
+- How long savings would last with no paycheck: {metrics["emergency_fund_months"]} months ({metric_scores["emergency_fund_months"]["status"]}) [emergency fund]
+- Share of pay going to rent or mortgage: {metrics["housing_ratio"]}% ({metric_scores["housing_ratio"]["status"]}) [housing]
 
 {profile_section}
 
@@ -148,11 +170,11 @@ IMPORTANT: Only reference data that was provided. If a section says "not provide
 
 {next_step_block}
 ## Action item logic — read this carefully before writing "What should you do this month"
-- If savings rate is above 50%: their money problem is NOT that they spend too much. The action should be about WHERE to put what they already save (e.g. open a HYSA, start an index fund, build the emergency fund). Do NOT suggest cutting expenses.
-- If savings rate is below 20%: focus on the single highest-impact cut.
-- If emergency fund is 0 and savings rate is healthy: the action is "move $X/month from checking into a separate savings account."
-- If debt-to-income is danger: action is about accelerating debt payoff.
-- If emergency fund is under 1 month, the overall score is capped at 50 whatever the other metrics say. Say this in one plain sentence, and make building a first month of savings the action.
+- If they keep more than 50% of pay: their money problem is NOT that they spend too much. The action should be about WHERE to put what they already save (e.g. a high-yield savings account, a low-cost index fund, or a savings cushion). Do NOT suggest cutting spending.
+- If they keep less than 20% of pay: focus on the single highest-impact cut.
+- If their savings would last 0 months and they keep a healthy share of pay: the action is "move $X from each paycheck into a separate savings account."
+- If the share of pay going to loans is in danger: the action is about paying the loans off faster.
+- If their savings would last under 1 month, the overall score is capped at 50 whatever the other numbers say. Say this in one plain sentence, and make saving a first month of costs the action.
 - Choose the ONE action that will move the needle most given their full picture.
 
 ## Answer ONLY these 4 questions. Keep the bold headers and emojis exactly as written.
@@ -161,16 +183,16 @@ IMPORTANT: Only reference data that was provided. If a section says "not provide
 2-3 sentences. Start with the most important thing about their situation — good or bad. Translate the score into real-life terms (e.g. "You keep $X every month after everything", "You're one bad month away from trouble"). Be specific.
 
 **✅ What's working?**
-1-2 sentences. Name the specific number and explain what it means in practice. Not just "your savings rate is good" — say what that rate actually means for them ("At 72%, you're putting away $X a month — more than most people manage").
+1-2 sentences. Name the specific number and explain what it means in practice. Not just "you save a good share" — say what it actually means for them ("You keep **72%** of your pay, $X a month — more than most people manage").
 
 **⚠️ What needs attention?**
-Use bullets if 2+ issues. For each issue: name it, say the real-world risk in plain English. Not "your emergency fund is low" — say "with 0 months covered, a single job loss or car repair could force you to borrow."
+Use bullets if 2+ issues. For each issue: name it, say the real-world risk in plain English. Not "your emergency fund is low" — say "your savings would last **0 months**, so a single job loss or car repair could force you to borrow."
 
 **🎯 What should you do this month?**
 ONE action. Make it logical given their full picture. If they already save a lot, tell them where to put it. If they overspend, name the one cut. Format: [specific action] → [specific destination or outcome].
 
 ## Formatting rules
-- Bold metric names and percentages: **savings rate**, **72%**
+- Bold the key percentages and months: **72%**, **3 months**
 - Do NOT bold dollar amounts
 - Bullets in "What needs attention" only — one line per issue, no emojis on bullets
 - No bullets in "Overall picture" or "What's working"
@@ -182,4 +204,5 @@ ONE action. Make it logical given their full picture. If they already save a lot
 - No motivational fluff: no "You've got this!", "Great job!", "Let's go!"
 - BANNED words: decent, solid, pretty good, big chunk, quite, fairly, somewhat, a lot, significant, robust, impressive
 - Always pair a number with what it means in real life
+- Everyday words only, like you'd use with a friend who has never made a budget. Never write these terms: savings rate, debt-to-income, DTI, housing ratio, emergency fund months, net monthly flow, cash flow, discretionary, allocation, liquidity, HYSA. Say instead: "what's left after everything", "the share of your pay going to loans", "the share going to rent", "your savings would last X months"
 """.strip()

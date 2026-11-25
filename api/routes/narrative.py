@@ -26,6 +26,7 @@ def stream_narrative(req: NarrativeRequest):
         req.overall_score,
         req.mirror.model_dump(),
         req.next_step,
+        req.plan_context,
     )
 
     def generate():

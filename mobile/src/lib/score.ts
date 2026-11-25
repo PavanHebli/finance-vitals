@@ -1,4 +1,4 @@
-import { fetchScore, scoreFormData, streamNarrative, toApiFormData, todayInTimezone } from "@vitals/shared";
+import { fetchScore, planStoryContext, scoreFormData, streamNarrative, toApiFormData, todayInTimezone } from "@vitals/shared";
 import type { BudgetCard, DistributionLogEntry, FinancialProfile, PaySchedule } from "@vitals/shared";
 import { useStore } from "@/lib/store";
 
@@ -17,7 +17,8 @@ export function currentScoreForm(
 // Sends numbers to the backend, stores the score, then starts the AI
 // narrative streaming in the background. Throws if the score call fails, so
 // the screen can show the real error instead of staying silent.
-async function runScore(form: Record<string, unknown>) {
+// planContext: the payday plan as text, so the story talks in paychecks.
+async function runScore(form: Record<string, unknown>, planContext = "") {
   const store = useStore.getState();
   store.setNarrativeText("");
 
@@ -34,6 +35,7 @@ async function runScore(form: Record<string, unknown>) {
       mirror: result.mirror,
       provider: "",
       api_key: "",
+      plan_context: planContext,
     },
     (chunk) => useStore.getState().appendNarrative(chunk)
   )
@@ -46,7 +48,10 @@ async function runScore(form: Record<string, unknown>) {
 // Score from the budget cards and financial profile (Budget tab).
 export async function calculateFromBudget() {
   const { budgetCards, distributionLog, financialProfile, paySchedule } = useStore.getState();
-  await runScore(currentScoreForm(budgetCards, distributionLog, financialProfile, paySchedule));
+  const planContext = paySchedule
+    ? planStoryContext(budgetCards, paySchedule, todayInTimezone(paySchedule.payTimezone))
+    : "";
+  await runScore(currentScoreForm(budgetCards, distributionLog, financialProfile, paySchedule), planContext);
 }
 
 // Score from the "Check your score" form. Also saves a check-in for Progress.

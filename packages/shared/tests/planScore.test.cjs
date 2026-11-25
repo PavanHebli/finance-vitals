@@ -1,7 +1,7 @@
 // Tests for scoring the payday plan. Run with: bash packages/shared/test.sh
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { planDebtMonthly, planToFormData, scoreFormData } = require("../.test-build/planScore.js");
+const { planDebtMonthly, planStoryContext, planToFormData, scoreFormData } = require("../.test-build/planScore.js");
 
 function card(id, label, extra = {}) {
   return {
@@ -67,4 +67,12 @@ test("without a pay schedule, the old budget cards are used unchanged", () => {
 test("the monthly debt payment shown in the profile is the loan bills", () => {
   near(planDebtMonthly(cards, schedule, "2026-11-18"), 600);
   assert.equal(planDebtMonthly(cards.filter((c) => c.id !== "loan"), schedule, "2026-11-18"), 0);
+});
+
+test("the story context has the plan and the weekly spending number", () => {
+  const text = planStoryContext(cards, schedule, "2026-11-18");
+  assert.match(text, /PAYDAY PLAN/);
+  assert.match(text, /Car loan \(loan\/credit card payment\): \$277 per paycheck/);
+  // 949.24 a paycheck, every 2 weeks -> about 475 a week (same as the plan screen).
+  assert.match(text, /Spending money after bills and goals: \$949 per paycheck, about \$475 a week\./);
 });

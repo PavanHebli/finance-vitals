@@ -86,6 +86,9 @@ class NarrativeRequest(BaseModel):
     api_key: str
     # The next step already shown on the results page. The story's action must match it.
     next_step: str = ""
+    # The payday plan as text (mobile only): pay, bills and goals per paycheck and
+    # the weekly spending number, so the story uses the numbers the person sees.
+    plan_context: str = ""
 
 
 # ── /simulate ─────────────────────────────────────────────────────────────────

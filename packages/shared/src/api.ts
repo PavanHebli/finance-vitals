@@ -45,6 +45,7 @@ export async function streamNarrative(
     provider: string;
     api_key: string;
     next_step?: string;
+    plan_context?: string;
   },
   onChunk: (chunk: string) => void
 ): Promise<void> {
