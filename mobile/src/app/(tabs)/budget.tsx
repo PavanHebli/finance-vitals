@@ -8,6 +8,7 @@ import { Icon } from "@/components/icons";
 import { CategoryCard, FloatCard, IncomeCard } from "@/components/budget-cards";
 import { CardSheet } from "@/components/card-sheet";
 import { ImportSheet } from "@/components/import-sheet";
+import { OccasionalSheet } from "@/components/occasional-sheet";
 import { MetricPanel } from "@/components/metric-panel";
 import { PlanCardSheet } from "@/components/plan-card-sheet";
 import { PlanView } from "@/components/plan-view";
@@ -52,6 +53,8 @@ export default function Budget() {
   // The plan's own editor (bills and goals), used once a payday plan exists.
   const [planSheetOpen, setPlanSheetOpen] = useState(false);
   const [planSheetKind, setPlanSheetKind] = useState<"bill" | "goal">("bill");
+  // Costs that come once in a while have their own editor.
+  const [occasionalOpen, setOccasionalOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -111,15 +114,15 @@ export default function Budget() {
     setCardSheetOpen(true);
   }
 
-  function openPlanCard(card: BudgetCard | null, kind: "bill" | "goal" = "bill") {
-    // Once-in-a-while costs get their own editor in a later step; until then
-    // the general card editor handles them.
-    if (card && cardKind(card) === "occasional") {
-      openCard(card);
+  function openPlanCard(card: BudgetCard | null, kind: "bill" | "goal" | "occasional" = "bill") {
+    setEditingCard(card);
+    const isOccasional = card ? cardKind(card) === "occasional" : kind === "occasional";
+    if (isOccasional) {
+      setOccasionalOpen(true);
       return;
     }
-    setEditingCard(card);
-    setPlanSheetKind(kind);
+    // An existing card opens with its own kind; this only matters for new ones.
+    setPlanSheetKind(kind === "goal" ? "goal" : "bill");
     setPlanSheetOpen(true);
   }
 
@@ -254,6 +257,7 @@ export default function Budget() {
       </ScrollView>
 
       <CardSheet visible={cardSheetOpen} onClose={() => setCardSheetOpen(false)} card={editingCard} />
+      <OccasionalSheet visible={occasionalOpen} onClose={() => setOccasionalOpen(false)} card={editingCard} />
       <PlanCardSheet visible={planSheetOpen} onClose={() => setPlanSheetOpen(false)} card={editingCard} newKind={planSheetKind} />
       <ProfileSheet visible={profileOpen} onClose={() => setProfileOpen(false)} />
       <ImportSheet visible={importOpen} onClose={() => setImportOpen(false)} />

@@ -76,3 +76,9 @@ test("the story context has the plan and the weekly spending number", () => {
   // 949.24 a paycheck, every 2 weeks -> about 475 a week (same as the plan screen).
   assert.match(text, /Spending money after bills and goals: \$949 per paycheck, about \$475 a week\./);
 });
+
+test("the story context describes a once-in-a-while cost by its cost and due date", () => {
+  const withInsurance = [...cards.slice(0, -1), card("ins", "Car insurance", { kind: "occasional", goalAmount: 600, balance: 200, dueDate: "2027-03-01" }), cash];
+  const text = planStoryContext(withInsurance, schedule, "2026-11-18");
+  assert.match(text, /Set aside: Car insurance: costs \$600, due 2027-03-01, \$200 set aside so far/);
+});

@@ -22,7 +22,7 @@ import { useStore } from "@/lib/store";
 
 interface PlanViewProps {
   onEditCard: (card: BudgetCard) => void;
-  onAddCard: (kind: "bill" | "goal") => void;
+  onAddCard: (kind: "bill" | "goal" | "occasional") => void;
 }
 
 export function PlanView({ onEditCard, onAddCard }: PlanViewProps) {
@@ -86,19 +86,23 @@ export function PlanView({ onEditCard, onAddCard }: PlanViewProps) {
         <AddButton label="+ Add bill" onPress={() => onAddCard("bill")} />
       </Section>
 
-      {setAsides.length > 0 && (
-        <Section title="Set aside for later" total={total(setAsides)}>
-          {setAsides.map((card) => (
-            <Row
-              key={card.id}
-              card={card}
-              detail={card.goalAmount && card.dueDate ? `${money(card.goalAmount)} due ${formatDay(card.dueDate)}` : undefined}
-              value={`${money(amount(card))} this paycheck`}
-              onPress={() => onEditCard(card)}
-            />
-          ))}
-        </Section>
-      )}
+      <Section title="Set aside for later" total={total(setAsides)}>
+        {setAsides.length === 0 && (
+          <Text style={{ color: theme.textMuted, fontSize: 13 }}>
+            Costs that don't come every month, like car insurance, a yearly subscription or gifts.
+          </Text>
+        )}
+        {setAsides.map((card) => (
+          <Row
+            key={card.id}
+            card={card}
+            detail={setAsideDetail(card, today)}
+            value={setAsideValue(card, amount(card))}
+            onPress={() => onEditCard(card)}
+          />
+        ))}
+        <AddButton label="+ Add once-in-a-while cost" onPress={() => onAddCard("occasional")} />
+      </Section>
 
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Goals</Text>
       {goals.length === 0 && <Text style={{ color: theme.textMuted, fontSize: 13 }}>No goals yet.</Text>}
@@ -108,6 +112,20 @@ export function PlanView({ onEditCard, onAddCard }: PlanViewProps) {
       <AddButton label="+ Add goal" onPress={() => onAddCard("goal")} />
     </View>
   );
+}
+
+// "$200 of $600 · due Mar 1", with "due now" once the date has come.
+function setAsideDetail(card: BudgetCard, today: string): string {
+  const cost = card.goalAmount ?? 0;
+  const saved = `${money(card.balance)} of ${money(cost)}`;
+  if (!card.dueDate) return `${saved} · no due date`;
+  if (card.dueDate <= today) return `${saved} · due now: tap to mark as paid`;
+  return `${saved} · due ${formatDay(card.dueDate)}`;
+}
+
+function setAsideValue(card: BudgetCard, thisPaycheck: number): string {
+  if (card.balance >= (card.goalAmount ?? 0)) return "Ready ✓";
+  return `${money(thisPaycheck)} this paycheck`;
 }
 
 function AddButton({ label, onPress }: { label: string; onPress: () => void }) {

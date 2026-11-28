@@ -78,7 +78,7 @@ interface MobileStore {
 
   addBudgetIncome: (amount: number) => void;
   addBudgetCard: (label: string, allocationMode: "percent" | "fixed", allocationValue: number, color: string, purpose: "expense" | "saving", description: string, goalAmount?: number) => void;
-  updateBudgetCard: (id: string, updates: Partial<Pick<BudgetCard, "label" | "allocationMode" | "allocationValue" | "color" | "purpose" | "description" | "goalAmount" | "savedSoFar" | "isHousing" | "isDebt">>) => void;
+  updateBudgetCard: (id: string, updates: Partial<Pick<BudgetCard, "label" | "allocationMode" | "allocationValue" | "color" | "purpose" | "description" | "goalAmount" | "savedSoFar" | "isHousing" | "isDebt" | "dueDate">>) => void;
   setBudgetCardBalance: (id: string, balance: number) => void;
   transferFromCash: (toCardId: string, amount: number) => { success: true } | { success: false; error: string };
   deleteBudgetCard: (id: string) => void;
@@ -241,6 +241,7 @@ export const useStore = create<MobileStore>()((set, get) => ({
       if (updates.savedSoFar !== undefined) row.saved_so_far = updates.savedSoFar;
       if (updates.isHousing !== undefined) row.is_housing = updates.isHousing;
       if (updates.isDebt !== undefined) row.is_debt = updates.isDebt;
+      if (updates.dueDate !== undefined) row.due_date = updates.dueDate;
       if (Object.keys(row).length > 0) {
         saveInBackground(supabase.from("budget_cards").update(row).eq("id", id));
       }
