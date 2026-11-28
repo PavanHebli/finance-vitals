@@ -233,6 +233,13 @@ function formatPlanContext(customCards: BudgetCard[], schedule: PaySchedule): st
     const kind = cardKind(card);
     const perPaycheck = card.allocationMode === "percent" ? (card.allocationValue / 100) * pay : card.allocationValue;
     const name = kind === "goal" ? "Goal" : kind === "occasional" ? "Set aside" : "Bill";
+    if (kind === "occasional") {
+      // The per-paycheck share depends on the due date, so give the facts instead.
+      const due = card.dueDate ? `, due ${card.dueDate}` : ", no due date yet";
+      const paused = card.paused ? " (paused)" : "";
+      lines.push(`- ${name}: ${card.label}: costs $${(card.goalAmount ?? 0).toFixed(0)}${due}, $${card.balance.toFixed(0)} set aside so far, spread over the paychecks before it is due${paused}`);
+      continue;
+    }
     let line = `- ${name}: ${card.label}${card.isHousing ? " (rent/mortgage)" : ""}${card.isDebt ? " (loan/credit card payment)" : ""}: $${perPaycheck.toFixed(0)} per paycheck (about $${perMonth(perPaycheck)} a month)`;
     if (kind !== "bill") line += `, $${card.balance.toFixed(0)} saved so far`;
     if (kind !== "bill" && card.goalAmount) line += ` of $${card.goalAmount.toFixed(0)}`;

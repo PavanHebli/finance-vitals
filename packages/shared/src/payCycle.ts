@@ -112,6 +112,15 @@ export function startPaycheck(
   return { cards: updated, plan, nextPayday: paydayAfter(payday, frequency) };
 }
 
+// A once-in-a-while cost has been paid. The money set aside goes to the bill;
+// anything set aside beyond the cost stays for next time. If less was set
+// aside, the rest came from spending money and the card starts again from $0.
+// `nextDueDate` is when it is due again ("YYYY-MM-DD").
+export function markOccasionalPaid(card: BudgetCard, nextDueDate: string): BudgetCard {
+  const cost = card.goalAmount ?? 0;
+  return { ...card, balance: cents(Math.max(0, card.balance - cost)), dueDate: nextDueDate };
+}
+
 // "You can spend $X a week until payday." Negative when the plan is bigger
 // than the paycheck, so the shortfall is shown, not hidden.
 export function spendingPerWeek(spendingMoney: number, today: string, nextPayday: string): number {

@@ -3,6 +3,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   paydayAfter,
+  addMonths,
+  dateFromParts,
   nextPaydayFrom,
   paychecksBefore,
   weeksUntil,
@@ -101,4 +103,18 @@ test("which payday a check-in is for", () => {
   assert.equal(paydayDue(schedule, "2026-11-25"), "2026-11-20");  // a few days late
   assert.equal(paydayDue(schedule, "2026-12-10"), "2026-12-04");  // missed one: the latest
   assert.equal(paydayDue({ frequency: "semimonthly", nextPayday: "2026-11-30" }, "2026-12-15"), "2026-12-15");
+});
+
+test("addMonths keeps the day, or uses the month's last day", () => {
+  assert.equal(addMonths("2026-03-01", 6), "2026-09-01");
+  assert.equal(addMonths("2026-11-15", 3), "2027-02-15"); // crosses the year
+  assert.equal(addMonths("2027-01-31", 1), "2027-02-28");
+  assert.equal(addMonths("2028-01-31", 1), "2028-02-29"); // leap year
+  assert.equal(addMonths("2026-12-10", 12), "2027-12-10");
+});
+
+test("dateFromParts keeps the day inside the month", () => {
+  assert.equal(dateFromParts(2027, 3, 1), "2027-03-01");
+  assert.equal(dateFromParts(2027, 2, 31), "2027-02-28");
+  assert.equal(dateFromParts(2027, 4, 0), "2027-04-01");
 });

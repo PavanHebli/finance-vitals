@@ -68,6 +68,24 @@ export function addDays(date: string, days: number): string {
   return format(new Date(parse(date).getTime() + days * DAY_MS));
 }
 
+// The same day `months` months later. A day that doesn't exist in that month
+// becomes its last day: Jan 31 + 1 month is Feb 28 (or 29).
+export function addMonths(date: string, months: number): string {
+  const d = parse(date);
+  const total = d.getUTCMonth() + months;
+  const year = d.getUTCFullYear() + Math.floor(total / 12);
+  const month = ((total % 12) + 12) % 12;
+  const day = Math.min(d.getUTCDate(), daysInMonth(year, month));
+  return format(new Date(Date.UTC(year, month, day)));
+}
+
+// A date from a year, a month (1-12) and a day, with the day kept inside the
+// month: (2027, 2, 31) is "2027-02-28".
+export function dateFromParts(year: number, month: number, day: number): string {
+  const safeDay = Math.max(1, Math.min(Math.round(day), daysInMonth(year, month - 1)));
+  return format(new Date(Date.UTC(year, month - 1, safeDay)));
+}
+
 // Whole days from one date to another (negative if `to` is earlier).
 export function daysBetween(from: string, to: string): number {
   return Math.round((parse(to).getTime() - parse(from).getTime()) / DAY_MS);

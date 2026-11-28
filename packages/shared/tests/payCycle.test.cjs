@@ -6,6 +6,7 @@ const {
   planPaycheck,
   startPaycheck,
   spendingPerWeek,
+  markOccasionalPaid,
 } = require("../.test-build/payCycle.js");
 
 function card(id, label, extra = {}) {
@@ -83,4 +84,29 @@ test("starting a paycheck: bills reset, set-asides and goals build up, spending 
 test("weekly spending number", () => {
   assert.equal(spendingPerWeek(1057.14, "2026-11-20", "2026-12-04"), 528.57); // two weeks
   assert.equal(spendingPerWeek(-200, "2026-11-20", "2026-12-04"), -100);
+});
+
+test("marking a once-in-a-while cost paid uses what was set aside", () => {
+  const insurance = card("ins", "Car insurance", { kind: "occasional", goalAmount: 600, balance: 600, dueDate: "2027-03-01" });
+  const paid = markOccasionalPaid(insurance, "2027-09-01");
+  assert.equal(paid.balance, 0);
+  assert.equal(paid.dueDate, "2027-09-01");
+  assert.equal(paid.goalAmount, 600); // same cost next time
+  assert.equal(insurance.balance, 600); // the input card is not changed
+});
+
+test("extra set aside stays; too little starts again from $0", () => {
+  const extra = card("a", "Gifts", { kind: "occasional", goalAmount: 400, balance: 450, dueDate: "2026-12-15" });
+  assert.equal(markOccasionalPaid(extra, "2027-12-15").balance, 50);
+  const short = card("b", "Gifts", { kind: "occasional", goalAmount: 400, balance: 250, dueDate: "2026-12-15" });
+  assert.equal(markOccasionalPaid(short, "2027-12-15").balance, 0);
+});
+
+test("after paying, the cost is spread again over the paychecks before the new date", () => {
+  const insurance = card("ins", "Car insurance", { kind: "occasional", goalAmount: 600, balance: 600, dueDate: "2026-12-01" });
+  // Ready: nothing more to put aside.
+  assert.equal(amountThisPaycheck(insurance, 2000, "2026-11-20", "biweekly"), 0);
+  // Paid, next due in 6 months: paydays Nov 20 ... May 21 before Jun 1 = 14 paychecks.
+  const paid = markOccasionalPaid(insurance, "2027-06-01");
+  assert.equal(amountThisPaycheck(paid, 2000, "2026-11-20", "biweekly"), 42.86);
 });
